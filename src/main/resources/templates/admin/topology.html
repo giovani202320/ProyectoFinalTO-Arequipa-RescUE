@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Topología del grafo N01–N10 — ARE (Arequipa RescUE)</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #cbd5e1;
+            --primary: #1e3a8a;
+            --text: #0f172a;
+            --muted: #475569;
+            --badge-bg: #dbeafe;
+            --badge-fg: #1e40af;
+            --isolated-bg: #fef3c7;
+            --isolated-fg: #92400e;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 2.5rem 1.25rem;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        main {
+            max-width: 980px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        }
+        nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            font-size: 0.92rem;
+        }
+        nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            background: var(--badge-bg);
+            color: var(--badge-fg);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        .badge-isolated {
+            display: inline-block;
+            padding: 0.15rem 0.6rem;
+            border-radius: 999px;
+            background: var(--isolated-bg);
+            color: var(--isolated-fg);
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+        h1 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary);
+            font-size: 1.65rem;
+        }
+        h2 {
+            margin: 1.5rem 0 0.5rem 0;
+            color: var(--primary);
+            font-size: 1.15rem;
+        }
+        p.lead {
+            margin: 0 0 1.25rem 0;
+            color: var(--muted);
+        }
+        .meta-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            padding: 0.75rem 1rem;
+            background: #f1f5f9;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 1.25rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
+            font-size: 0.92rem;
+        }
+        th, td {
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <nav>
+        <div>
+            <a th:href="@{/}">Inicio</a> |
+            <a th:href="@{/admin/ambulances}">Ambulancias</a> |
+            <a th:href="@{/admin/hospitals}">Hospitales</a> |
+            <a th:href="@{/admin/triage-rules}">Reglas (Admin)</a>
+        </div>
+        <div>
+            <a th:href="@{/emergencies}">Emergencias</a>
+        </div>
+    </nav>
+
+    <span class="badge">ACT-03 Administrador — HU-03 CA-4</span>
+    <h1>Topología del grafo vial simplificado (N01–N10)</h1>
+    <p class="lead">
+        Consulta estructural de los nodos del grafo de Arequipa, los costos enteros positivos abstractos de cada arista bidireccional y la condición de nodo aislado sin aristas activas de <code>N10</code> (RN-RUT-006, CA-SIM-05).
+    </p>
+
+    <div class="meta-bar">
+        <span><strong>Total de nodos:</strong> <span th:text="${nodeCount}">10</span></span>
+        <span><strong>Total de aristas activas:</strong> <span th:text="${edgeCount}">12</span></span>
+    </div>
+
+    <section>
+        <h2>Nodos configurados (N01 a N10)</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Nodo</th>
+                <th>Código de zona</th>
+                <th>Nombre descriptivo</th>
+                <th>Grado (aristas activas)</th>
+                <th>Condición topológica</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="node : ${nodes}">
+                <td><strong th:text="${node.id}">N01</strong></td>
+                <td th:text="${node.zoneCode}">ZONA-01</td>
+                <td th:text="${node.displayName}">Centro Histórico</td>
+                <td th:text="${node.degree}">3</td>
+                <td>
+                    <span th:if="${node.isolated}" class="badge-isolated">Nodo aislado sin aristas activas</span>
+                    <span th:if="${!node.isolated}">Conectado</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>Aristas bidireccionales ponderadas</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>ID Arista</th>
+                <th>Nodo origen</th>
+                <th>Nodo destino</th>
+                <th>Costo abstracto (entero positivo)</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="edge : ${edges}">
+                <td><strong th:text="${edge.id}">EDG-01</strong></td>
+                <td th:text="${edge.sourceNodeId}">N01</td>
+                <td th:text="${edge.targetNodeId}">N02</td>
+                <td th:text="${edge.abstractCost}">4</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+</body>
+</html>

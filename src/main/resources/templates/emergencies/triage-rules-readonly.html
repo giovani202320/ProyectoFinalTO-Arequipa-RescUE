@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reglas de clasificación (Solo lectura) — ARE (Arequipa RescUE)</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #cbd5e1;
+            --primary: #1e3a8a;
+            --text: #0f172a;
+            --muted: #475569;
+            --badge-bg: #dbeafe;
+            --badge-fg: #1e40af;
+            --active-bg: #dcfce7;
+            --active-fg: #166534;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 2.5rem 1.25rem;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        main {
+            max-width: 960px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        }
+        nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            font-size: 0.92rem;
+        }
+        nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            background: var(--badge-bg);
+            color: var(--badge-fg);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        .status-active {
+            display: inline-block;
+            padding: 0.15rem 0.6rem;
+            border-radius: 999px;
+            background: var(--active-bg);
+            color: var(--active-fg);
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+        h1 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary);
+            font-size: 1.65rem;
+        }
+        p.lead {
+            margin: 0 0 1.25rem 0;
+            color: var(--muted);
+        }
+        .meta-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            padding: 0.75rem 1rem;
+            background: #f1f5f9;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 1.25rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.75rem;
+            font-size: 0.92rem;
+        }
+        th, td {
+            padding: 0.65rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+        }
+        .section-title {
+            margin: 1.5rem 0 0.5rem 0;
+            font-size: 1.15rem;
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+<main>
+    <nav>
+        <div>
+            <a th:href="@{/}">Inicio</a> |
+            <a th:href="@{/emergencies}">Emergencias</a> |
+            <a th:href="@{/emergencies/new}">Registrar emergencia</a>
+        </div>
+        <div>
+            <a th:href="@{/triage-rules(actor='ACT-01')}">Vista Operador (ACT-01)</a> |
+            <a th:href="@{/triage-rules(actor='ACT-02')}">Vista Despachador (ACT-02)</a>
+        </div>
+    </nav>
+
+    <span class="badge">HU-04 — Consulta en modo de solo lectura</span>
+    <h1>Catálogo vigente de reglas de clasificación</h1>
+    <p class="lead">
+        Vista informativa de solo lectura sin controles de creación, edición, publicación ni activación de versiones (DEC-009, HU-04 CA-5).
+    </p>
+
+    <div class="meta-bar">
+        <span><strong>Perfil consultante:</strong> <span th:text="${viewerRoleLabel}">Operador de recepción (ACT-01)</span></span>
+        <span><strong>Escenario experimental activo:</strong> <span th:text="${scenarioActive ? 'Sí' : 'No'}">No</span></span>
+    </div>
+
+    <section th:if="${activeVersion != null}">
+        <h2 class="section-title">
+            Versión activa: <span th:text="${activeVersion.id}">RUL-V01</span>
+            <span class="status-active" th:text="${activeVersion.statusCode}">ACTIVE</span>
+        </h2>
+        <p style="font-size: 0.9rem; color: var(--muted);">
+            Número de versión: <strong th:text="${activeVersion.versionNumber}">1</strong> |
+            Publicado en tiempo lógico t = <strong th:text="${activeVersion.publishedAtTicks}">0</strong>
+        </p>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Categoría</th>
+                <th>Descripción de categoría</th>
+                <th>Prioridad simulada informativa</th>
+                <th>Equipamiento requerido</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="rule : ${activeVersion.rules}">
+                <td><strong th:text="${rule.categoryCode}">INC-A</strong></td>
+                <td th:text="${rule.categoryLabel}">Emergencia crítica</td>
+                <td th:text="${rule.priorityLabel}">Alta</td>
+                <td th:text="${rule.equipmentCode}">SPECIALIZED</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section th:if="${versions != null and !versions.isEmpty()}">
+        <h2 class="section-title">Historial inmutable de versiones registradas</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Versión</th>
+                <th>Número</th>
+                <th>Estado</th>
+                <th>Tiempo lógico t</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="ver : ${versions}">
+                <td th:text="${ver.id}">RUL-V01</td>
+                <td th:text="${ver.versionNumber}">1</td>
+                <td th:text="${ver.statusCode}">ACTIVE</td>
+                <td th:text="${ver.publishedAtTicks}">0</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+</body>
+</html>

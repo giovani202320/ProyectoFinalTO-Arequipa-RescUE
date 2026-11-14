@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo de hospitales — ARE (Arequipa RescUE)</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #cbd5e1;
+            --primary: #1e3a8a;
+            --primary-hover: #1d4ed8;
+            --text: #0f172a;
+            --muted: #475569;
+            --badge-bg: #dbeafe;
+            --badge-fg: #1e40af;
+            --error-bg: #fef2f2;
+            --error-border: #fca5a5;
+            --error-fg: #991b1b;
+            --ok-bg: #f0fdf4;
+            --ok-border: #86efac;
+            --ok-fg: #166534;
+            --warn-bg: #fffbeb;
+            --warn-border: #fcd34d;
+            --warn-fg: #92400e;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 2.5rem 1.25rem;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        main {
+            max-width: 1020px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        }
+        nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            font-size: 0.92rem;
+        }
+        nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            background: var(--badge-bg);
+            color: var(--badge-fg);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        h1 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary);
+            font-size: 1.65rem;
+        }
+        h2 {
+            margin: 1.5rem 0 0.5rem 0;
+            color: var(--primary);
+            font-size: 1.15rem;
+        }
+        p.lead {
+            margin: 0 0 1.25rem 0;
+            color: var(--muted);
+        }
+        .alert-error {
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error-fg);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .alert-ok {
+            background: var(--ok-bg);
+            border: 1px solid var(--ok-border);
+            color: var(--ok-fg);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .alert-warn {
+            background: var(--warn-bg);
+            border: 1px solid var(--warn-border);
+            color: var(--warn-fg);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 0.75rem;
+            align-items: end;
+            padding: 1rem;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+        }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 0.45rem 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font: inherit;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-weight: 600;
+            font-size: 0.88rem;
+            margin-bottom: 0.35rem;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+        .btn-secondary {
+            background: #334155;
+            color: #ffffff;
+            border: none;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 0.6rem 0.65rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+        }
+        .inline-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            align-items: center;
+        }
+        .inline-form input[type="text"] {
+            width: 140px;
+            padding: 0.3rem 0.45rem;
+            font-size: 0.85rem;
+        }
+        .inline-form input[type="number"] {
+            width: 68px;
+            padding: 0.3rem 0.45rem;
+            font-size: 0.85rem;
+        }
+        .inline-form select {
+            width: auto;
+            padding: 0.3rem 0.45rem;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <nav>
+        <div>
+            <a th:href="@{/}">Inicio</a> |
+            <a th:href="@{/admin/ambulances}">Ambulancias</a> |
+            <a th:href="@{/admin/topology}">Topología N01–N10</a> |
+            <a th:href="@{/admin/triage-rules}">Reglas (Admin)</a>
+        </div>
+        <div>
+            <a th:href="@{/emergencies}">Emergencias</a>
+        </div>
+    </nav>
+
+    <span class="badge">ACT-03 Administrador — HU-03</span>
+    <h1>Administración del catálogo de hospitales</h1>
+    <p class="lead">
+        Administre hospitales sin especialidades clínicas (DEC-018, RN-HOS-004) con habilitación y capacidad numérica simulada: <code>C &gt;= 0</code>, <code>R &gt;= 0</code>, <code>O &gt;= 0</code>, <code>R + O &lt;= C</code> y <code>D = C - R - O</code>.
+    </p>
+
+    <div th:if="${scenarioActive}" class="alert-warn">
+        <strong>Escenario experimental activo:</strong> se prohíbe modificar el catálogo o la capacidad total <code>C</code> de los hospitales mientras un escenario está en curso (RN-HOS-015, CA-HOS-12, HU-03 CA-2).
+    </div>
+
+    <div th:if="${successMessage != null}" class="alert-ok" th:text="${successMessage}">
+        Hospital guardado correctamente.
+    </div>
+
+    <section>
+        <h2>Registrar nuevo hospital</h2>
+        <form th:action="@{/admin/hospitals}" th:object="${hospitalForm}" method="post" class="form-grid">
+            <div th:if="${#fields.hasErrors('*')}" class="alert-error" style="grid-column: 1 / -1;">
+                <div th:each="err : ${#fields.allErrors()}" th:text="${err}">Error de validación</div>
+            </div>
+            <div>
+                <label for="hospId">Identificador (opcional, ej. HOSP-01)</label>
+                <input id="hospId" type="text" th:field="*{id}" placeholder="Automático si queda vacío">
+            </div>
+            <div>
+                <label for="hospName">Nombre del hospital</label>
+                <input id="hospName" type="text" th:field="*{name}" placeholder="Hospital Base Simulado">
+            </div>
+            <div>
+                <label for="hospNode">Nodo de ubicación</label>
+                <select id="hospNode" th:field="*{nodeId}">
+                    <option value="">Seleccione nodo...</option>
+                    <option th:each="node : ${nodes}" th:value="${node.id.value}" th:text="${node.id.value + ' — ' + node.displayName}">N01</option>
+                </select>
+            </div>
+            <div>
+                <label for="hospCapacity">Capacidad total (C)</label>
+                <input id="hospCapacity" type="number" min="0" th:field="*{totalCapacity}">
+            </div>
+            <div>
+                <label class="checkbox-label">
+                    <input type="checkbox" th:field="*{enabled}">
+                    Habilitado
+                </label>
+                <button type="submit" class="btn-primary">Registrar hospital</button>
+            </div>
+        </form>
+    </section>
+
+    <section>
+        <h2>Hospitales registrados</h2>
+        <p th:if="${#lists.isEmpty(hospitals)}" style="color: var(--muted);">No hay hospitales registrados en el catálogo.</p>
+        <table th:if="${!#lists.isEmpty(hospitals)}">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Nodo</th>
+                <th>Estado</th>
+                <th>C</th>
+                <th>R</th>
+                <th>O</th>
+                <th>D</th>
+                <th>Actualizar configuración</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="hosp : ${hospitals}">
+                <td><strong th:text="${hosp.id}">HOSP-01</strong></td>
+                <td th:text="${hosp.name}">Hospital General</td>
+                <td th:text="${hosp.nodeId}">N01</td>
+                <td th:text="${hosp.enabled ? 'Habilitado' : 'Deshabilitado'}">Habilitado</td>
+                <td th:text="${hosp.totalCapacity}">10</td>
+                <td th:text="${hosp.reservedSlots}">0</td>
+                <td th:text="${hosp.occupiedSlots}">0</td>
+                <td><strong th:text="${hosp.availableSlots}">10</strong></td>
+                <td>
+                    <form th:action="@{'/admin/hospitals/' + ${hosp.id}}" method="post" class="inline-form">
+                        <input type="text" name="name" th:value="${hosp.name}" aria-label="Nombre">
+                        <select name="nodeId" aria-label="Nodo">
+                            <option th:each="node : ${nodes}" th:value="${node.id.value}" th:selected="${hosp.nodeId == node.id.value}" th:text="${node.id.value}">N01</option>
+                        </select>
+                        <input type="number" name="totalCapacity" min="0" th:value="${hosp.totalCapacity}" aria-label="Capacidad total C">
+                        <label class="checkbox-label" style="margin: 0;">
+                            <input type="checkbox" name="enabled" th:checked="${hosp.enabled}">
+                            Hab.
+                        </label>
+                        <button type="submit" class="btn-secondary">Actualizar</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+</body>
+</html>

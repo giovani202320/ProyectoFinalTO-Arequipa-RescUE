@@ -94,6 +94,34 @@ public final class TriageRuleVersion {
     }
 
     /**
+     * Crea una nueva versión de reglas lista para activación verificando que cubra de forma completa,
+     * activa y sin duplicados ni contradicciones las 4 categorías aprobadas INC-A a INC-D (HU-04 CA-1, CA-4, RN-EME-011).
+     */
+    public static TriageRuleVersion createCompleteActiveVersion(
+            TriageRuleVersionId id,
+            int versionNumber,
+            LogicalTime publishedAt,
+            Collection<TriageRuleEntry> rules
+    ) {
+        TriageRuleVersion version = new TriageRuleVersion(
+                id,
+                versionNumber,
+                TriageRuleStatus.ACTIVE,
+                publishedAt,
+                rules
+        );
+        for (IncidentCategory requiredCategory : IncidentCategory.values()) {
+            TriageRuleEntry entry = version.rulesByCategory.get(requiredCategory);
+            if (entry == null || !entry.active()) {
+                throw new IllegalArgumentException(
+                        "La versión de reglas a publicar es incompleta: falta una regla activa para la categoría "
+                                + requiredCategory.code() + " (RN-EME-011.5, HU-04 CA-4).");
+            }
+        }
+        return version;
+    }
+
+    /**
      * Evalúa de forma determinista y sin valores por defecto la categoría del incidente contra esta versión
      * activa de reglas (RN-EME-003, RN-EME-004, RN-EME-007, RN-EME-010).
      */

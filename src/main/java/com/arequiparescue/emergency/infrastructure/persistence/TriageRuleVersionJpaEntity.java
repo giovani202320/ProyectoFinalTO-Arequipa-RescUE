@@ -48,6 +48,10 @@ public class TriageRuleVersionJpaEntity {
         return status;
     }
 
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
     public long getPublishedAtTicks() {
         return publishedAtTicks;
     }

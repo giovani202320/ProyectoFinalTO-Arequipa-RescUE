@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración de reglas de clasificación — ARE (Arequipa RescUE)</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #cbd5e1;
+            --primary: #1e3a8a;
+            --primary-hover: #1d4ed8;
+            --text: #0f172a;
+            --muted: #475569;
+            --badge-bg: #dbeafe;
+            --badge-fg: #1e40af;
+            --error-bg: #fef2f2;
+            --error-border: #fca5a5;
+            --error-fg: #991b1b;
+            --ok-bg: #f0fdf4;
+            --ok-border: #86efac;
+            --ok-fg: #166534;
+            --warn-bg: #fffbeb;
+            --warn-border: #fcd34d;
+            --warn-fg: #92400e;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 2.5rem 1.25rem;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        main {
+            max-width: 980px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        }
+        nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            font-size: 0.92rem;
+        }
+        nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            background: var(--badge-bg);
+            color: var(--badge-fg);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        h1 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary);
+            font-size: 1.65rem;
+        }
+        h2 {
+            margin: 1.5rem 0 0.5rem 0;
+            color: var(--primary);
+            font-size: 1.15rem;
+        }
+        p.lead {
+            margin: 0 0 1.25rem 0;
+            color: var(--muted);
+        }
+        .alert-error {
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error-fg);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .alert-ok {
+            background: var(--ok-bg);
+            border: 1px solid var(--ok-border);
+            color: var(--ok-fg);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .alert-warn {
+            background: var(--warn-bg);
+            border: 1px solid var(--warn-border);
+            color: var(--warn-fg);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
+            font-size: 0.92rem;
+        }
+        th, td {
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+        }
+        select {
+            padding: 0.4rem 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font: inherit;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 0.65rem 1.25rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+    </style>
+</head>
+<body>
+<main>
+    <nav>
+        <div>
+            <a th:href="@{/}">Inicio</a> |
+            <a th:href="@{/admin/ambulances}">Ambulancias</a> |
+            <a th:href="@{/admin/hospitals}">Hospitales</a> |
+            <a th:href="@{/admin/topology}">Topología N01–N10</a>
+        </div>
+        <div>
+            <a th:href="@{/triage-rules}">Consulta solo lectura</a> |
+            <a th:href="@{/emergencies}">Emergencias</a>
+        </div>
+    </nav>
+
+    <span class="badge">ACT-03 Administrador — HU-04</span>
+    <h1>Versiones inmutables de reglas de clasificación</h1>
+    <p class="lead">
+        Publique y active una nueva versión inmutable del catálogo completo (INC-A a INC-D) sin alterar las emergencias ya registradas bajo versiones anteriores.
+    </p>
+
+    <div th:if="${scenarioActive}" class="alert-warn">
+        <strong>Escenario experimental activo:</strong> la publicación y activación de nuevas versiones de reglas se encuentra bloqueada mientras exista un escenario activo (RN-EME-012, HU-04 CA-3).
+    </div>
+
+    <div th:if="${errorMessage != null}" class="alert-error" th:text="${errorMessage}">
+        Error de validación al publicar versión de reglas.
+    </div>
+
+    <div th:if="${publishedVersion != null}" class="alert-ok">
+        Nueva versión <strong th:text="${publishedVersion.id}">RUL-V02</strong> publicada y activada correctamente. Las versiones previas permanecen inmutables.
+    </div>
+
+    <section>
+        <h2>Publicar y activar nueva versión</h2>
+        <form th:action="@{/admin/triage-rules}" th:object="${form}" method="post">
+            <table>
+                <thead>
+                <tr>
+                    <th>Categoría</th>
+                    <th>Prioridad simulada informativa</th>
+                    <th>Equipamiento requerido</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><strong>INC-A</strong></td>
+                    <td>
+                        <select th:field="*{incAPriority}">
+                            <option value="HIGH">Alta (HIGH)</option>
+                            <option value="MEDIUM">Media (MEDIUM)</option>
+                            <option value="LOW">Baja (LOW)</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select th:field="*{incAEquipment}">
+                            <option value="SPECIALIZED">SPECIALIZED</option>
+                            <option value="BASIC">BASIC</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>INC-B</strong></td>
+                    <td>
+                        <select th:field="*{incBPriority}">
+                            <option value="HIGH">Alta (HIGH)</option>
+                            <option value="MEDIUM">Media (MEDIUM)</option>
+                            <option value="LOW">Baja (LOW)</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select th:field="*{incBEquipment}">
+                            <option value="BASIC">BASIC</option>
+                            <option value="SPECIALIZED">SPECIALIZED</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>INC-C</strong></td>
+                    <td>
+                        <select th:field="*{incCPriority}">
+                            <option value="HIGH">Alta (HIGH)</option>
+                            <option value="MEDIUM">Media (MEDIUM)</option>
+                            <option value="LOW">Baja (LOW)</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select th:field="*{incCEquipment}">
+                            <option value="BASIC">BASIC</option>
+                            <option value="SPECIALIZED">SPECIALIZED</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>INC-D</strong></td>
+                    <td>
+                        <select th:field="*{incDPriority}">
+                            <option value="HIGH">Alta (HIGH)</option>
+                            <option value="MEDIUM">Media (MEDIUM)</option>
+                            <option value="LOW">Baja (LOW)</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select th:field="*{incDEquipment}">
+                            <option value="BASIC">BASIC</option>
+                            <option value="SPECIALIZED">SPECIALIZED</option>
+                        </select>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <button type="submit" class="btn-primary">Publicar y activar nueva versión</button>
+        </form>
+    </section>
+
+    <section th:if="${activeVersion != null}">
+        <h2>Versión activa actual: <span th:text="${activeVersion.id}">RUL-V01</span></h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Categoría</th>
+                <th>Prioridad informativa</th>
+                <th>Equipamiento requerido</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="rule : ${activeVersion.rules}">
+                <td><strong th:text="${rule.categoryCode}">INC-A</strong></td>
+                <td th:text="${rule.priorityLabel}">Alta</td>
+                <td th:text="${rule.equipmentCode}">SPECIALIZED</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section th:if="${versions != null and !versions.isEmpty()}">
+        <h2>Historial inmutable de versiones</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>ID Versión</th>
+                <th>Número</th>
+                <th>Estado</th>
+                <th>Tiempo lógico t</th>
+                <th>Correspondencia</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="ver : ${versions}">
+                <td><strong th:text="${ver.id}">RUL-V01</strong></td>
+                <td th:text="${ver.versionNumber}">1</td>
+                <td th:text="${ver.statusCode}">ACTIVE</td>
+                <td th:text="${ver.publishedAtTicks}">0</td>
+                <td>
+                    <span th:each="r, stat : ${ver.rules}">
+                        <span th:text="${r.categoryCode + ': ' + r.priorityLabel + '/' + r.equipmentCode}">INC-A: Alta/SPECIALIZED</span><span th:if="${!stat.last}"> | </span>
+                    </span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+</body>
+</html>

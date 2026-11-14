@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo de ambulancias — ARE (Arequipa RescUE)</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #cbd5e1;
+            --primary: #1e3a8a;
+            --primary-hover: #1d4ed8;
+            --text: #0f172a;
+            --muted: #475569;
+            --badge-bg: #dbeafe;
+            --badge-fg: #1e40af;
+            --error-bg: #fef2f2;
+            --error-border: #fca5a5;
+            --error-fg: #991b1b;
+            --ok-bg: #f0fdf4;
+            --ok-border: #86efac;
+            --ok-fg: #166534;
+            --warn-bg: #fffbeb;
+            --warn-border: #fcd34d;
+            --warn-fg: #92400e;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 2.5rem 1.25rem;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        main {
+            max-width: 980px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        }
+        nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            font-size: 0.92rem;
+        }
+        nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            background: var(--badge-bg);
+            color: var(--badge-fg);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        h1 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary);
+            font-size: 1.65rem;
+        }
+        h2 {
+            margin: 1.5rem 0 0.5rem 0;
+            color: var(--primary);
+            font-size: 1.15rem;
+        }
+        p.lead {
+            margin: 0 0 1.25rem 0;
+            color: var(--muted);
+        }
+        .alert-error {
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error-fg);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .alert-ok {
+            background: var(--ok-bg);
+            border: 1px solid var(--ok-border);
+            color: var(--ok-fg);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .alert-warn {
+            background: var(--warn-bg);
+            border: 1px solid var(--warn-border);
+            color: var(--warn-fg);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.75rem;
+            align-items: end;
+            padding: 1rem;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+        }
+        input, select {
+            width: 100%;
+            padding: 0.45rem 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font: inherit;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+        .btn-secondary {
+            background: #334155;
+            color: #ffffff;
+            border: none;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 0.6rem 0.65rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+        }
+        .inline-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            align-items: center;
+        }
+        .inline-form select {
+            width: auto;
+            padding: 0.3rem 0.45rem;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <nav>
+        <div>
+            <a th:href="@{/}">Inicio</a> |
+            <a th:href="@{/admin/hospitals}">Hospitales</a> |
+            <a th:href="@{/admin/topology}">Topología N01–N10</a> |
+            <a th:href="@{/admin/triage-rules}">Reglas (Admin)</a>
+        </div>
+        <div>
+            <a th:href="@{/emergencies}">Emergencias</a>
+        </div>
+    </nav>
+
+    <span class="badge">ACT-03 Administrador — HU-03</span>
+    <h1>Administración del catálogo de ambulancias</h1>
+    <p class="lead">
+        Registre y actualice ambulancias con equipamiento <code>BASIC</code> o <code>SPECIALIZED</code> sobre los nodos <code>N01</code>–<code>N10</code> (estados aprobados: <code>AVAILABLE</code>, <code>ASSIGNED</code>, <code>AT_INCIDENT</code>, <code>TRANSPORTING</code>).
+    </p>
+
+    <div th:if="${scenarioActive}" class="alert-warn">
+        <strong>Escenario experimental activo:</strong> el registro y la modificación de ambulancias se encuentran bloqueados mientras exista un escenario activo (HU-03 CA-1).
+    </div>
+
+    <div th:if="${errorMessage != null}" class="alert-error" th:text="${errorMessage}">
+        Error de validación en el catálogo de ambulancias.
+    </div>
+
+    <div th:if="${savedAmbulance != null}" class="alert-ok">
+        Ambulancia <strong th:text="${savedAmbulance.id}">AMB-01</strong> guardada correctamente (<span th:text="${savedAmbulance.equipmentTypeCode}">BASIC</span> en nodo <span th:text="${savedAmbulance.currentNodeId}">N01</span>, estado <span th:text="${savedAmbulance.stateCode}">AVAILABLE</span>).
+    </div>
+
+    <section>
+        <h2>Registrar nueva ambulancia</h2>
+        <form th:action="@{/admin/ambulances}" th:object="${form}" method="post" class="form-grid">
+            <div th:if="${#fields.hasErrors('*')}" class="alert-error" style="grid-column: 1 / -1;">
+                <div th:each="err : ${#fields.allErrors()}" th:text="${err}">Error de campo</div>
+            </div>
+            <div>
+                <label for="ambId">Identificador (opcional, ej. AMB-01)</label>
+                <input id="ambId" type="text" th:field="*{id}" placeholder="Automático si queda vacío">
+            </div>
+            <div>
+                <label for="ambEquipment">Equipamiento</label>
+                <select id="ambEquipment" th:field="*{equipmentType}">
+                    <option value="">Seleccione equipamiento...</option>
+                    <option value="BASIC">BASIC (Básico)</option>
+                    <option value="SPECIALIZED">SPECIALIZED (Especializado)</option>
+                </select>
+            </div>
+            <div>
+                <label for="ambNode">Nodo de ubicación</label>
+                <select id="ambNode" th:field="*{nodeId}">
+                    <option value="">Seleccione nodo...</option>
+                    <option th:each="node : ${nodes}" th:value="${node.id.value}" th:text="${node.id.value + ' — ' + node.displayName}">N01</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="btn-primary">Registrar ambulancia</button>
+            </div>
+        </form>
+    </section>
+
+    <section>
+        <h2>Ambulancias registradas</h2>
+        <p th:if="${#lists.isEmpty(ambulances)}" style="color: var(--muted);">No hay ambulancias registradas en el catálogo.</p>
+        <table th:if="${!#lists.isEmpty(ambulances)}">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Equipamiento</th>
+                <th>Nodo actual</th>
+                <th>Estado operativo</th>
+                <th>Emergencia vinculada</th>
+                <th>Actualizar configuración</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="amb : ${ambulances}">
+                <td><strong th:text="${amb.id}">AMB-01</strong></td>
+                <td th:text="${amb.equipmentTypeCode}">BASIC</td>
+                <td th:text="${amb.currentNodeId}">N01</td>
+                <td th:text="${amb.stateCode}">AVAILABLE</td>
+                <td th:text="${amb.assignedEmergencyId != null ? amb.assignedEmergencyId : '—'}">—</td>
+                <td>
+                    <form th:action="@{'/admin/ambulances/' + ${amb.id}}" method="post" class="inline-form">
+                        <select name="equipmentType" aria-label="Equipamiento">
+                            <option value="BASIC" th:selected="${amb.equipmentTypeCode == 'BASIC'}">BASIC</option>
+                            <option value="SPECIALIZED" th:selected="${amb.equipmentTypeCode == 'SPECIALIZED'}">SPECIALIZED</option>
+                        </select>
+                        <select name="nodeId" aria-label="Nodo">
+                            <option th:each="node : ${nodes}" th:value="${node.id.value}" th:selected="${amb.currentNodeId == node.id.value}" th:text="${node.id.value}">N01</option>
+                        </select>
+                        <button type="submit" class="btn-secondary">Actualizar</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+</body>
+</html>

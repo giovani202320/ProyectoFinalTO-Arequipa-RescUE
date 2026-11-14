@@ -129,7 +129,10 @@
 <body>
 <main>
     <nav>
-        <a th:href="@{/}">← Volver al inicio</a>
+        <div>
+            <a th:href="@{/}">← Volver al inicio</a> |
+            <a th:href="@{/triage-rules(actor='ACT-01')}">Reglas vigentes (Solo lectura, HU-04)</a>
+        </div>
         <a class="btn-primary" th:href="@{/emergencies/new}">+ Registrar emergencia (HU-01)</a>
     </nav>
 
