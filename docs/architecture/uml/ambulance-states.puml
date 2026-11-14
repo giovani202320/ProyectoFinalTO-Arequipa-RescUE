@@ -1,0 +1,50 @@
+@startuml ambulance-states
+!pragma layout smetana
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam DefaultFontName "Segoe UI"
+skinparam DefaultFontSize 12
+skinparam State {
+    BackgroundColor #F8FAFC
+    BorderColor #1E3A8A
+    FontColor #0F172A
+    ArrowColor #334155
+}
+
+title Máquina de Estados UML de Ambulancia — ARE (DEC-019 / RN-RUT-007)
+
+[*] --> AVAILABLE : T-AMB-00: registrarAmbulanciaEnCatalogo(id, equipamiento, nodo)\n/ inicializar en nodo válido (N01..N10) con\n  assigned_emergency_id = NULL
+
+state "AVAILABLE" as AVAILABLE : Unidad disponible en su nodo actual (N01..N10)\ny elegible para despacho según equipamiento\n(BASIC o SPECIALIZED).\nassigned_emergency_id = NULL.
+
+state "ASSIGNED" as ASSIGNED : Unidad asignada exclusivamente a una emergencia activa\n(assigned_emergency_id != NULL) y en desplazamiento\nsimulado hacia el nodo del incidente.\n(Emergencia vinculada en estado ASSIGNED).
+
+state "AT_INCIDENT" as AT_INCIDENT : Unidad posicionada en el nodo del incidente\ndurante la recogida y evaluación hospitalaria,\no retenida mientras su emergencia vinculada espera en\nWAITING_HOSPITAL.\n(Emergencia vinculada assigned_emergency_id en\nAT_INCIDENT o WAITING_HOSPITAL).
+
+state "TRANSPORTING" as TRANSPORTING : Unidad trasladando a su emergencia vinculada\n(assigned_emergency_id != NULL) hacia el hospital\ncon destino y reserva (R) confirmados.\n(Emergencia vinculada en estado IN_TRANSPORT).
+
+AVAILABLE --> ASSIGNED : T-AMB-01: confirmarAsignacion(emergencyId)\n[status == AVAILABLE && assigned_emergency_id == NULL\n&& equipamiento compatible && alcanzable,\nbajo SELECT ... FOR UPDATE (ADR-0002)]\n/ asociar assigned_emergency_id;\n  transitar emergencia a ASSIGNED
+
+ASSIGNED --> AT_INCIDENT : T-AMB-02: confirmarLlegadaAlIncidente()\n[arribo al nodo del incidente en tiempo lógico t]\n/ actualizar nodo actual al nodo del incidente;\n  transitar emergencia (ASSIGNED -> AT_INCIDENT)
+
+AT_INCIDENT --> TRANSPORTING : T-AMB-03: confirmarReservaHospitalaria(hospitalId)\n[reserva de plaza R confirmada en hospital elegible\nbajo SELECT ... FOR UPDATE (en recogida inicial\nT-EME-05 o reevaluación FIFO T-EME-07)]\n/ transitar emergencia a IN_TRANSPORT;\n  iniciar traslado hacia el nodo del hospital
+
+TRANSPORTING --> AVAILABLE : T-AMB-04: confirmarEntregaSimuladaEnHospital()\n[arribo al nodo del hospital reservado y entrega\nsimulada completada en tiempo lógico t]\n/ actualizar nodo actual al nodo del hospital;\n  limpiar assigned_emergency_id = NULL;\n  transitar emergencia (IN_TRANSPORT -> COMPLETED);\n  convertir R -> O y disparar evaluación de\n  cola WAITING_AMBULANCE (RN-RUT-008)
+
+note right of AT_INCIDENT
+  Retención durante espera hospitalaria (RN-HOS-009, CA-SIM-03):
+  Si no hay hospital elegible o se agotan los 1+2 intentos
+  de reserva, la emergencia pasa a WAITING_HOSPITAL y la
+  ambulancia permanece ocupada en AT_INCIDENT (no existe
+  un estado WAITING_HOSPITAL en la ambulancia).
+end note
+
+note bottom of AVAILABLE
+  Restricciones aprobadas (DEC-019, ADR-0002):
+  - Únicamente existen estos 4 estados (no existen EN_ROUTE,
+    DISPATCHED ni MAINTENANCE).
+  - La liberación (TRANSPORTING -> AVAILABLE) ocurre en la
+    entrega hospitalaria y no depende del alta simulada posterior.
+end note
+
+@enduml

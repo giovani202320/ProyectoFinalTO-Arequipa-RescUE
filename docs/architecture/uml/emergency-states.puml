@@ -1,0 +1,65 @@
+@startuml emergency-states
+!pragma layout smetana
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam DefaultFontName "Segoe UI"
+skinparam DefaultFontSize 12
+skinparam State {
+    BackgroundColor #F8FAFC
+    BorderColor #1E3A8A
+    FontColor #0F172A
+    ArrowColor #334155
+}
+
+title Máquina de Estados UML de Emergencia — ARE (DEC-019 / RN-RUT-007)
+
+[*] --> REGISTERED : T-EME-00: registrarEmergencia(categoria, nodo, desc)\n[datos válidos y versión activa de reglas]\n/ clasificar determinísticamente (BASIC | SPECIALIZED);\n  sellar registered_at_t = t
+
+state "REGISTERED" as REGISTERED : Emergencia registrada y clasificada\ncon referencia inmutable a versión de reglas.\nSin ambulancia activamente vinculada\n(ninguna unidad con assigned_emergency_id = id).
+
+state "WAITING_AMBULANCE" as WAITING_AMBULANCE : En cola FIFO de espera de ambulancia (sin aging, RN-COL-003/005).\nFiltrado por compatibilidad y preservación de equipamiento\n(RN-COL-001/002/004/007). Sin ambulancia activamente vinculada.
+
+state "ASSIGNED" as ASSIGNED : Ambulancia activamente vinculada (assigned_emergency_id = id)\ny en desplazamiento simulado hacia el nodo del incidente.\n(Ambulancia vinculada en estado ASSIGNED).
+
+state "AT_INCIDENT" as AT_INCIDENT : Ambulancia vinculada (assigned_emergency_id = id) en el nodo del incidente\ncon recogida confirmada; ejecutando selección y reserva\nconcurrente de hospital (1+2 intentos).\n(Ambulancia vinculada en estado AT_INCIDENT).
+
+state "WAITING_HOSPITAL" as WAITING_HOSPITAL : En cola FIFO de espera de destino hospitalario.\nConserva su ambulancia vinculada (assigned_emergency_id = id)\nretenida en el incidente (Ambulancia vinculada en AT_INCIDENT).
+
+state "IN_TRANSPORT" as IN_TRANSPORT : Destino hospitalario y plaza reservada (R) confirmados;\nen traslado hacia el hospital.\n(Ambulancia vinculada assigned_emergency_id = id en TRANSPORTING).
+
+state "COMPLETED" as COMPLETED : Entrega simulada en el hospital completada.\nReserva convertida en ocupación (R -> O) y ambulancia\ndesvinculada (assigned_emergency_id = NULL, estado AVAILABLE).\nFin del ciclo simulado de la emergencia.
+
+REGISTERED --> ASSIGNED : T-EME-01: evaluarYAsignarAmbulancia()\n[ambulancia elegible confirmada bajo SELECT ... FOR UPDATE\n(supervisada o automática 1..4 intentos)]\n/ asociar assigned_emergency_id = id (AVAILABLE -> ASSIGNED);\n  sellar assigned_at_t = t
+
+REGISTERED --> WAITING_AMBULANCE : T-EME-02: evaluarYAsignarAmbulancia()\n[sin ambulancia elegible inicial (0 reintentos)\nO agotamiento 1+3 intentos (CONCURRENCY_RETRY_EXHAUSTED)]\n/ sellar queue_entered_at_t = t;\n  registrar motivo (y aviso al Despachador si agotó 1+3)
+
+WAITING_AMBULANCE --> ASSIGNED : T-EME-03: atenderColaEsperaAmbulancia()\n[compatibilidad y preservación (unidad SPECIALIZED: grupo SPECIALIZED\ny luego BASIC supletorio RN-COL-001/002; unidad BASIC: solo grupo\nBASIC RN-COL-007) + FIFO estricto (RN-COL-003) + confirmación bajo\nSELECT ... FOR UPDATE (contador nuevo 1+3, DEC-017)]\n/ asociar assigned_emergency_id = id (AVAILABLE -> ASSIGNED);\n  sellar assigned_at_t = t
+
+ASSIGNED --> AT_INCIDENT : T-EME-04: confirmarLlegadaYRecogidaEnIncidente()\n[arribo al nodo del incidente en tiempo lógico t]\n/ pasar ambulancia (ASSIGNED -> AT_INCIDENT);\n  sellar at_incident_at_t = t; iniciar selección hospitalaria
+
+AT_INCIDENT --> IN_TRANSPORT : T-EME-05: seleccionarYReservarHospital()\n[hospital habilitado, alcanzable y D >= 1 confirmado\nbajo SELECT ... FOR UPDATE (1..3 intentos)]\n/ incrementar R = R + 1 (D = D - 1);\n  pasar ambulancia (AT_INCIDENT -> TRANSPORTING);\n  sellar in_transport_at_t = t
+
+AT_INCIDENT --> WAITING_HOSPITAL : T-EME-06: seleccionarYReservarHospital()\n[sin hospital elegible inicial (0 reintentos) O agotamiento\n1+2 intentos (HOSPITAL_RESERVATION_RETRY_EXHAUSTED)]\n/ retener ambulancia en AT_INCIDENT;\n  sellar hospital_queue_entered_at_t = t; registrar motivo
+
+WAITING_HOSPITAL --> IN_TRANSPORT : T-EME-07: reevaluarColaEsperaHospitalaria()\n[liberación de capacidad (D >= 1) + evaluación FIFO\nsin pérdida de posición + reserva R confirmada\n(contador nuevo 1+2)]\n/ incrementar R = R + 1 (D = D - 1);\n  pasar ambulancia (AT_INCIDENT -> TRANSPORTING);\n  sellar in_transport_at_t = t
+
+IN_TRANSPORT --> COMPLETED : T-EME-08: confirmarLlegadaYEntregaEnHospital()\n[arribo al nodo del hospital reservado en tiempo lógico t]\n/ transformar reserva en ocupación (R = R - 1, O = O + 1);\n  liberar ambulancia (TRANSPORTING -> AVAILABLE);\n  sellar completed_at_t = t; evaluar cola WAITING_AMBULANCE
+
+COMPLETED --> [*] : T-EME-09: fin del ciclo simulado\n(RN-EME-001, RN-HOS-003)
+
+note right of WAITING_HOSPITAL
+  Invariante de reevaluación FIFO (CA-HOS-09):
+  Si al liberarse plaza en un hospital ese destino
+  es inalcanzable para la primera emergencia en cola,
+  esta permanece en WAITING_HOSPITAL conservando
+  intacta su posición original (hospital_queue_entered_at_t).
+end note
+
+note bottom of COMPLETED
+  Invariante de cierre (DEC-018 / DEC-019):
+  - No existen cancelación de emergencias ni estados adicionales.
+  - El alta simulada hospitalaria posterior (O = O - 1, D = D + 1)
+    actúa sobre la ocupación del hospital y no altera COMPLETED.
+end note
+
+@enduml
