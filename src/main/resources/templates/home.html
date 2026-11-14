@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${status.systemTitle}">ARE — Arequipa RescUE</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #cbd5e1;
+            --primary: #1e3a8a;
+            --text: #0f172a;
+            --muted: #475569;
+            --badge-bg: #dbeafe;
+            --badge-fg: #1e40af;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 2.5rem 1.25rem;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        main {
+            max-width: 760px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            background: var(--badge-bg);
+            color: var(--badge-fg);
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 0.75rem;
+        }
+        h1 {
+            margin: 0 0 0.75rem 0;
+            color: var(--primary);
+            font-size: 1.85rem;
+        }
+        p.lead {
+            margin: 0 0 1.5rem 0;
+            color: var(--muted);
+            font-size: 1.05rem;
+        }
+        dl {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: 0.65rem 1rem;
+            margin: 0;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+        dt {
+            font-weight: 600;
+            color: var(--text);
+        }
+        dd {
+            margin: 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+<main>
+    <span class="badge" th:text="${status.implementationStage}">Estado de implementación: Incremento 01</span>
+    <h1 th:text="${status.systemTitle}">ARE — Arequipa RescUE</h1>
+    <p class="lead" th:text="${status.academicDescription}">
+        Simulador académico de atención de emergencias médicas, despacho concurrente de ambulancias,
+        cálculo de rutas mediante Dijkstra sobre una red vial simplificada de Arequipa y gestión
+        simulada de capacidad hospitalaria.
+    </p>
+
+    <dl>
+        <dt>Estado de implementación</dt>
+        <dd th:text="${status.implementationStage}">Incremento 01</dd>
+
+        <dt>Estilo arquitectónico</dt>
+        <dd th:text="${status.architectureSummary}">Monolito modular con principios de arquitectura hexagonal y presentación Spring MVC + Thymeleaf</dd>
+
+        <dt>Base técnica activa</dt>
+        <dd>Java 21 LTS, Spring Boot 3.4.5, MySQL 8.4 LTS (Flyway), grafo inicial N01–N10 y reloj lógico monotónico (t &gt;= 0)</dd>
+    </dl>
+
+    <footer>
+        Proyecto académico de ingeniería de software. Exclusivamente para simulación y experimentación académica (DEC-001).
+    </footer>
+</main>
+</body>
+</html>

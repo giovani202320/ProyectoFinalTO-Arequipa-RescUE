@@ -1,0 +1,35 @@
+# ==============================================================================
+# compose.yaml — ARE (Arequipa RescUE)
+# Servicio único de desarrollo/pruebas: MySQL 8.4 LTS (InnoDB)
+# Sin contraseñas ni secretos codificados en el repositorio (definir en variables de entorno)
+# ==============================================================================
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: are-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${ARE_DB_NAME:-arequipa_rescue}
+      MYSQL_USER: ${ARE_DB_USERNAME:-are_user}
+      MYSQL_PASSWORD: ${ARE_DB_PASSWORD:?Se requiere definir la variable de entorno ARE_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${ARE_DB_ROOT_PASSWORD:?Se requiere definir la variable de entorno ARE_DB_ROOT_PASSWORD}
+      TZ: UTC
+    ports:
+      - "${ARE_DB_PORT:-3306}:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+    volumes:
+      - are_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u $$MYSQL_USER --password=$$MYSQL_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+volumes:
+  are_mysql_data:
+    name: are_mysql_data
