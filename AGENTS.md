@@ -379,14 +379,16 @@ Estas herramientas y su configuración definitiva deben verificarse y aprobarse 
 
 ```text
 docs/
-├── project/
-│   ├── vision.md
-│   ├── scope.md
-│   └── glossary.md
-├── requirements/
-├── architecture/
-├── adr/
+├── decisions/
+│   ├── decision-log.md
+│   └── adr/
+├── product/
+│   ├── vision-and-scope.md
+│   ├── stakeholders.md
+│   └── requirements/
+│       └── business-rules.md
 ├── planning/
+├── architecture/
 └── testing/
 ```
 
@@ -409,7 +411,7 @@ Se consideran decisiones relevantes:
 
 Ubicación propuesta:
 
-`docs/adr/ADR-XXXX-titulo-decision.md`
+`docs/decisions/adr/ADR-XXXX-titulo-decision.md`
 
 Estructura propuesta:
 
