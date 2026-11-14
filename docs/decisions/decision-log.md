@@ -1,10 +1,10 @@
 # Bitácora de Decisiones — ARE (Arequipa RescUE)
 
-**Estado del documento:** Aprobado — Línea base aceptada (`DEC-015`) y formalizaciones de `PEN-002a` (`DEC-016`) y `PEN-002b` (`DEC-017`)
+**Estado del documento:** Aprobado — Línea base aceptada (`DEC-015`) y formalizaciones de `PEN-002a` (`DEC-016`), `PEN-002b` (`DEC-017`) y `PEN-002c` (`DEC-018`)
 **Propósito:** Registrar de manera trazable las decisiones arquitectónicas, tecnológicas, funcionales y de producto formalmente acordadas en **ARE – Arequipa RescUE**, diferenciándolas estrictamente de las propuestas y definiciones que permanecen pendientes de aprobación.
 
 > [!IMPORTANT]
-> Solo llevan el estado **Aprobada** aquellas decisiones que cuentan con autorización expresa del responsable humano del proyecto. Las decisiones previas (`DEC-001` a `DEC-016`) se conservan íntegras y se amplían con `DEC-017` (que formaliza y cierra `PEN-002b`). Ningún parámetro o regla pendiente (`PEN-002c` a `PEN-008`, `RN-ASI-005`, `RN-MET-003`) se registra como decisión aprobada.
+> Solo llevan el estado **Aprobada** aquellas decisiones que cuentan con autorización expresa del responsable humano del proyecto. Las decisiones previas (`DEC-001` a `DEC-017`) se conservan íntegras y se amplían con `DEC-018` (que formaliza y cierra `PEN-002c`). Ningún parámetro o regla pendiente (`PEN-002d` a `PEN-008`, `RN-ASI-005`, `RN-MET-003`) se registra como decisión aprobada.
 
 ---
 
@@ -29,6 +29,7 @@
 | [DEC-015](#dec-015-aprobación-formal-de-la-primera-entrega-documental-definición-de-producto-y-reglas-de-negocio) | Aprobación formal de la primera entrega documental (definición de producto y reglas de negocio) | Producto / Gobernanza Documental | Aprobada (con propuestas y parámetros pendientes abiertos) | 2026-11-12 |
 | [DEC-016](#dec-016-formalización-de-pen-002a-sobre-modelo-de-clasificación-simulada-equipamiento-requerido-versionado-de-reglas-y-validaciones-de-registro) | Formalización de `PEN-002a` sobre modelo de clasificación simulada, equipamiento requerido, versionado de reglas y validaciones de registro | Dominio / Triage y Equipamiento | Aprobada (cierra `PEN-002a`; borradores en escenario activo pendientes) | 2026-11-13 |
 | [DEC-017](#dec-017-formalización-de-pen-002b-sobre-política-de-reintentos-automáticos-ante-conflictos-concurrentes-registro-funcional-aviso-al-despachador-y-criterios-de-aceptación) | Formalización de `PEN-002b` sobre política de reintentos automáticos ante conflictos concurrentes, registro funcional, aviso al despachador y criterios de aceptación | Dominio / Despacho y Concurrencia | Aprobada (cierra `PEN-002b`; mecanismos técnicos en `PEN-006`) | 2026-11-13 |
+| [DEC-018](#dec-018-formalización-de-pen-002c-sobre-selección-de-hospital-capacidad-numérica-simulada-reservas-concurrentes-cola-fifo-hospitalaria-y-alta-simulada) | Formalización de `PEN-002c` sobre selección de hospital, capacidad numérica simulada, reservas concurrentes, cola FIFO hospitalaria y alta simulada | Dominio / Hospitales y Concurrencia | Aprobada (cierra `PEN-002c`; alcances diferidos en `PEN-002d`, `PEN-005` y `PEN-006`) | 2026-11-13 |
 
 ---
 
@@ -467,6 +468,86 @@
 
 ---
 
+### DEC-018: Formalización de PEN-002c sobre selección de hospital, capacidad numérica simulada, reservas concurrentes, cola FIFO hospitalaria y alta simulada
+
+- **Identificador:** DEC-018
+- **Fecha:** 2026-11-13.
+- **Origen de la aprobación humana:** Autorización expresa del responsable humano del proyecto ARE posterior a `DEC-017` (commit `cca8f31`) para formalizar y cerrar el pendiente funcional `PEN-002c`.
+- **Título:** Formalización del modelo funcional de capacidad numérica simulada de hospitales, selección automática tras la recogida, reserva concurrente con reintentos acotados, espera de destino con cola FIFO, llegada con transformación en ocupación, alta simulada e independencia de liberación de recursos (`PEN-002c`).
+- **Contexto y problema abordado:** `DEC-014` aprobó la gestión básica de hospitales y estableció que la disponibilidad hospitalaria no interviene en la selección inicial de ambulancias (`RN-ELE-004`, `RN-HOS-002`), dejando abierto en `PEN-002c` (`RN-HOS-004`) cómo se representa la capacidad hospitalaria simulada, en qué momento del ciclo se selecciona el hospital de destino, bajo qué criterios de elegibilidad, costo y desempate se elige, cómo se gestionan las reservas concurrentes y la saturación temporal de plazas, cómo se transforma la reserva en ocupación al llegar al hospital y cómo se liberan las plazas ocupadas sin simular procesos clínicos reales (`DEC-001`, `DEC-007`).
+- **Alternativas consideradas:**
+  1. **Alternativa A (Descartada — Disponibilidad binaria):** Representar a cada hospital únicamente con un indicador booleano (`disponible` / `no disponible`) sin conteo explícito de plazas ni reservas. Se descartó porque impide modelar y verificar condiciones de carrera reales por la última plaza disponible, no distingue entre plazas reservadas en tránsito y plazas efectivamente ocupadas tras la llegada, y limita el valor académico de las pruebas de concurrencia y de saturación hospitalaria.
+  2. **Alternativa B (Adoptada — Capacidad numérica simplificada con reservas y ocupaciones):** Modelar cada hospital mediante cuatro magnitudes enteras no negativas de plazas ficticias de simulación —capacidad total `C`, plazas reservadas `R`, plazas ocupadas `O` y plazas disponibles `D = C - R - O` con la invariante `R + O <= C`—, iniciando la selección y reserva de plaza al confirmar la recogida de la emergencia por la ambulancia, aplicando Dijkstra con desempate determinista, permitiendo 1 intento inicial + hasta 2 reintentos ante conflictos concurrentes (máximo 3 intentos totales), gestionando una cola FIFO de espera de destino cuando no hay hospitales elegibles, transformando la reserva en ocupación al llegar al hospital y liberando la plaza ocupada mediante un evento explícito de alta simulada.
+- **Justificación de la capacidad numérica:** La capacidad numérica simplificada (`C`, `R`, `O`, `D`) mantiene el nivel de realismo intermedio aprobado en `DEC-007` sin introducir complejidad clínica intrahospitalaria (`DEC-001`), y a la vez provee un recurso cuantificable y escaso sobre el cual demostrar empíricamente invariantes de no sobreocupación, prevención de doble reserva, competencia por la última plaza, reintentos acotados y recuperación ordenada mediante cola FIFO.
+- **Decisión funcional completa:**
+  1. **Capacidad hospitalaria simulada e invariantes (`C`, `R`, `O`, `D`):**
+     - Cada hospital tendrá cuatro cantidades enteras no negativas de plazas ficticias de simulación (no camas clínicas reales):
+       - Capacidad total `C`.
+       - Plazas reservadas `R`.
+       - Plazas ocupadas `O`.
+       - Plazas disponibles `D = C - R - O`.
+     - Invariantes obligatorias:
+       - `R + O <= C` (no puede existir sobreocupación).
+       - Una plaza no puede reservarse simultáneamente para dos emergencias.
+       - Una emergencia no puede mantener dos reservas hospitalarias activas.
+       - Una reserva y una ocupación no deben contabilizarse simultáneamente para la misma plaza y emergencia.
+  2. **Momento y criterios de selección del hospital:**
+     - La selección del hospital comienza **al confirmar la recogida de la emergencia por la ambulancia** (manteniendo intacto `DEC-014`: no interviene en la selección inicial de ambulancias).
+     - Solo son elegibles los hospitales que cumplan simultáneamente: (a) estar habilitados, (b) ser alcanzables mediante el grafo simulado y (c) contar con al menos una plaza disponible (`D >= 1`).
+     - ARE calcula el costo de ruta desde el nodo del incidente hasta cada hospital elegible utilizando el algoritmo de **Dijkstra** (`DEC-013`).
+     - Se selecciona el hospital elegible con **menor costo de ruta**.
+     - Si dos o más hospitales elegibles tienen exactamente el mismo costo mínimo de ruta, se aplica un **orden determinista mediante su identificador técnico estable**.
+     - El destino hospitalario solo queda confirmado cuando se confirma también su reserva de plaza; **no se permite iniciar el traslado hacia el hospital sin destino confirmado**.
+  3. **Reserva concurrente y política de reintentos hospitalarios:**
+     - Cada operación independiente de reserva hospitalaria permite **1 intento inicial** y **hasta 2 reintentos adicionales exclusivamente ante conflictos concurrentes**, lo que equivale a un **máximo de 3 intentos totales**.
+     - En cada reintento el sistema debe reevaluar obligatoriamente: disponibilidad actual, capacidad disponible (`D`), elegibilidad hospitalaria, alcanzabilidad en el grafo, costo de ruta (Dijkstra) y desempate determinista.
+     - La operación finaliza inmediatamente cuando se confirma una reserva válida o cuando ya no quedan hospitales elegibles (sin consumir reintentos vacíos).
+     - Si no existen hospitales elegibles desde el intento inicial, la emergencia pasa a espera de destino consumiendo `0` reintentos por concurrencia.
+     - Si se agotan el intento inicial y los 2 reintentos adicionales por conflictos concurrentes, la emergencia pasa a espera de destino registrando un motivo funcional distinguible (por ejemplo, `HOSPITAL_RESERVATION_RETRY_EXHAUSTED`).
+     - Los errores técnicos generales no deben clasificarse automáticamente como conflictos concurrentes.
+     - Esta política es **independiente de `DEC-017`**: no modifica el límite de reintentos para la asignación automática de ambulancias (1 intento inicial + hasta 3 reintentos = máximo 4 intentos).
+  4. **Espera de destino hospitalario:**
+     - Cuando no exista hospital elegible o no se logre confirmar una reserva tras agotar los reintentos concurrentes:
+       1. La emergencia permanece activa.
+       2. Conserva la ambulancia asignada y ocupada.
+       3. No inicia el traslado hacia el hospital.
+       4. Entra en **espera de destino hospitalario**.
+       5. Se registra el motivo funcional correspondiente.
+     - Esta condición no debe confundirse con la espera de asignación de ambulancia (`RN-ASI-004`). El nombre definitivo del estado se resolverá junto con la máquina de estados en `PEN-002d`.
+  5. **Cola FIFO hospitalaria y reevaluación automática:**
+     - Las emergencias en espera de destino hospitalario se ordenan según el momento de ingreso a dicha espera (disciplina FIFO); ante igualdad de marca temporal, se aplica un desempate determinista mediante identificador estable.
+     - Cuando se libera capacidad hospitalaria, ARE activa una reevaluación automática respetando el orden FIFO.
+     - Si la primera emergencia de la cola no tiene ningún hospital elegible (por ejemplo, por alcanzabilidad), permanece en espera conservando su posición original y se permite evaluar la siguiente emergencia; una reevaluación fallida nunca desplaza automáticamente una emergencia al final de la cola.
+     - Cada nueva operación independiente de reserva utiliza su propio contador de intentos hospitalarios (hasta 3 intentos totales), sin acumular los intentos de operaciones anteriores.
+  6. **Llegada al hospital y transformación en ocupación:**
+     - Cuando la ambulancia llega al hospital con una reserva confirmada:
+       1. La reserva se transforma en ocupación.
+       2. Se reduce `R` en una unidad (`R = R - 1`).
+       3. Se incrementa `O` en una unidad (`O = O + 1`).
+       4. La disponibilidad `D = C - R - O` permanece sin cambios.
+     - La llegada no consume una segunda plaza, y la reserva confirmada permanece válida aunque el hospital alcance `D = 0` posteriormente por otras emergencias.
+  7. **Alta simulada:**
+     - La plaza ocupada (`O`) se libera mediante un **evento explícito de alta simulada**, activado por un operador autorizado (cuyos permisos exactos quedan pendientes de definición en la matriz de responsabilidades y permisos).
+     - El alta simulada requiere una ocupación válida, libera exactamente una plaza ocupada (`O = O - 1`), incrementa la disponibilidad (`D = D + 1`), no puede ejecutarse dos veces con efecto sobre la misma ocupación (idempotencia/rechazo de duplicados) y desencadena la reevaluación automática de las emergencias en espera de destino hospitalario.
+     - No representa un alta médica real (`DEC-001`, `DEC-007`).
+  8. **Independencia de recursos (plaza hospitalaria vs. ambulancia):**
+     - La liberación de una plaza hospitalaria mediante alta simulada no implica la liberación de una ambulancia, y el momento exacto de liberación de la ambulancia permanece pendiente de definición en `PEN-002d`. No se aprueban estados definitivos de ambulancias ni se modifica su ciclo de vida mediante esta decisión.
+  9. **Restricción de edición de capacidad hospitalaria:**
+     - Se prohíbe modificar la capacidad hospitalaria (`C`) durante la ejecución de escenarios experimentales activos.
+     - Fuera de escenarios experimentales activos, cualquier modificación de capacidad debe preservar las invariantes (`R + O <= C`, `D = C - R - O >= 0`).
+     - No se extiende automáticamente esta restricción a otros catálogos cuyo comportamiento durante escenarios activos continúa pendiente (`ambulancias`).
+  10. **Reglas y criterios de aceptación:**
+      - Se actualizan y formalizan en `docs/product/requirements/business-rules.md` las reglas `RN-HOS-004` a `RN-HOS-015` y los trece criterios de aceptación verificables `CA-HOS-01` a `CA-HOS-13`.
+- **Consecuencias:**
+  - **Positivas:** Queda cerrado `PEN-002c` con un modelo cuantitativo determinista y libre de contradicciones con `DEC-014`, `DEC-016` y `DEC-017`; se habilita la verificación de concurrencia tanto en despacho de ambulancias como en reserva de plazas hospitalarias.
+  - **Negativas / Compromisos (Dependencias y alcance diferido):**
+    - Requiere coordinar el estado de espera de destino hospitalario y el momento exacto de liberación de la ambulancia cuando se resuelva `PEN-002d`.
+    - Se mantienen explícitamente pendientes y fuera de esta decisión (en `PEN-002d`, `PEN-005`, `PEN-006` y Sección 5 de `stakeholders.md`): la cancelación de reservas confirmadas, la reasignación de destinos ya reservados, los permisos exactos del actor para activar altas simuladas, los nombres definitivos de los estados de emergencia y ambulancia, el momento exacto de liberación de ambulancias, los mecanismos técnicos de concurrencia/persistencia (bloqueos, aislamiento, transacciones, restricciones SQL, retry técnico y ejecución concurrente de la cola en `PEN-005`/`PEN-006`) y la configuración temporal del motor de simulación (`PEN-002d`).
+- **Estado:** Aprobada (cierra `PEN-002c`).
+- **Referencias relacionadas:** `DEC-001`, `DEC-007`, `DEC-008`, `DEC-009`, `DEC-013`, `DEC-014`, `DEC-015`, `DEC-016`, `DEC-017`, `PEN-002c`, `PEN-002d`, `PEN-005`, `PEN-006`, `docs/product/requirements/business-rules.md` (`RN-HOS-001` a `RN-HOS-015`, `CA-HOS-01` a `CA-HOS-13`), `docs/product/vision-and-scope.md`, `docs/product/stakeholders.md`.
+
+---
+
 ## 3. Decisiones y Definiciones Pendientes (No Aprobadas)
 
 A continuación se listan los aspectos que **continúan pendientes de definición o aprobación humana**. Ninguno de ellos debe asumirse como cerrado:
@@ -476,7 +557,7 @@ A continuación se listan los aspectos que **continúan pendientes de definició
 | **PEN-001** | *(Resuelto por `DEC-008`)* Alcance del MVP vs. alcance total | Se conserva por trazabilidad histórica: quedó resuelto y aprobado mediante `DEC-008` (MVP equilibrado con los 8 componentes listados). | Cerrado por `DEC-008` | `DEC-008`, `docs/product/vision-and-scope.md` (Secc. 8) |
 | **PEN-002a** | *(Resuelto por `DEC-016`)* Catálogo y reglas concretas de Triage y Equipamiento | Quedó formalizado mediante `DEC-016` (modelo determinista, catálogo inicial `INC-A` a `INC-D`, equipamiento `BASIC`/`SPECIALIZED`, versionado inmutable, bloqueo de publicación/activación en escenario activo, campos del registro y validaciones). *(Nota: la posibilidad de preparar borradores de reglas durante escenarios activos se mantiene abierta en `stakeholders.md` Secc. 5.2, y los formatos físicos/SQL y mecanismos técnicos de activación atómica corresponden a `PEN-005` y `PEN-006`).* | Cerrado por `DEC-016` | `DEC-010`, `DEC-016`, `business-rules.md` (`RN-EME-007` a `RN-EME-012`) |
 | **PEN-002b** | *(Resuelto por `DEC-017`)* Límite máximo y política funcional de reintentos automáticos | Quedó formalizado mediante `DEC-017` (1 intento inicial + hasta 3 reintentos automáticos adicionales = máximo 4 intentos totales ante conflicto concurrente en asignación automática, reevaluación integral obligatoria, finalización anticipada, permanencia en estado `pendiente` al agotar el límite, registro funcional distinguible como `CONCURRENCY_RETRY_EXHAUSTED`, aviso visible al `Despachador` en la interfaz web y criterios `CA-CON-01` a `CA-CON-10`, sin extender el límite al modo supervisado). *(Los mecanismos técnicos de concurrencia, bloqueo, aislamiento y transacciones permanecen abiertos en `PEN-006`).* | Cerrado por `DEC-017` | `DEC-011`, `DEC-017`, `business-rules.md` (`RN-CON-005` a `RN-CON-009`, `CA-CON-01` a `CA-CON-10`) |
-| **PEN-002c** | Reglas de selección de hospital y capacidad | Definir en qué momento del ciclo se selecciona el hospital destino, con qué criterio (cercanía, capacidad) y cómo se descuenta/libera su disponibilidad simulada. | Pendiente de definición | `DEC-014`, `business-rules.md` (`RN-HOS-004`) |
+| **PEN-002c** | *(Resuelto por `DEC-018`)* Reglas de selección de hospital, capacidad simulada, reservas concurrentes y alta simulada | Quedó formalizado mediante `DEC-018` (capacidad numérica `C`, `R`, `O`, `D = C - R - O` con `R + O <= C`, selección tras confirmar recogida usando Dijkstra y desempate determinista, reserva confirmada previa al traslado con 1 intento inicial + hasta 2 reintentos concurrentes = máximo 3 intentos totales, espera de destino con cola FIFO sin pérdida de posición, transformación de reserva en ocupación al llegar, alta simulada explícita, independencia respecto a la liberación de ambulancia y bloqueo de edición de capacidad durante escenarios activos; reglas `RN-HOS-004` a `RN-HOS-015` y criterios `CA-HOS-01` a `CA-HOS-13`). *(Quedan diferidos en `PEN-002d`, `PEN-005`, `PEN-006` y `stakeholders.md` Secc. 5: cancelación/reasignación de reservas confirmadas, permisos exactos del actor para el alta simulada, nombres definitivos de estados, momento exacto de liberación de ambulancias y mecanismos técnicos de concurrencia y persistencia).* | Cerrado por `DEC-018` | `DEC-014`, `DEC-018`, `business-rules.md` (`RN-HOS-004` a `RN-HOS-015`, `CA-HOS-01` a `CA-HOS-13`) |
 | **PEN-002d** | Cola ante liberación de unidad básica, desempate, estados, grafo y métricas | Definir el comportamiento de la cola cuando se libera una ambulancia básica, los criterios de desempate en asignación automática (`RN-ASI-005`), los nombres exactos de los estados del ciclo, los nodos/pesos del grafo simplificado de Arequipa (`RN-RUT-006`), la mecánica de avance temporal y el catálogo/auditoría de métricas experimentales (`RN-MET-003`, `RN-MET-004`). | Pendiente de definición | `DEC-007`, `DEC-012`, `DEC-013`, `business-rules.md` |
 | **PEN-003** | Versiones exactas del stack tecnológico | Definir versiones concretas de Java, Spring Boot, MySQL y configuración de Maven antes de inicializar el repositorio de código. | Pendiente de aprobación | `AGENTS.md` (Secc. 2.2), `DEC-005` |
 | **PEN-004** | Límites definitivos de módulos y ubicación de puertos | Validar la distribución final de módulos del monolito y la convención exacta de subpaquetes de puertos. | Pendiente de aprobación (requiere ADR) | `AGENTS.md` (Secc. 3.2, 3.3, 4.3) |

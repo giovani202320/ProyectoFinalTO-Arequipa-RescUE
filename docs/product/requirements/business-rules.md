@@ -1,10 +1,10 @@
 # Reglas de Negocio — ARE (Arequipa RescUE)
 
-**Estado del documento:** Aprobado — Línea base aceptada (`DEC-015`) y formalizaciones de `PEN-002a` (`DEC-016`) y `PEN-002b` (`DEC-017`), conservando `RN-ASI-005` y `RN-MET-003` como propuestas pendientes y los parámetros pendientes de `PEN-002c` y `PEN-002d`
+**Estado del documento:** Aprobado — Línea base aceptada (`DEC-015`) y formalizaciones de `PEN-002a` (`DEC-016`), `PEN-002b` (`DEC-017`) y `PEN-002c` (`DEC-018`), conservando `RN-ASI-005` y `RN-MET-003` como propuestas pendientes y los parámetros pendientes de `PEN-002d`
 **Propósito:** Formalizar las reglas de negocio e invariantes de dominio de **ARE – Arequipa RescUE** con identificadores estables, distinguiendo con exactitud qué reglas están **Aprobadas** por el responsable del proyecto y qué propuestas, parámetros o reglas específicas permanecen **Pendientes de aprobación o definición**.
 
 > [!IMPORTANT]
-> Ningún parámetro pendiente (como las reglas de selección de hospital, la liberación de ambulancia básica, los criterios de desempate o la preparación de borradores durante escenarios activos) se convierte en una regla definitiva en este documento. Todo elemento no cerrado se declara expresamente como **Pendiente de definición**.
+> Ningún parámetro pendiente (como la liberación de ambulancia básica, los criterios de desempate en asignación de ambulancias, los estados definitivos, la cancelación/reasignación de reservas hospitalarias confirmadas, los permisos exactos para el alta simulada o la preparación de borradores durante escenarios activos) se convierte en una regla definitiva en este documento. Todo elemento no cerrado se declara expresamente como **Pendiente de definición**.
 
 ---
 
@@ -19,7 +19,7 @@
 | **`RN-CON`** | 5. Conflictos concurrentes y reintentos | `RN-CON-001` a `RN-CON-009` | — *(Mecanismos técnicos en `PEN-006`)* |
 | **`RN-COL`** | 6. Cola de emergencias y FIFO | `RN-COL-001` a `RN-COL-006` | Pendiente: liberación de ambulancia básica (`PEN-002d`) |
 | **`RN-RUT`** | 7. Rutas y seguimiento | `RN-RUT-001` a `RN-RUT-005` | `RN-RUT-006` |
-| **`RN-HOS`** | 8. Hospitales | `RN-HOS-001` a `RN-HOS-003` | `RN-HOS-004` |
+| **`RN-HOS`** | 8. Hospitales | `RN-HOS-001` a `RN-HOS-015` | Pendientes diferidos en `PEN-002d`, `PEN-005`, `PEN-006` y `stakeholders.md` Secc. 5 (cancelación/reasignación de reservas, permisos de alta simulada, estados y liberación de ambulancia) |
 | **`RN-MET`** | 9. Métricas y experimentación | `RN-MET-001` a `RN-MET-002` | `RN-MET-003` (propuesta pendiente), `RN-MET-004` |
 
 ---
@@ -399,10 +399,124 @@
 - **Estado:** **Aprobada**
 - **Referencias:** `DEC-007`.
 
-#### `RN-HOS-004` — Reglas de selección de hospital de destino y gestión de capacidad
-- **Enunciado:** Las reglas específicas para seleccionar a qué hospital se dirige la ambulancia y cómo se actualiza o valida su capacidad/disponibilidad simulada permanecen pendientes de definición.
-- **Estado:** **Pendiente de definición** (`PEN-002c`)
-- **Decisión faltante:** Definir el momento y criterio de selección del hospital destino y el efecto de la llegada sobre su disponibilidad simulada.
+#### `RN-HOS-004` — Capacidad hospitalaria numérica simulada e invariantes (`C`, `R`, `O`, `D`)
+- **Enunciado:** Cada hospital cuenta con cuatro magnitudes enteras no negativas que representan plazas ficticias de simulación (no camas clínicas reales):
+  - Capacidad total `C`.
+  - Plazas reservadas `R`.
+  - Plazas ocupadas `O`.
+  - Plazas disponibles `D = C - R - O`.
+  Deben cumplirse en todo momento las siguientes invariantes:
+  1. `R + O <= C` (no puede existir sobreocupación).
+  2. Una plaza no puede reservarse simultáneamente para dos emergencias.
+  3. Una emergencia no puede mantener dos reservas hospitalarias activas.
+  4. Una reserva y una ocupación no deben contabilizarse simultáneamente para la misma plaza y emergencia.
+- **Estado:** **Aprobada** (cierra `PEN-002c`)
+- **Referencias:** `DEC-001`, `DEC-007`, `DEC-014`, `DEC-018`.
+
+#### `RN-HOS-005` — Elegibilidad hospitalaria y selección automática por menor costo de ruta (Dijkstra)
+- **Enunciado:** La selección del hospital de destino comienza **al confirmar la recogida de la emergencia por la ambulancia** (sin intervenir en la selección inicial de ambulancias según `RN-ELE-004` y `RN-HOS-002`). Solo son elegibles los hospitales que cumplan simultáneamente:
+  1. Estar **habilitados**.
+  2. Ser **alcanzables** mediante el grafo simulado desde el nodo del incidente.
+  3. Contar con **al menos una plaza disponible** (`D >= 1`).
+  ARE calcula el costo de ruta desde el nodo del incidente hasta cada hospital elegible utilizando el algoritmo de **Dijkstra** (`RN-RUT-002`) y selecciona el hospital elegible con el **menor costo de ruta**.
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-013`, `DEC-014`, `DEC-018`, `RN-ELE-004`, `RN-HOS-002`, `RN-RUT-002`.
+
+#### `RN-HOS-006` — Desempate determinista ante igualdad de costo de ruta entre hospitales elegibles
+- **Enunciado:** Si dos o más hospitales elegibles presentan exactamente el mismo costo mínimo de ruta desde el nodo del incidente, el sistema aplica un **orden determinista mediante su identificador técnico estable** para seleccionar el hospital.
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-018`, `RN-HOS-005`.
+
+#### `RN-HOS-007` — Confirmación del destino condicionada a la reserva confirmada de plaza
+- **Enunciado:** El destino hospitalario de una emergencia solo queda confirmado cuando se confirma también la reserva de una plaza (`R`) en dicho hospital. **No se permite iniciar el traslado hacia el hospital sin un destino hospitalario confirmado.**
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-018`, `RN-HOS-004`, `RN-HOS-005`.
+
+#### `RN-HOS-008` — Política de reintentos automáticos en reserva hospitalaria concurrente y finalización anticipada
+- **Enunciado:** Una operación independiente de reserva hospitalaria permite **1 intento inicial** y **hasta 2 reintentos adicionales exclusivamente ante conflictos concurrentes**, lo que equivale a un **máximo de 3 intentos totales**, bajo las siguientes reglas:
+  1. En cada reintento se deben reevaluar obligatoriamente: disponibilidad actual, capacidad disponible (`D`), elegibilidad hospitalaria, alcanzabilidad en el grafo, costo de ruta (Dijkstra) y desempate determinista.
+  2. La operación finaliza inmediatamente cuando se confirma una reserva válida o cuando ya no quedan hospitales elegibles (sin consumir reintentos vacíos).
+  3. Si desde el inicio no existen hospitales elegibles, la emergencia pasa a espera de destino sin consumir reintentos por concurrencia (`0` reintentos).
+  4. Si se agotan el intento inicial y los 2 reintentos adicionales por conflictos concurrentes, la emergencia pasa a espera de destino registrando un motivo funcional distinguible (por ejemplo, `HOSPITAL_RESERVATION_RETRY_EXHAUSTED`).
+  5. Los errores técnicos generales no deben clasificarse automáticamente como conflictos concurrentes.
+  6. Esta política es **independiente de `DEC-017`**: no modifica los límites de reintentos para la asignación automática de ambulancias (`RN-CON-005`). *(La implementación de atomicidad, bloqueos, transacciones, restricciones SQL y mecanismos de retry técnico corresponde a `PEN-006`).*
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-017`, `DEC-018`, `PEN-006`, `RN-CON-005`, `RN-HOS-004` a `RN-HOS-007`.
+
+#### `RN-HOS-009` — Espera de destino hospitalario y distinción respecto a la espera de ambulancia
+- **Enunciado:** Cuando no exista hospital elegible o no se logre confirmar una reserva tras agotar los reintentos por conflicto concurrente:
+  1. La emergencia permanece activa.
+  2. Conserva la ambulancia asignada y ocupada.
+  3. No inicia el traslado hacia el hospital.
+  4. Entra en **espera de destino hospitalario**.
+  5. Se registra el motivo funcional correspondiente.
+  Esta condición no debe confundirse con la espera de asignación de ambulancia (`RN-ASI-004`). *(El nombre definitivo del estado se resolverá junto con la máquina de estados en `PEN-002d`).*
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-018`, `PEN-002d`, `RN-ASI-004`, `RN-HOS-007`, `RN-HOS-008`.
+
+#### `RN-HOS-010` — Cola FIFO de espera de destino hospitalario
+- **Enunciado:** Las emergencias que se encuentran esperando destino hospitalario se ordenan según el momento de ingreso a dicha espera (disciplina FIFO). Ante igualdad exacta en el momento de ingreso, se aplica un orden determinista mediante un identificador estable.
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-018`, `RN-HOS-009`.
+
+#### `RN-HOS-011` — Reevaluación automática de la cola hospitalaria sin pérdida de posición e independencia del contador
+- **Enunciado:** Cuando se libera capacidad hospitalaria, ARE activa una reevaluación automática de las emergencias en espera de destino bajo las siguientes reglas:
+  1. La reevaluación respeta el orden FIFO (`RN-HOS-010`).
+  2. Si la primera emergencia de la cola no tiene ningún hospital elegible (por ejemplo, por inalcanzabilidad hacia el hospital que liberó plaza), dicha emergencia **permanece en espera conservando su posición original** y se permite evaluar la siguiente emergencia de la cola. Una reevaluación fallida no desplaza automáticamente una emergencia al final de la cola.
+  3. Cada nueva operación independiente de reserva utiliza su propio contador de intentos hospitalarios (hasta 1 intento inicial + 2 reintentos adicionales), sin acumular los intentos de operaciones anteriores.
+  *(La política técnica de ejecución concurrente de la cola queda pendiente en `PEN-006`).*
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-018`, `PEN-006`, `RN-HOS-008`, `RN-HOS-009`, `RN-HOS-010`.
+
+#### `RN-HOS-012` — Transformación de reserva en ocupación a la llegada al hospital
+- **Enunciado:** Cuando la ambulancia llega al hospital con una reserva confirmada:
+  1. La reserva se transforma en ocupación.
+  2. Se reduce `R` en una unidad (`R = R - 1`).
+  3. Se incrementa `O` en una unidad (`O = O + 1`).
+  4. La disponibilidad `D = C - R - O` permanece sin cambios.
+  La llegada no consume una segunda plaza, y la reserva confirmada permanece válida aunque el hospital se llene posteriormente (`D = 0`) por otras reservas u ocupaciones.
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-007`, `DEC-018`, `RN-HOS-004`, `RN-RUT-005`.
+
+#### `RN-HOS-013` — Alta simulada y liberación de plaza ocupada
+- **Enunciado:** La plaza ocupada (`O`) se libera mediante un **evento explícito de alta simulada** activado por un operador autorizado, cumpliendo las siguientes condiciones:
+  1. Requiere una ocupación válida.
+  2. Libera exactamente una plaza ocupada (`O = O - 1`).
+  3. No puede ejecutarse dos veces con efecto sobre la misma ocupación.
+  4. Incrementa la disponibilidad en una unidad (`D = D + 1`).
+  5. Desencadena la reevaluación automática de las emergencias en espera de destino hospitalario (`RN-HOS-011`).
+  6. No representa un alta médica real (`DEC-001`, `DEC-007`).
+  *(Nota: los permisos exactos del actor que activa el alta simulada quedan pendientes de definición en la matriz de responsabilidades y permisos).*
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-001`, `DEC-007`, `DEC-018`, `RN-HOS-004`, `RN-HOS-011`, `docs/product/stakeholders.md` (Sección 5).
+
+#### `RN-HOS-014` — Independencia entre liberación de plaza hospitalaria y liberación de ambulancia
+- **Enunciado:** La liberación de una plaza hospitalaria mediante alta simulada **no implica la liberación de una ambulancia**. El momento exacto de liberación de la ambulancia y los estados definitivos de su ciclo de vida permanecen pendientes de definición en `PEN-002d`.
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-018`, `PEN-002d`, `RN-HOS-013`.
+
+#### `RN-HOS-015` — Prohibición de modificar la capacidad hospitalaria durante escenarios experimentales activos
+- **Enunciado:** Se prohíbe modificar la capacidad hospitalaria (`C`) durante la ejecución de escenarios experimentales activos. Fuera de escenarios experimentales activos, cualquier modificación de la capacidad hospitalaria debe preservar las invariantes de capacidad (`R + O <= C` y `D = C - R - O >= 0`, `RN-HOS-004`). *(Esta restricción no se extiende automáticamente a otros catálogos cuyo comportamiento durante escenarios activos continúa pendiente).*
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-016`, `DEC-018`, `RN-HOS-004`, `docs/product/stakeholders.md` (`ACT-03`, Sección 5.2).
+
+#### Criterios de aceptación funcionales aprobados para hospitales (`CA-HOS-01` a `CA-HOS-13`)
+
+- **`CA-HOS-01` (Hospital más cercano sin capacidad):** Si al confirmar la recogida de la emergencia el hospital con menor costo de ruta tiene `D = 0` (`R + O = C`), el sistema lo descarta como no elegible y selecciona el siguiente hospital habilitado, alcanzable y con `D >= 1` de menor costo de ruta por Dijkstra.
+- **`CA-HOS-02` (Empate de costos):** Si dos o más hospitales elegibles tienen exactamente el mismo costo mínimo de ruta por Dijkstra desde el nodo del incidente, el sistema selecciona de manera determinista aquel que preceda según su identificador técnico estable.
+- **`CA-HOS-03` (Hospital inaccesible):** Si un hospital está habilitado y tiene plazas disponibles (`D >= 1`), pero no existe camino alcanzable en el grafo simulado desde el nodo del incidente, dicho hospital no se considera elegible ni puede ser seleccionado.
+- **`CA-HOS-04` (Competencia por última plaza):** Si dos operaciones concurrentes intentan reservar la última plaza disponible (`D = 1`) de un mismo hospital, a lo sumo una confirma la reserva (`R` aumenta en 1 y `D` pasa a `0`), impidiendo sobreocupación (`R + O <= C`) y doble reserva de la misma plaza, mientras la otra operación reevalúa alternativas dentro de su límite de hasta 2 reintentos adicionales.
+- **`CA-HOS-05` (Agotamiento de reintentos):** Si en una operación independiente de reserva hospitalaria fallan el intento inicial y los 2 reintentos adicionales (3 intentos totales) por conflictos concurrentes, la emergencia no inicia traslado, entra en espera de destino hospitalario conservando su ambulancia asignada y se registra un motivo funcional distinguible (como `HOSPITAL_RESERVATION_RETRY_EXHAUSTED`).
+- **`CA-HOS-06` (Finalización anticipada):** El ciclo de reintentos hospitalarios se detiene inmediatamente en cuanto se confirma una reserva válida o cuando tras una reevaluación ya no quedan hospitales elegibles, sin consumir reintentos vacíos restantes.
+- **`CA-HOS-07` (Ausencia de hospitales elegibles):** Si al confirmar la recogida no existe ningún hospital elegible desde el intento inicial, la emergencia entra directamente en espera de destino hospitalario conservando la ambulancia asignada, sin iniciar traslado y consumiendo `0` reintentos por concurrencia.
+- **`CA-HOS-08` (Recuperación automática FIFO):** Cuando se libera capacidad hospitalaria (por ejemplo, tras un alta simulada), el sistema reevalúa automáticamente la cola de espera de destino hospitalario en estricto orden FIFO (y por identificador estable en caso de empate temporal), iniciando para cada operación independiente un contador nuevo de intentos hospitalarios desde cero.
+- **`CA-HOS-09` (Primera emergencia sin hospital elegible):** Si durante la reevaluación automática de la cola FIFO la primera emergencia en espera no cuenta con ningún hospital elegible (por ejemplo, por inalcanzabilidad hacia el hospital con plaza liberada), dicha emergencia conserva su posición original en la cola sin ser enviada al final y el sistema evalúa la siguiente emergencia en espera.
+- **`CA-HOS-10` (Transformación de reserva en ocupación):** Cuando la ambulancia arriba al hospital con reserva confirmada, la reserva se transforma en ocupación (`R` disminuye en 1, `O` aumenta en 1 y `D` permanece igual), sin consumir una segunda plaza y manteniendo su validez aunque el hospital haya quedado con `D = 0` antes de la llegada.
+- **`CA-HOS-11` (Alta simulada válida y duplicada):** Al ejecutar un alta simulada sobre una ocupación válida, `O` disminuye en 1, `D` aumenta en 1 y se dispara la reevaluación automática de la cola de espera de destino; si se intenta ejecutar nuevamente el alta simulada sobre la misma ocupación ya liberada, el sistema rechaza o ignora el duplicado sin volver a alterar `O` ni `D`.
+- **`CA-HOS-12` (Bloqueo de cambios de capacidad durante escenario activo):** Cualquier intento de modificar la capacidad total `C` de un hospital mientras un escenario experimental está activo es rechazado; fuera de escenarios activos, solo se permite modificar `C` si se preserva la invariante `R + O <= C`.
+- **`CA-HOS-13` (Independencia entre plaza hospitalaria y ambulancia):** Ejecutar un alta simulada libera exclusivamente la plaza hospitalaria ocupada (`O`) sin liberar ni cambiar implícitamente el estado de una ambulancia, quedando el momento exacto de liberación de la ambulancia regido por lo que se defina en `PEN-002d`.
+
+> **Asuntos hospitalarios y relacionados expresamente pendientes de definición (`PEN-002d`, `PEN-005`, `PEN-006` y `stakeholders.md` Secc. 5):** Se mantienen pendientes sin asumir comportamientos no aprobados: (1) cancelación de reservas confirmadas, (2) reasignación de destinos ya reservados, (3) permisos exactos del actor autorizado para activar altas simuladas, (4) nombres definitivos de los estados del ciclo de emergencia y ambulancia, (5) momento exacto de liberación de ambulancias, (6) mecanismos técnicos de concurrencia y persistencia y (7) configuración temporal del motor de simulación.
 
 ---
 
