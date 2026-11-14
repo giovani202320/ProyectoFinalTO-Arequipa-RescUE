@@ -13,6 +13,8 @@ public interface SpringDataEmergencyRepository extends JpaRepository<EmergencyJp
 
     List<EmergencyJpaEntity> findAllByOrderByRegisteredAtTicksAscIdAsc();
 
+    List<EmergencyJpaEntity> findByStateOrderByQueueEnteredAtTicksAscIdAsc(String state);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT e FROM EmergencyJpaEntity e WHERE e.id = :id")
     Optional<EmergencyJpaEntity> findByIdForUpdate(@Param("id") String id);

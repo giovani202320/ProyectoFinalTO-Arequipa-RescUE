@@ -7,8 +7,10 @@ import com.arequiparescue.ambulance.domain.AmbulanceId;
 import com.arequiparescue.ambulance.domain.AmbulanceState;
 import com.arequiparescue.ambulance.domain.port.AmbulanceRepository;
 import com.arequiparescue.ambulance.infrastructure.persistence.SpringDataAmbulanceRepository;
+import com.arequiparescue.dispatch.application.AutomaticDispatchResult;
 import com.arequiparescue.dispatch.application.DispatchApplicationService;
 import com.arequiparescue.dispatch.application.SupervisedDispatchResult;
+import com.arequiparescue.dispatch.application.WaitingQueueEvaluationResult;
 import com.arequiparescue.dispatch.domain.DispatchOperationOutcome;
 import com.arequiparescue.dispatch.domain.EligibleAmbulanceCandidate;
 import com.arequiparescue.dispatch.infrastructure.persistence.SpringDataExperimentOperationResultRepository;
@@ -20,6 +22,11 @@ import com.arequiparescue.emergency.domain.EmergencyState;
 import com.arequiparescue.emergency.infrastructure.persistence.EmergencySequenceJpaEntity;
 import com.arequiparescue.emergency.infrastructure.persistence.SpringDataEmergencyRepository;
 import com.arequiparescue.emergency.infrastructure.persistence.SpringDataEmergencySequenceRepository;
+import com.arequiparescue.shared.domain.LogicalClock;
+import com.arequiparescue.shared.domain.LogicalTime;
+import com.arequiparescue.simulation.application.WaitingQueueSimulationTrigger;
+import com.arequiparescue.simulation.domain.DiscreteEvent;
+import com.arequiparescue.simulation.domain.DiscreteEventType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -80,6 +87,12 @@ class DispatchMySqlIntegrationTest {
 
     @Autowired
     private SpringDataEmergencySequenceRepository springDataEmergencySequenceRepository;
+
+    @Autowired
+    private WaitingQueueSimulationTrigger waitingQueueSimulationTrigger;
+
+    @Autowired
+    private LogicalClock logicalClock;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -203,5 +216,108 @@ class DispatchMySqlIntegrationTest {
         } finally {
             pool.shutdownNow();
         }
+    }
+
+    @Test
+    @DisplayName("HU-07 MySQL: asignación automática concurrente evita doble asignación, reintenta y persiste trazabilidad")
+    void shouldHandleConcurrentAutomaticDispatchWithoutDoubleAssignment() throws Exception {
+        ambulanceCatalogService.registerAmbulance(new RegisterAmbulanceCommand("AMB-01", "BASIC", "N01"));
+        ambulanceCatalogService.registerAmbulance(new RegisterAmbulanceCommand("AMB-02", "SPECIALIZED", "N02"));
+
+        Emergency emg1 = emergencyApplicationService.registerEmergency(
+                new RegisterEmergencyCommand("INC-C", "N01", "Primera automática")
+        );
+        Emergency emg2 = emergencyApplicationService.registerEmergency(
+                new RegisterEmergencyCommand("INC-B", "N02", "Segunda automática")
+        );
+        Emergency emg3 = emergencyApplicationService.registerEmergency(
+                new RegisterEmergencyCommand("INC-D", "N10", "Nodo aislado N10")
+        );
+
+        AutomaticDispatchResult isolatedResult = dispatchApplicationService.assignAutomatic(emg3.id().value());
+        assertThat(isolatedResult.outcome()).isEqualTo(DispatchOperationOutcome.MOVED_TO_WAITING_AMBULANCE);
+        assertThat(isolatedResult.attemptsExecuted()).isZero();
+        assertThat(isolatedResult.emergency().state()).isEqualTo(EmergencyState.WAITING_AMBULANCE);
+
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        try {
+            List<Callable<AutomaticDispatchResult>> tasks = List.of(
+                    () -> {
+                        readyLatch.countDown();
+                        startLatch.await(5, TimeUnit.SECONDS);
+                        return dispatchApplicationService.assignAutomatic(emg1.id().value());
+                    },
+                    () -> {
+                        readyLatch.countDown();
+                        startLatch.await(5, TimeUnit.SECONDS);
+                        return dispatchApplicationService.assignAutomatic(emg2.id().value());
+                    }
+            );
+            List<Future<AutomaticDispatchResult>> futures = new ArrayList<>();
+            for (Callable<AutomaticDispatchResult> task : tasks) {
+                futures.add(pool.submit(task));
+            }
+            assertThat(readyLatch.await(5, TimeUnit.SECONDS)).isTrue();
+            startLatch.countDown();
+
+            AutomaticDispatchResult res1 = futures.get(0).get(10, TimeUnit.SECONDS);
+            AutomaticDispatchResult res2 = futures.get(1).get(10, TimeUnit.SECONDS);
+
+            assertThat(res1.outcome()).isEqualTo(DispatchOperationOutcome.ASSIGNED);
+            assertThat(res2.outcome()).isEqualTo(DispatchOperationOutcome.ASSIGNED);
+            assertThat(res1.assignedAmbulance().id()).isNotEqualTo(res2.assignedAmbulance().id());
+            assertThat(operationResultRepository.findByEmergencyIdOrderByIdAsc(emg1.id().value()))
+                    .anyMatch(r -> "ASSIGNED".equals(r.getFinalStatus()));
+            assertThat(operationResultRepository.findByEmergencyIdOrderByIdAsc(emg2.id().value()))
+                    .anyMatch(r -> "ASSIGNED".equals(r.getFinalStatus()));
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("HU-08 MySQL: cola WAITING_AMBULANCE respeta FIFO sin prioridad clínica, equipamiento y dispara por evento")
+    void shouldProcessWaitingAmbulanceQueueInStrictFifoOrderViaSimulationTrigger() {
+        logicalClock.advanceTo(LogicalTime.of(1L));
+        Emergency lowFirst = emergencyApplicationService.registerEmergency(
+                new RegisterEmergencyCommand("INC-D", "N02", "Baja primero")
+        );
+        dispatchApplicationService.moveToWaitingWhenNoEligible(lowFirst.id().value());
+
+        logicalClock.advanceTo(LogicalTime.of(3L));
+        Emergency highSecond = emergencyApplicationService.registerEmergency(
+                new RegisterEmergencyCommand("INC-B", "N02", "Alta después")
+        );
+        dispatchApplicationService.moveToWaitingWhenNoEligible(highSecond.id().value());
+
+        logicalClock.advanceTo(LogicalTime.of(5L));
+        Emergency specThird = emergencyApplicationService.registerEmergency(
+                new RegisterEmergencyCommand("INC-A", "N03", "Especializada después")
+        );
+        dispatchApplicationService.moveToWaitingWhenNoEligible(specThird.id().value());
+
+        // Se registra una ambulancia BASIC: debe atender a lowFirst (FIFO t=1) y nunca a specThird (INC-A)
+        ambulanceCatalogService.registerAmbulance(new RegisterAmbulanceCommand("AMB-01", "BASIC", "N01"));
+        WaitingQueueEvaluationResult result = waitingQueueSimulationTrigger.handleEvent(
+                new DiscreteEvent(
+                        "EVT-Q1",
+                        logicalClock.currentTime(),
+                        DiscreteEventType.RESOURCE_RELEASE,
+                        1L,
+                        "AMB-01",
+                        "AMB-01 pasa a AVAILABLE"
+                )
+        ).orElseThrow();
+
+        assertThat(result.assignedCount()).isEqualTo(1);
+        assertThat(result.remainingWaitingCount()).isEqualTo(2);
+        assertThat(emergencyApplicationService.getEmergencyById(lowFirst.id().value()).state())
+                .isEqualTo(EmergencyState.ASSIGNED);
+        assertThat(emergencyApplicationService.getEmergencyById(highSecond.id().value()).state())
+                .isEqualTo(EmergencyState.WAITING_AMBULANCE);
+        assertThat(emergencyApplicationService.getEmergencyById(specThird.id().value()).state())
+                .isEqualTo(EmergencyState.WAITING_AMBULANCE);
     }
 }

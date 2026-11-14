@@ -124,8 +124,9 @@
         <a th:href="@{/}">Inicio</a>
         <a th:href="@{/emergencies}">Listado de emergencias (HU-02)</a>
         <a th:href="@{/emergencies/new}">Registrar nueva emergencia (HU-01)</a>
+        <a th:href="@{/dispatch/waiting-queue}">Cola WAITING_AMBULANCE (HU-08)</a>
         <a th:if="${emergency.stateCode == 'REGISTERED' or emergency.stateCode == 'WAITING_AMBULANCE'}"
-           th:href="@{/dispatch/emergencies/{id}(id=${emergency.id})}">Evaluar y asignar ambulancia (HU-05/06)</a>
+           th:href="@{/dispatch/emergencies/{id}(id=${emergency.id})}">Evaluar y asignar ambulancia (HU-05/06/07)</a>
     </nav>
 
     <span class="badge">Actor: Operador de recepción (ACT-01) — HU-01 / HU-02</span>

@@ -5,6 +5,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
  * Adaptador JPA que persiste trazas de intentos y resultados de despacho en transacciones
  * independientes {@code REQUIRES_NEW} para conservar la evidencia incluso cuando un intento
@@ -70,6 +72,24 @@ public class DispatchTraceabilityJpaAdapter implements DispatchTraceabilityRepos
                 truncate(outcomeReason, 500),
                 logicalTicks
         ));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ExhaustedDispatchNotice> findRecentConcurrencyExhaustedNotices() {
+        return operationResultRepository
+                .findTop10ByFinalStatusOrderByIdDesc("CONCURRENCY_RETRY_EXHAUSTED")
+                .stream()
+                .map(entity -> new ExhaustedDispatchNotice(
+                        entity.getOperationId(),
+                        entity.getOperationType(),
+                        entity.getEmergencyId(),
+                        entity.getTotalAttempts(),
+                        entity.getFinalStatus(),
+                        entity.getOutcomeReason(),
+                        entity.getLogicalTicks()
+                ))
+                .toList();
     }
 
     private static String truncate(String value, int maxLen) {

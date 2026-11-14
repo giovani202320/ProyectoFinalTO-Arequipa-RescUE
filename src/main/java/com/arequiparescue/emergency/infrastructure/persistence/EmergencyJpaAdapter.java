@@ -2,6 +2,7 @@ package com.arequiparescue.emergency.infrastructure.persistence;
 
 import com.arequiparescue.emergency.domain.Emergency;
 import com.arequiparescue.emergency.domain.EmergencyId;
+import com.arequiparescue.emergency.domain.EmergencyState;
 import com.arequiparescue.emergency.domain.port.EmergencyRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,6 +63,16 @@ public class EmergencyJpaAdapter implements EmergencyRepository {
     public List<Emergency> findAllOrderByRegisteredAtAndId() {
         return springDataEmergencyRepository
                 .findAllByOrderByRegisteredAtTicksAscIdAsc()
+                .stream()
+                .map(EmergencyPersistenceMapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Emergency> findWaitingAmbulanceOrderByQueueEnteredAtAndId() {
+        return springDataEmergencyRepository
+                .findByStateOrderByQueueEnteredAtTicksAscIdAsc(EmergencyState.WAITING_AMBULANCE.name())
                 .stream()
                 .map(EmergencyPersistenceMapper::toDomain)
                 .toList();

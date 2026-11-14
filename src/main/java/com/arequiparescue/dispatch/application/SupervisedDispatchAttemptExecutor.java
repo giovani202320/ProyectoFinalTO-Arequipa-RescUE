@@ -60,6 +60,34 @@ public class SupervisedDispatchAttemptExecutor {
             AmbulanceId ambulanceId,
             LogicalTime at
     ) {
+        return executeAssignmentAttemptInternal(emergencyId, ambulanceId, at, "supervisada", false);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED, timeout = 5)
+    public AttemptOutcome executeAutomaticAssignmentAttempt(
+            EmergencyId emergencyId,
+            AmbulanceId ambulanceId,
+            LogicalTime at
+    ) {
+        return executeAssignmentAttemptInternal(emergencyId, ambulanceId, at, "automática", false);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED, timeout = 5)
+    public AttemptOutcome executeQueueAssignmentAttempt(
+            EmergencyId emergencyId,
+            AmbulanceId ambulanceId,
+            LogicalTime at
+    ) {
+        return executeAssignmentAttemptInternal(emergencyId, ambulanceId, at, "desde cola FIFO", true);
+    }
+
+    private AttemptOutcome executeAssignmentAttemptInternal(
+            EmergencyId emergencyId,
+            AmbulanceId ambulanceId,
+            LogicalTime at,
+            String modeLabel,
+            boolean treatNonAssignableStateAsConflict
+    ) {
         // Orden canónico de bloqueos ADR-0002 Decisión 7: Emergency -> Ambulance
         Emergency emergency = emergencyRepository.findByIdForUpdate(emergencyId)
                 .orElseThrow(() -> new DispatchValidationException(
@@ -68,9 +96,12 @@ public class SupervisedDispatchAttemptExecutor {
 
         if (emergency.state() != EmergencyState.REGISTERED
                 && emergency.state() != EmergencyState.WAITING_AMBULANCE) {
-            throw new DispatchValidationException(
-                    "La emergencia " + emergencyId.value() + " se encuentra en estado " + emergency.state()
-                            + " y no admite asignación de ambulancia.");
+            String message = "La emergencia " + emergencyId.value() + " se encuentra en estado " + emergency.state()
+                    + " y no admite asignación de ambulancia.";
+            if (treatNonAssignableStateAsConflict) {
+                return new AttemptOutcome(false, true, emergency, null, message);
+            }
+            throw new DispatchValidationException(message);
         }
 
         Ambulance ambulance = ambulanceRepository.findByIdForUpdate(ambulanceId)
@@ -119,7 +150,7 @@ public class SupervisedDispatchAttemptExecutor {
                 false,
                 savedEmergency,
                 savedAmbulance,
-                "Asignación supervisada confirmada: " + savedEmergency.id().value()
+                "Asignación " + modeLabel + " confirmada: " + savedEmergency.id().value()
                         + " -> " + savedAmbulance.id().value() + "."
         );
     }

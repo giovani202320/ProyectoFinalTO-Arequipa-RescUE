@@ -7,4 +7,6 @@ import java.util.List;
 public interface SpringDataExperimentOperationResultRepository extends JpaRepository<ExperimentOperationResultJpaEntity, Long> {
 
     List<ExperimentOperationResultJpaEntity> findByEmergencyIdOrderByIdAsc(String emergencyId);
+
+    List<ExperimentOperationResultJpaEntity> findTop10ByFinalStatusOrderByIdDesc(String finalStatus);
 }

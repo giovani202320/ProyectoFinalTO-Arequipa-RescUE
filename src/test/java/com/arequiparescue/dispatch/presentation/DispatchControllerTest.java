@@ -2,6 +2,7 @@ package com.arequiparescue.dispatch.presentation;
 
 import com.arequiparescue.ambulance.domain.Ambulance;
 import com.arequiparescue.ambulance.domain.AmbulanceId;
+import com.arequiparescue.dispatch.application.AutomaticDispatchResult;
 import com.arequiparescue.dispatch.application.DispatchApplicationService;
 import com.arequiparescue.dispatch.application.SupervisedDispatchResult;
 import com.arequiparescue.dispatch.domain.DispatchOperationOutcome;
@@ -116,5 +117,48 @@ class DispatchControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(content().string(containsString("Conflicto concurrente detectado")))
                 .andExpect(content().string(containsString("AMB-02")));
+    }
+
+    @Test
+    @DisplayName("POST /dispatch/emergencies/{id}/assign-automatic redirige ante éxito y muestra aviso HTTP 409 ante CONCURRENCY_RETRY_EXHAUSTED (HU-07)")
+    void shouldHandleAutomaticDispatchSuccessWaitingAndExhaustion() throws Exception {
+        Emergency emergency = sampleRegisteredEmergency();
+        Ambulance amb1 = Ambulance.registerInCatalog(AmbulanceId.of("AMB-01"), EquipmentType.BASIC, NodeId.of("N01"));
+        Emergency assigned = emergency.assignAmbulance("AMB-01", LogicalTime.of(0));
+
+        when(dispatchApplicationService.assignAutomatic("EMG-00001"))
+                .thenReturn(new AutomaticDispatchResult(
+                        "AUTO-1",
+                        DispatchOperationOutcome.ASSIGNED,
+                        assigned,
+                        amb1.assignToEmergency(emergency.id()),
+                        1,
+                        0,
+                        "ASSIGNED",
+                        "Asignación automática confirmada"
+                ));
+
+        mockMvc.perform(post("/dispatch/emergencies/EMG-00001/assign-automatic"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/emergencies/EMG-00001"));
+
+        Emergency waiting = emergency.enterOrRemainInWaitingAmbulance(
+                LogicalTime.of(0), "CONCURRENCY_RETRY_EXHAUSTED");
+        when(dispatchApplicationService.assignAutomatic("EMG-00001"))
+                .thenReturn(new AutomaticDispatchResult(
+                        "AUTO-2",
+                        DispatchOperationOutcome.CONCURRENCY_RETRY_EXHAUSTED,
+                        waiting,
+                        null,
+                        4,
+                        3,
+                        "CONCURRENCY_RETRY_EXHAUSTED",
+                        "Agotamiento tras 4 intentos para EMG-00001"
+                ));
+
+        mockMvc.perform(post("/dispatch/emergencies/EMG-00001/assign-automatic"))
+                .andExpect(status().isConflict())
+                .andExpect(content().string(containsString("CONCURRENCY_RETRY_EXHAUSTED")))
+                .andExpect(content().string(containsString("Agotamiento tras 4 intentos para EMG-00001")));
     }
 }

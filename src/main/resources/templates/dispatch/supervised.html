@@ -158,6 +158,7 @@
         <div>
             <a th:href="@{/}">Inicio</a> |
             <a th:href="@{/emergencies}">Emergencias</a> |
+            <a th:href="@{/dispatch/waiting-queue}">Cola WAITING_AMBULANCE (HU-08)</a> |
             <a th:href="@{/triage-rules(actor='ACT-02')}">Reglas vigentes (Solo lectura)</a>
         </div>
         <div th:if="${emergency != null}">
@@ -177,6 +178,11 @@
         <span th:text="${conflictMessage}">La ambulancia dejó de estar disponible.</span>
     </div>
 
+    <div th:if="${exhaustedMessage != null}" class="alert-error">
+        <strong>Agotamiento de reintentos en asignación automática (CONCURRENCY_RETRY_EXHAUSTED — HU-07):</strong>
+        <span th:text="${exhaustedMessage}">La operación automática agotó los 4 intentos y dejó la emergencia en WAITING_AMBULANCE.</span>
+    </div>
+
     <div th:if="${waitingMessage != null}" class="alert-warn">
         <strong>Sin ambulancias elegibles (RN-ASI-004):</strong>
         <span th:text="${waitingMessage}">La emergencia permanece en WAITING_AMBULANCE.</span>
@@ -189,6 +195,16 @@
             <span><strong>Nodo incidente:</strong> <code th:text="${emergency.nodeId}">N01</code></span>
             <span><strong>Equipamiento requerido:</strong> <strong th:text="${emergency.requiredEquipmentCode}">BASIC</strong></span>
             <span><strong>Prioridad informativa:</strong> <span th:text="${emergency.simulatedPriorityLabel}">Media</span></span>
+        </div>
+
+        <div class="alert-warn" style="background:#eff6ff; border-color:#93c5fd; color:#1e3a8a;"
+             th:if="${emergency.stateCode == 'REGISTERED' or emergency.stateCode == 'WAITING_AMBULANCE'}">
+            <strong>Modalidad automática diferenciada (HU-07):</strong>
+            selecciona automáticamente la unidad óptima con reevaluación integral y hasta <code>1 + 3</code> intentos ante conflictos concurrentes.
+            <form th:action="@{'/dispatch/emergencies/' + ${emergency.id} + '/assign-automatic'}"
+                  method="post" style="margin-top:0.6rem;">
+                <button type="submit" class="btn-primary">Ejecutar asignación automática (HU-07)</button>
+            </form>
         </div>
 
         <div th:if="${hasSupplementalNotice}" class="alert-warn">

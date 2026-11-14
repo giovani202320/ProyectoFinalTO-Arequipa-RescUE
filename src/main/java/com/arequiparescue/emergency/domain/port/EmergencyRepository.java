@@ -20,5 +20,7 @@ public interface EmergencyRepository {
 
     List<Emergency> findAllOrderByRegisteredAtAndId();
 
+    List<Emergency> findWaitingAmbulanceOrderByQueueEnteredAtAndId();
+
     long nextSequenceNumber();
 }

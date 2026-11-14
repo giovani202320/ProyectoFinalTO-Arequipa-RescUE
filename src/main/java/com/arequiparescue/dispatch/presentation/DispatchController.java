@@ -1,5 +1,6 @@
 package com.arequiparescue.dispatch.presentation;
 
+import com.arequiparescue.dispatch.application.AutomaticDispatchResult;
 import com.arequiparescue.dispatch.application.DispatchApplicationService;
 import com.arequiparescue.dispatch.application.DispatchValidationException;
 import com.arequiparescue.dispatch.application.SupervisedDispatchResult;
@@ -70,6 +71,40 @@ public class DispatchController {
             if (result.outcome() == DispatchOperationOutcome.CONFLICT_RELOAD_REQUIRED) {
                 model.addAttribute("conflictMessage", result.message());
                 populatePanelModel(model, result.emergency(), result.refreshedCandidates());
+                response.setStatus(HttpServletResponse.SC_CONFLICT);
+                return "dispatch/supervised";
+            }
+            model.addAttribute("waitingMessage", result.message());
+            populatePanelModel(model, result.emergency(), List.of());
+            return "dispatch/supervised";
+        } catch (DispatchValidationException ex) {
+            model.addAttribute("errorMessage", ex.getMessage());
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return "dispatch/supervised";
+        }
+    }
+
+    @PostMapping("/{id}/assign-automatic")
+    public String assignAutomatic(
+            @PathVariable("id") String id,
+            Model model,
+            HttpServletResponse response,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            AutomaticDispatchResult result = dispatchApplicationService.assignAutomatic(id);
+            if (result.outcome() == DispatchOperationOutcome.ASSIGNED) {
+                redirectAttributes.addFlashAttribute(
+                        "dispatchSuccessMessage",
+                        result.message() + " (Modalidad automática: "
+                                + result.attemptsExecuted() + " intento(s), "
+                                + result.retriesConsumed() + " reintento(s) consumido(s))."
+                );
+                return "redirect:/emergencies/" + result.emergency().id().value();
+            }
+            if (result.outcome() == DispatchOperationOutcome.CONCURRENCY_RETRY_EXHAUSTED) {
+                model.addAttribute("exhaustedMessage", result.message());
+                populatePanelModel(model, result.emergency(), List.of());
                 response.setStatus(HttpServletResponse.SC_CONFLICT);
                 return "dispatch/supervised";
             }
