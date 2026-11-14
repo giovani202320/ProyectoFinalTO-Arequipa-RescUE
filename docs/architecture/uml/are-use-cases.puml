@@ -1,0 +1,104 @@
+@startuml are-use-cases
+!pragma layout smetana
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam DefaultFontName "Segoe UI"
+skinparam DefaultFontSize 12
+
+title Diagrama UML de Casos de Uso del MVP — ARE (Arequipa RescUE)
+
+' ============================================================================
+' Actores humanos aprobados (DEC-009)
+' Nota: El Motor de simulación (CMP-INT-01) es un componente interno del
+' sistema y no se modela como actor externo.
+' ============================================================================
+actor "Operador de recepción\n(ACT-01)" as ACT01
+actor "Despachador\n(ACT-02)" as ACT02
+actor "Administrador\n(ACT-03)" as ACT03
+
+' ============================================================================
+' Límite del sistema ARE — Simulador Académico MVP
+' ============================================================================
+rectangle "ARE — Arequipa RescUE (Simulador Académico MVP)" as ARE_SYSTEM {
+
+    package "1. Gestión de emergencias" as PKG_EME {
+        usecase "CU-01: Registrar y clasificar\nsolicitud de emergencia" as CU01
+        usecase "CU-02: Consultar y dar seguimiento\na emergencias" as CU02
+        usecase "CU-03: Consultar versión vigente\nde reglas de clasificación" as CU03
+    }
+
+    package "2. Gestión de ambulancias y despacho" as PKG_DSP {
+        usecase "CU-04: Consultar ambulancias\nelegibles para emergencia" as CU04
+        usecase "CU-05: Asignar ambulancia\nen modalidad supervisada" as CU05
+        usecase "CU-06: Ejecutar y supervisar asignación\nautomática de ambulancia" as CU06
+        usecase "CU-07: Gestionar cola de espera\nde ambulancia (WAITING_AMBULANCE)" as CU07
+    }
+
+    package "3. Gestión hospitalaria" as PKG_HOS {
+        usecase "CU-08: Confirmar llegada al incidente\ny reservar plaza hospitalaria" as CU08
+        usecase "CU-09: Gestionar cola de espera de\ndestino hospitalario (WAITING_HOSPITAL)" as CU09
+        usecase "CU-10: Confirmar entrega simulada en\nhospital y liberar ambulancia" as CU10
+        usecase "CU-11: Ejecutar alta simulada\nhospitalaria" as CU11
+    }
+
+    package "4. Administración y simulación" as PKG_SIM {
+        usecase "CU-12: Administrar catálogo de ambulancias,\nhospitales y grafo vial (N01..N10)" as CU12
+        usecase "CU-13: Publicar y activar versión\ninmutable de reglas de clasificación" as CU13
+        usecase "CU-14: Ejecutar escenario experimental y\navanzar eventos discretos manualmente" as CU14
+    }
+
+    package "5. Métricas y reportes" as PKG_MET {
+        usecase "CU-15: Consultar catálogo de 7 métricas\ny registro experimental trazable" as CU15
+    }
+}
+
+' ============================================================================
+' Asociaciones Actor <-> Caso de Uso
+' ============================================================================
+
+' ACT-01: Operador de recepción
+ACT01 --> CU01
+ACT01 --> CU02
+ACT01 --> CU03
+
+' ACT-02: Despachador
+ACT02 --> CU02
+ACT02 --> CU03
+ACT02 --> CU04
+ACT02 --> CU05
+ACT02 --> CU06
+ACT02 --> CU07
+ACT02 --> CU08
+ACT02 --> CU09
+ACT02 --> CU10
+
+' ACT-03: Administrador
+ACT03 --> CU03
+ACT03 --> CU11
+ACT03 --> CU12
+ACT03 --> CU13
+ACT03 --> CU14
+ACT03 --> CU15
+
+' ============================================================================
+' Relaciones <<include>> justificadas semánticamente
+' ============================================================================
+
+' Toda asignación (supervisada o automática) incluye obligatoriamente la
+' evaluación funcional de ambulancias elegibles (RN-ELE-001, RN-CON-006),
+' sin implicar la obligación de abrir antes una pantalla separada de consulta.
+CU05 ..> CU04 : <<include>>
+CU06 ..> CU04 : <<include>>
+
+note bottom of ARE_SYSTEM
+  Restricciones de alcance del modelo (DEC-001 a DEC-021):
+  - Simulador exclusivamente académico (sin atención ni diagnóstico clínico real).
+  - El Motor de simulación (CMP-INT-01) es un componente interno del sistema.
+  - La reevaluación FIFO de colas al liberar ambulancia (CU-10) o plaza hospitalaria (CU-11)
+    es un comportamiento interno del dominio (RN-RUT-008, RN-HOS-011) y no una relación UML entre casos de uso.
+  - No se representan algoritmos (Dijkstra), tablas ni clases como casos de uso.
+end note
+
+@enduml
