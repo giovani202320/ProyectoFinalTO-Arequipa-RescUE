@@ -7,6 +7,10 @@ public class HospitalCatalogValidationException extends RuntimeException {
 
     private final String field;
 
+    public HospitalCatalogValidationException(String message) {
+        this(null, message);
+    }
+
     public HospitalCatalogValidationException(String field, String message) {
         super(message);
         this.field = field;

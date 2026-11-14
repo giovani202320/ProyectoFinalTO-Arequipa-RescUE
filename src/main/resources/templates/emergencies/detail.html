@@ -125,6 +125,7 @@
         <a th:href="@{/emergencies}">Listado de emergencias (HU-02)</a>
         <a th:href="@{/emergencies/new}">Registrar nueva emergencia (HU-01)</a>
         <a th:href="@{/dispatch/waiting-queue}">Cola WAITING_AMBULANCE (HU-08)</a>
+        <a th:href="@{/dispatch/hospital-queue}">Cola WAITING_HOSPITAL (HU-09/10)</a>
         <a th:if="${emergency.stateCode == 'REGISTERED' or emergency.stateCode == 'WAITING_AMBULANCE'}"
            th:href="@{/dispatch/emergencies/{id}(id=${emergency.id})}">Evaluar y asignar ambulancia (HU-05/06/07)</a>
     </nav>
@@ -134,6 +135,29 @@
     <div class="banner-success" th:if="${dispatchSuccessMessage != null}">
         <strong>Asignación supervisada confirmada (HU-06):</strong>
         <span th:text="${dispatchSuccessMessage}">Ambulancia asignada correctamente.</span>
+    </div>
+
+    <div class="banner-success" th:if="${hospitalDispatchMessage != null}">
+        <strong>Llegada y reserva hospitalaria confirmadas (HU-09):</strong>
+        <span th:text="${hospitalDispatchMessage}">Hospital reservado correctamente.</span>
+    </div>
+
+    <div class="banner-success" th:if="${hospitalWaitingMessage != null}" style="background:#fffbeb;border-color:#fcd34d;color:#92400e;">
+        <strong>En espera de hospital (HU-09/HU-10):</strong>
+        <span th:text="${hospitalWaitingMessage}">Emergencia en WAITING_HOSPITAL.</span>
+    </div>
+
+    <div class="banner-success" th:if="${hospitalExhaustedMessage != null}" style="background:#fef2f2;border-color:#fca5a5;color:#991b1b;">
+        <strong>Agotamiento de reserva hospitalaria (CA-SIM-03):</strong>
+        <span th:text="${hospitalExhaustedMessage}">Reintentos hospitalarios agotados.</span>
+    </div>
+
+    <div style="margin: 0.75rem 0;" th:if="${emergency.stateCode == 'ASSIGNED'}">
+        <form th:action="@{/dispatch/emergencies/{id}/arrive(id=${emergency.id})}" method="post" style="margin:0;">
+            <button type="submit" style="background:#1e3a8a;color:#fff;border:none;border-radius:6px;padding:0.55rem 1rem;font-weight:600;cursor:pointer;">
+                Confirmar llegada al incidente (AT_INCIDENT) y reservar hospital (HU-09)
+            </button>
+        </form>
     </div>
 
     <div class="banner-success" th:if="${justRegistered}">

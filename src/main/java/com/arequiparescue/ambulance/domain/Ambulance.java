@@ -115,6 +115,43 @@ public final class Ambulance {
         );
     }
 
+    /**
+     * Ejecuta la transición T-AMB-02 (ASSIGNED -> AT_INCIDENT) actualizando la ubicación al nodo del incidente
+     * y conservando el vínculo con la emergencia activa (HU-09, INV-SM-02, INV-SM-03).
+     */
+    public Ambulance arriveAtIncident(NodeId incidentNode) {
+        Objects.requireNonNull(incidentNode, "El nodo del incidente es obligatorio.");
+        if (this.state != AmbulanceState.ASSIGNED || this.assignedEmergencyId == null) {
+            throw new IllegalStateException(
+                    "Solo una ambulancia en estado ASSIGNED puede llegar al incidente. Estado actual: " + this.state);
+        }
+        return new Ambulance(
+                this.id,
+                this.equipmentType,
+                incidentNode,
+                AmbulanceState.AT_INCIDENT,
+                this.assignedEmergencyId
+        );
+    }
+
+    /**
+     * Ejecuta la transición T-AMB-03 (AT_INCIDENT -> TRANSPORTING) al confirmarse una reserva hospitalaria
+     * (HU-09, HU-10, INV-SM-03).
+     */
+    public Ambulance startTransportToHospital() {
+        if (this.state != AmbulanceState.AT_INCIDENT || this.assignedEmergencyId == null) {
+            throw new IllegalStateException(
+                    "Solo una ambulancia en estado AT_INCIDENT puede iniciar traslado a hospital. Estado actual: " + this.state);
+        }
+        return new Ambulance(
+                this.id,
+                this.equipmentType,
+                this.currentNode,
+                AmbulanceState.TRANSPORTING,
+                this.assignedEmergencyId
+        );
+    }
+
     public AmbulanceId id() {
         return id;
     }

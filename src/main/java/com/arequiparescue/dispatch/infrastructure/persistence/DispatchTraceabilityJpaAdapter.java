@@ -77,8 +77,18 @@ public class DispatchTraceabilityJpaAdapter implements DispatchTraceabilityRepos
     @Override
     @Transactional(readOnly = true)
     public List<ExhaustedDispatchNotice> findRecentConcurrencyExhaustedNotices() {
+        return findRecentNoticesByStatus("CONCURRENCY_RETRY_EXHAUSTED");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ExhaustedDispatchNotice> findRecentHospitalExhaustedNotices() {
+        return findRecentNoticesByStatus("HOSPITAL_RESERVATION_RETRY_EXHAUSTED");
+    }
+
+    private List<ExhaustedDispatchNotice> findRecentNoticesByStatus(String finalStatus) {
         return operationResultRepository
-                .findTop10ByFinalStatusOrderByIdDesc("CONCURRENCY_RETRY_EXHAUSTED")
+                .findTop10ByFinalStatusOrderByIdDesc(finalStatus)
                 .stream()
                 .map(entity -> new ExhaustedDispatchNotice(
                         entity.getOperationId(),

@@ -78,6 +78,27 @@ public class EmergencyJpaAdapter implements EmergencyRepository {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<Emergency> findWaitingHospitalOrderByHospitalQueueEnteredAtAndId() {
+        return springDataEmergencyRepository
+                .findByStateOrderByHospitalQueueEnteredAtTicksAscIdAsc(EmergencyState.WAITING_HOSPITAL.name())
+                .stream()
+                .map(EmergencyPersistenceMapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Emergency> findByStateOrderByRegisteredAtAndId(EmergencyState state) {
+        Objects.requireNonNull(state, "El estado a consultar no puede ser nulo.");
+        return springDataEmergencyRepository
+                .findByStateOrderByRegisteredAtTicksAscIdAsc(state.name())
+                .stream()
+                .map(EmergencyPersistenceMapper::toDomain)
+                .toList();
+    }
+
     /**
      * Adquiere bloqueo pesimista de fila ({@code SELECT ... FOR UPDATE}) sobre la fila
      * {@code EMERGENCY} en {@code emergency_sequences}, consume el valor actual e incrementa

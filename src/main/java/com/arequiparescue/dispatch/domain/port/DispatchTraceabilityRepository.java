@@ -44,4 +44,8 @@ public interface DispatchTraceabilityRepository {
     default List<ExhaustedDispatchNotice> findRecentConcurrencyExhaustedNotices() {
         return List.of();
     }
+
+    default List<ExhaustedDispatchNotice> findRecentHospitalExhaustedNotices() {
+        return List.of();
+    }
 }

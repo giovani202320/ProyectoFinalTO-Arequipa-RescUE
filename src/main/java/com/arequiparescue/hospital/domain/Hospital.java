@@ -178,4 +178,31 @@ public final class Hospital {
     public int availableSlots() {
         return totalCapacity - reservedSlots - occupiedSlots;
     }
+
+    /**
+     * Reserva exactamente una plaza ({@code R = R + 1}, {@code D = D - 1}) validando habilitación
+     * y disponibilidad bajo la invariante {@code R + O <= C} (HU-09, HU-10, RN-HOS-004, RN-HOS-007).
+     */
+    public Hospital reserveSlot() {
+        if (!this.enabled) {
+            throw new IllegalStateException(
+                    "El hospital " + this.id + " se encuentra deshabilitado y no admite reservas.");
+        }
+        if (availableSlots() < 1) {
+            throw new IllegalStateException(
+                    "El hospital " + this.id + " no dispone de plazas libres (D = 0; R + O = "
+                            + (this.reservedSlots + this.occupiedSlots) + ", C = " + this.totalCapacity + ").");
+        }
+        int nextReserved = Math.addExact(this.reservedSlots, 1);
+        validateCapacityInvariants(this.totalCapacity, nextReserved, this.occupiedSlots);
+        return new Hospital(
+                this.id,
+                this.name,
+                this.locationNode,
+                this.enabled,
+                this.totalCapacity,
+                nextReserved,
+                this.occupiedSlots
+        );
+    }
 }

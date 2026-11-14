@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Llegada al incidente y cola WAITING_HOSPITAL — ARE (Arequipa RescUE)</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #cbd5e1;
+            --primary: #1e3a8a;
+            --primary-hover: #1d4ed8;
+            --text: #0f172a;
+            --muted: #475569;
+            --badge-bg: #dbeafe;
+            --badge-fg: #1e40af;
+            --error-bg: #fef2f2;
+            --error-border: #fca5a5;
+            --error-fg: #991b1b;
+            --success-bg: #ecfdf5;
+            --success-border: #6ee7b7;
+            --success-fg: #065f46;
+            --warn-bg: #fffbeb;
+            --warn-border: #fcd34d;
+            --warn-fg: #92400e;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 2.5rem 1.25rem;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        main {
+            max-width: 1080px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        }
+        nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            font-size: 0.92rem;
+        }
+        nav a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            background: var(--badge-bg);
+            color: var(--badge-fg);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        h1 { margin: 0 0 0.5rem 0; color: var(--primary); font-size: 1.65rem; }
+        h2 { margin: 1.5rem 0 0.5rem 0; color: var(--primary); font-size: 1.15rem; }
+        .alert-error {
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error-fg);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .alert-success {
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            color: var(--success-fg);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .alert-warn {
+            background: var(--warn-bg);
+            border: 1px solid var(--warn-border);
+            color: var(--warn-fg);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.75rem;
+            font-size: 0.92rem;
+        }
+        th, td {
+            padding: 0.65rem 0.7rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        th { background: #f8fafc; font-weight: 600; }
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            padding: 0.55rem 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-secondary {
+            background: #f1f5f9;
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.4rem 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .muted { color: var(--muted); font-size: 0.9rem; }
+        .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-weight: 600; }
+        .pill {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            background: #e2e8f0;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <nav>
+        <div>
+            <a th:href="@{/}">Inicio</a> |
+            <a th:href="@{/emergencies}">Emergencias</a> |
+            <a th:href="@{/dispatch/waiting-queue}">Cola WAITING_AMBULANCE (HU-08)</a> |
+            <a th:href="@{/hospitals}">Hospitales</a>
+        </div>
+        <span class="muted">Actor operativo: Despachador (ACT-02)</span>
+    </nav>
+
+    <span class="badge">HU-09 / HU-10 — Llegada al incidente, reserva hospitalaria (1+2) y cola WAITING_HOSPITAL</span>
+    <h1>Gestión hospitalaria y cola WAITING_HOSPITAL</h1>
+    <p class="muted">
+        Confirma la llegada de la ambulancia al incidente (<code>ASSIGNED -&gt; AT_INCIDENT</code>), selecciona el hospital
+        habilitado alcanzable de menor costo con cupo disponible (<code>D &gt;= 1</code>) y administra en orden FIFO la cola
+        <code>WAITING_HOSPITAL</code> preservando la ambulancia retenida en <code>AT_INCIDENT</code>.
+    </p>
+
+    <div class="alert-error" th:if="${errorMessage != null}" th:text="${errorMessage}">Error</div>
+
+    <div class="alert-success" th:if="${evaluationResult != null}">
+        <strong>Resultado de evaluación FIFO:</strong>
+        <span th:text="${evaluationResult.summaryMessage}">Resumen</span>
+    </div>
+
+    <h2>1. Disponibilidad hospitalaria vigente (C / R / O / D)</h2>
+    <p class="muted" th:if="${#lists.isEmpty(hospitals)}">No hay hospitales registrados.</p>
+    <table th:if="${!#lists.isEmpty(hospitals)}">
+        <thead>
+        <tr>
+            <th>Hospital</th>
+            <th>Nombre</th>
+            <th>Nodo</th>
+            <th>Estado</th>
+            <th>C (Total)</th>
+            <th>R (Reservadas)</th>
+            <th>O (Ocupadas)</th>
+            <th>D (Disponibles)</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="h : ${hospitals}">
+            <td class="mono" th:text="${h.id}">HOSP-01</td>
+            <td th:text="${h.name}">Hospital</td>
+            <td class="mono" th:text="${h.nodeId}">N-04</td>
+            <td><span class="pill" th:text="${h.enabled ? 'Habilitado' : 'Deshabilitado'}">Habilitado</span></td>
+            <td th:text="${h.totalCapacity}">2</td>
+            <td th:text="${h.reservedSlots}">0</td>
+            <td th:text="${h.occupiedSlots}">0</td>
+            <td class="mono" th:text="${h.availableSlots}">2</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>2. Emergencias en estado ASSIGNED (confirmar llegada al incidente — HU-09)</h2>
+    <p class="muted" th:if="${#lists.isEmpty(assignedEmergencies)}">
+        No hay emergencias en estado <code>ASSIGNED</code> pendientes de llegada al incidente.
+    </p>
+    <table th:if="${!#lists.isEmpty(assignedEmergencies)}">
+        <thead>
+        <tr>
+            <th>Emergencia</th>
+            <th>Prioridad</th>
+            <th>Nodo</th>
+            <th>Ambulancia asignada</th>
+            <th>Acción</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="emg : ${assignedEmergencies}">
+            <td class="mono">
+                <a th:href="@{/emergencies/{id}(id=${emg.id})}" th:text="${emg.id}">EMG-00001</a>
+            </td>
+            <td th:text="${emg.simulatedPriorityLabel}">ALTA</td>
+            <td class="mono" th:text="${emg.nodeId}">N01</td>
+            <td class="mono" th:text="${emg.assignedAmbulanceId}">AMB-01</td>
+            <td>
+                <form th:action="@{/dispatch/emergencies/{id}/arrive(id=${emg.id})}" method="post" style="margin:0;">
+                    <button type="submit" class="btn-primary">Confirmar llegada (AT_INCIDENT) y reservar hospital</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>3. Cola FIFO WAITING_HOSPITAL (HU-10)</h2>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+        <p class="muted" style="margin:0;">
+            Orden estricto por marca de ingreso <code>hospitalQueueEnteredAt</code> y desempate por ID.
+            Si una emergencia no tiene hospital alcanzable o disponible, conserva su posición original.
+        </p>
+        <form th:action="@{/dispatch/hospital-queue/evaluate}" method="post" style="margin:0;">
+            <button type="submit" class="btn-primary">Reevaluar cola WAITING_HOSPITAL (HU-10)</button>
+        </form>
+    </div>
+
+    <p class="muted" th:if="${#lists.isEmpty(waitingHospitalQueue)}">
+        La cola <code>WAITING_HOSPITAL</code> está vacía.
+    </p>
+    <table th:if="${!#lists.isEmpty(waitingHospitalQueue)}">
+        <thead>
+        <tr>
+            <th>Posición FIFO</th>
+            <th>Emergencia</th>
+            <th>Prioridad</th>
+            <th>Nodo</th>
+            <th>Ambulancia retenida (AT_INCIDENT)</th>
+            <th>Ingreso a cola hospitalaria (tick)</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="emg, iter : ${waitingHospitalQueue}">
+            <td class="mono" th:text="${iter.index + 1}">1</td>
+            <td class="mono">
+                <a th:href="@{/emergencies/{id}(id=${emg.id})}" th:text="${emg.id}">EMG-00001</a>
+            </td>
+            <td th:text="${emg.simulatedPriorityLabel}">ALTA</td>
+            <td class="mono" th:text="${emg.nodeId}">N01</td>
+            <td class="mono" th:text="${emg.assignedAmbulanceId}">AMB-01</td>
+            <td class="mono" th:text="${emg.hospitalQueueEnteredAtTicks}">5</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>4. Avisos recientes de agotamiento de reintentos hospitalarios (CA-SIM-03)</h2>
+    <p class="muted" th:if="${#lists.isEmpty(exhaustedNotices)}">
+        No se registran agotamientos recientes de reintentos de reserva hospitalaria.
+    </p>
+    <div th:if="${!#lists.isEmpty(exhaustedNotices)}">
+        <div class="alert-warn" th:each="notice : ${exhaustedNotices}">
+            <strong class="mono" th:text="${notice.emergencyId}">EMG-00001</strong> —
+            <span class="mono" th:text="${notice.outcomeCode}">HOSPITAL_RESERVATION_RETRY_EXHAUSTED</span>
+            (<span th:text="${notice.attemptsExecuted}">3</span> intentos, tick <span th:text="${notice.logicalTick}">5</span>):
+            <span th:text="${notice.message}">Agotamiento</span>
+        </div>
+    </div>
+</main>
+</body>
+</html>

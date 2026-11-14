@@ -394,6 +394,142 @@ public final class Emergency {
         );
     }
 
+    /**
+     * Ejecuta T-EME-04 (ASSIGNED -> AT_INCIDENT) al confirmarse la llegada de la ambulancia
+     * asignada al nodo del incidente (HU-09, INV-SM-03).
+     */
+    public Emergency arriveAtIncident(LogicalTime at) {
+        Objects.requireNonNull(at, "El instante lógico de llegada al incidente no puede ser nulo.");
+        if (this.state != EmergencyState.ASSIGNED || this.assignedAmbulanceId == null) {
+            throw new IllegalStateException(
+                    "Solo una emergencia en estado ASSIGNED con ambulancia vinculada puede pasar a AT_INCIDENT. Estado actual: "
+                            + this.state);
+        }
+        return new Emergency(
+                this.id,
+                this.category,
+                this.locationNode,
+                this.description,
+                this.simulatedPriority,
+                this.requiredEquipment,
+                this.appliedRuleVersionId,
+                EmergencyState.AT_INCIDENT,
+                this.assignedAmbulanceId,
+                this.reservedOrOccupiedHospitalId,
+                this.registeredAt,
+                this.queueEnteredAt,
+                this.assignedAt,
+                at,
+                this.hospitalQueueEnteredAt,
+                this.inTransportAt,
+                this.completedAt,
+                null
+        );
+    }
+
+    /**
+     * Ejecuta T-EME-05 (AT_INCIDENT -> IN_TRANSPORT) o T-EME-07 (WAITING_HOSPITAL -> IN_TRANSPORT)
+     * vinculando el hospital reservado y sellando {@code inTransportAt} (HU-09, HU-10, INV-SM-03).
+     */
+    public Emergency reserveHospitalAndStartTransport(String hospitalId, LogicalTime at) {
+        Objects.requireNonNull(at, "El instante lógico de inicio de traslado no puede ser nulo.");
+        if (hospitalId == null || hospitalId.isBlank()) {
+            throw new IllegalArgumentException("El identificador del hospital reservado es obligatorio.");
+        }
+        if (this.state != EmergencyState.AT_INCIDENT && this.state != EmergencyState.WAITING_HOSPITAL) {
+            throw new IllegalStateException(
+                    "Solo una emergencia en estado AT_INCIDENT o WAITING_HOSPITAL puede pasar a IN_TRANSPORT. Estado actual: "
+                            + this.state);
+        }
+        if (this.assignedAmbulanceId == null) {
+            throw new IllegalStateException(
+                    "La emergencia " + this.id + " no tiene ambulancia retenida para iniciar traslado.");
+        }
+        if (this.reservedOrOccupiedHospitalId != null) {
+            throw new IllegalStateException(
+                    "La emergencia " + this.id + " ya tiene un hospital reservado: " + this.reservedOrOccupiedHospitalId);
+        }
+        return new Emergency(
+                this.id,
+                this.category,
+                this.locationNode,
+                this.description,
+                this.simulatedPriority,
+                this.requiredEquipment,
+                this.appliedRuleVersionId,
+                EmergencyState.IN_TRANSPORT,
+                this.assignedAmbulanceId,
+                hospitalId.trim(),
+                this.registeredAt,
+                this.queueEnteredAt,
+                this.assignedAt,
+                this.atIncidentAt,
+                this.hospitalQueueEnteredAt,
+                at,
+                this.completedAt,
+                null
+        );
+    }
+
+    /**
+     * Ejecuta T-EME-06 (AT_INCIDENT -> WAITING_HOSPITAL) o conserva WAITING_HOSPITAL sin alterar
+     * su marca FIFO {@code hospitalQueueEnteredAt} ni desvincular su ambulancia retenida (RN-HOS-009 a RN-HOS-011, CA-HOS-09).
+     */
+    public Emergency enterOrRemainInWaitingHospital(LogicalTime at, String outcomeReason) {
+        Objects.requireNonNull(at, "El instante lógico de ingreso a cola hospitalaria no puede ser nulo.");
+        if (this.assignedAmbulanceId == null) {
+            throw new IllegalStateException(
+                    "La emergencia " + this.id + " debe conservar su ambulancia retenida en AT_INCIDENT al esperar hospital (INV-SM-03).");
+        }
+        if (this.state == EmergencyState.WAITING_HOSPITAL) {
+            return new Emergency(
+                    this.id,
+                    this.category,
+                    this.locationNode,
+                    this.description,
+                    this.simulatedPriority,
+                    this.requiredEquipment,
+                    this.appliedRuleVersionId,
+                    EmergencyState.WAITING_HOSPITAL,
+                    this.assignedAmbulanceId,
+                    this.reservedOrOccupiedHospitalId,
+                    this.registeredAt,
+                    this.queueEnteredAt,
+                    this.assignedAt,
+                    this.atIncidentAt,
+                    this.hospitalQueueEnteredAt,
+                    this.inTransportAt,
+                    this.completedAt,
+                    outcomeReason
+            );
+        }
+        if (this.state != EmergencyState.AT_INCIDENT) {
+            throw new IllegalStateException(
+                    "Solo una emergencia en estado AT_INCIDENT o WAITING_HOSPITAL puede entrar o permanecer en WAITING_HOSPITAL. Estado actual: "
+                            + this.state);
+        }
+        return new Emergency(
+                this.id,
+                this.category,
+                this.locationNode,
+                this.description,
+                this.simulatedPriority,
+                this.requiredEquipment,
+                this.appliedRuleVersionId,
+                EmergencyState.WAITING_HOSPITAL,
+                this.assignedAmbulanceId,
+                this.reservedOrOccupiedHospitalId,
+                this.registeredAt,
+                this.queueEnteredAt,
+                this.assignedAt,
+                this.atIncidentAt,
+                at,
+                this.inTransportAt,
+                this.completedAt,
+                outcomeReason
+        );
+    }
+
     public boolean isCycleClosed() {
         return this.state == EmergencyState.COMPLETED;
     }
