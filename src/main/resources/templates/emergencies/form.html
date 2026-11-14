@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar emergencia — ARE (Arequipa RescUE)</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #cbd5e1;
+            --primary: #1e3a8a;
+            --primary-hover: #1d4ed8;
+            --text: #0f172a;
+            --muted: #475569;
+            --badge-bg: #dbeafe;
+            --badge-fg: #1e40af;
+            --error-bg: #fef2f2;
+            --error-border: #fca5a5;
+            --error-fg: #991b1b;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 2.5rem 1.25rem;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        main {
+            max-width: 780px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        }
+        nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.92rem;
+        }
+        nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            background: var(--badge-bg);
+            color: var(--badge-fg);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        h1 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary);
+            font-size: 1.65rem;
+        }
+        p.lead {
+            margin: 0 0 1.25rem 0;
+            color: var(--muted);
+            font-size: 0.98rem;
+        }
+        .meta-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            padding: 0.75rem 1rem;
+            background: #f1f5f9;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+        .alert-error {
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error-fg);
+            padding: 0.85rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.25rem;
+            font-size: 0.92rem;
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+        }
+        select, textarea {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            background: #ffffff;
+            color: var(--text);
+        }
+        .field-hint {
+            font-size: 0.84rem;
+            color: var(--muted);
+            margin-top: 0.25rem;
+        }
+        .field-error {
+            color: var(--error-fg);
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-top: 0.35rem;
+        }
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            margin-top: 1.5rem;
+        }
+        button {
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            padding: 0.65rem 1.25rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:hover {
+            background: var(--primary-hover);
+        }
+        .btn-secondary {
+            display: inline-block;
+            padding: 0.6rem 1.1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.92rem;
+            font-weight: 600;
+        }
+        footer {
+            margin-top: 1.75rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.84rem;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+<main>
+    <nav>
+        <a th:href="@{/}">Inicio</a>
+        <a th:href="@{/emergencies}">Listado de emergencias (HU-02)</a>
+    </nav>
+
+    <span class="badge">Actor: Operador de recepción (ACT-01) — HU-01</span>
+    <h1>Registro y clasificación simulada de emergencia</h1>
+    <p class="lead">
+        Ingrese la categoría de incidente, el nodo de ubicación en el grafo vial simplificado de Arequipa
+        y una descripción ficticia opcional. El sistema aplicará de forma determinista la versión activa de reglas
+        para determinar la prioridad informativa, el equipamiento requerido y el estado inicial <code>REGISTERED</code>.
+    </p>
+
+    <div class="meta-bar">
+        <span><strong>Versión activa de reglas:</strong> <code th:text="${activeRuleVersionId}">RUL-V01</code></span>
+        <span><strong>Tiempo lógico actual:</strong> <code>t = <span th:text="${currentLogicalTicks}">0</span></code></span>
+    </div>
+
+    <form th:action="@{/emergencies}" th:object="${form}" method="post" novalidate>
+        <div class="alert-error" th:if="${#fields.hasErrors('*')}">
+            <strong>No se pudo registrar la emergencia (RN-EME-010):</strong>
+            revise los errores señalados a continuación. No se aplican clasificaciones por defecto ni se persisten solicitudes inválidas.
+            <div th:each="err : ${#fields.globalErrors()}" th:text="${err}"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="incidentCategory">1. Categoría del incidente (obligatoria)</label>
+            <select id="incidentCategory" name="incidentCategory" th:field="*{incidentCategory}" required>
+                <option value="">-- Seleccione una categoría aprobada (INC-A a INC-D) --</option>
+                <option th:each="cat : ${categories}"
+                        th:value="${cat.code}"
+                        th:text="${cat.label}">INC-A</option>
+            </select>
+            <div class="field-hint">
+                Catálogo académico determinista (DEC-016): INC-A (Alta / SPECIALIZED), INC-B (Media / BASIC),
+                INC-C (Baja / BASIC), INC-D (Alta / BASIC).
+            </div>
+            <div class="field-error" th:if="${#fields.hasErrors('incidentCategory')}" th:errors="*{incidentCategory}"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="nodeId">2. Nodo de ubicación en el grafo de Arequipa (obligatorio)</label>
+            <select id="nodeId" name="nodeId" th:field="*{nodeId}" required>
+                <option value="">-- Seleccione un nodo del grafo (N01 a N10) --</option>
+                <option th:each="node : ${nodes}"
+                        th:value="${node.id}"
+                        th:text="${node.displayName + (node.isolated ? ' [Nodo aislado de prueba]' : '')}">N01</option>
+            </select>
+            <div class="field-hint">
+                Topología aprobada de 10 nodos (N01 a N10) según DEC-019 y RN-RUT-006.
+            </div>
+            <div class="field-error" th:if="${#fields.hasErrors('nodeId')}" th:errors="*{nodeId}"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="description">3. Descripción ficticia (opcional)</label>
+            <textarea id="description" name="description" th:field="*{description}" rows="3" maxlength="500"
+                      placeholder="Descripción ficticia opcional del incidente simulado (puede dejarse vacía según RN-EME-010.4)"></textarea>
+            <div class="field-hint">
+                Campo opcional (máximo 500 caracteres). Se permite descripción vacía.
+            </div>
+            <div class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
+        </div>
+
+        <div class="actions">
+            <button type="submit">Registrar y clasificar emergencia</button>
+            <a class="btn-secondary" th:href="@{/emergencies}">Ver emergencias registradas</a>
+        </div>
+    </form>
+
+    <footer>
+        ARE — Arequipa RescUE. Simulador exclusivamente académico; la clasificación obtenida no constituye un diagnóstico médico ni decisión clínica real (DEC-001, RN-EME-005).
+    </footer>
+</main>
+</body>
+</html>

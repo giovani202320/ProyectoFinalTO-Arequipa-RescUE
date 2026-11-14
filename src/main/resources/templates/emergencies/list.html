@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta y seguimiento de emergencias — ARE (Arequipa RescUE)</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #cbd5e1;
+            --primary: #1e3a8a;
+            --primary-hover: #1d4ed8;
+            --text: #0f172a;
+            --muted: #475569;
+            --badge-bg: #dbeafe;
+            --badge-fg: #1e40af;
+            --error-bg: #fef2f2;
+            --error-border: #fca5a5;
+            --error-fg: #991b1b;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 2.5rem 1.25rem;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        main {
+            max-width: 980px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        }
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            font-size: 0.92rem;
+        }
+        nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            background: var(--badge-bg);
+            color: var(--badge-fg);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        h1 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary);
+            font-size: 1.65rem;
+        }
+        .meta-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            padding: 0.75rem 1rem;
+            background: #f1f5f9;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 1.25rem;
+        }
+        .alert-error {
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error-fg);
+            padding: 0.85rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.25rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92rem;
+        }
+        th, td {
+            border-bottom: 1px solid var(--border);
+            padding: 0.65rem 0.5rem;
+            text-align: left;
+        }
+        th {
+            color: var(--primary);
+            font-weight: 600;
+            background: #f8fafc;
+        }
+        .empty-state {
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--muted);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+        }
+        footer {
+            margin-top: 1.75rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.84rem;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+<main>
+    <nav>
+        <a th:href="@{/}">← Volver al inicio</a>
+        <a class="btn-primary" th:href="@{/emergencies/new}">+ Registrar emergencia (HU-01)</a>
+    </nav>
+
+    <span class="badge">Actor: Operador de recepción (ACT-01) — HU-02</span>
+    <h1>Consulta y seguimiento del estado de emergencias</h1>
+
+    <div class="meta-bar">
+        <span><strong>Versión activa de reglas:</strong> <code th:text="${activeRuleVersionId}">RUL-V01</code></span>
+        <span><strong>Tiempo lógico actual:</strong> <code>t = <span th:text="${currentLogicalTicks}">0</span></code></span>
+        <span><strong>Total registradas:</strong> <strong th:text="${#lists.size(emergencies)}">0</strong></span>
+    </div>
+
+    <div class="alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <div class="empty-state" th:if="${#lists.isEmpty(emergencies)}">
+        No existen emergencias registradas actualmente. Utilice el botón <strong>Registrar emergencia (HU-01)</strong> para crear una solicitud.
+    </div>
+
+    <table th:if="${!#lists.isEmpty(emergencies)}">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Categoría</th>
+            <th>Nodo</th>
+            <th>Prioridad informativa</th>
+            <th>Equipamiento requerido</th>
+            <th>Versión reglas</th>
+            <th>Estado (DEC-019)</th>
+            <th>Ambulancia</th>
+            <th>Hospital</th>
+            <th>Registro (t)</th>
+            <th>Detalle</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${emergencies}">
+            <td><code th:text="${item.id}">EMG-00001</code></td>
+            <td><code th:text="${item.incidentCategoryCode}">INC-A</code></td>
+            <td><code th:text="${item.nodeId}">N01</code></td>
+            <td th:text="${item.simulatedPriorityLabel}">Alta</td>
+            <td><code th:text="${item.requiredEquipmentCode}">SPECIALIZED</code></td>
+            <td><code th:text="${item.appliedRuleVersionId}">RUL-V01</code></td>
+            <td><code th:text="${item.stateCode}">REGISTERED</code></td>
+            <td th:text="${item.assignedAmbulanceId != null ? item.assignedAmbulanceId : '—'}">—</td>
+            <td th:text="${item.reservedOrOccupiedHospitalId != null ? item.reservedOrOccupiedHospitalId : '—'}">—</td>
+            <td><code th:text="${'t=' + item.registeredAtTicks}">t=0</code></td>
+            <td><a th:href="@{/emergencies/{id}(id=${item.id})}">Ver ficha</a></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <footer>
+        ARE — Arequipa RescUE. Estados permitidos exclusivamente según DEC-019: REGISTERED, WAITING_AMBULANCE, ASSIGNED, AT_INCIDENT, WAITING_HOSPITAL, IN_TRANSPORT, COMPLETED.
+    </footer>
+</main>
+</body>
+</html>

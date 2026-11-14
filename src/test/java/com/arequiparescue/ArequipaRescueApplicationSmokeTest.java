@@ -1,5 +1,9 @@
 package com.arequiparescue;
 
+import com.arequiparescue.emergency.infrastructure.persistence.SpringDataEmergencyRepository;
+import com.arequiparescue.emergency.infrastructure.persistence.SpringDataEmergencySequenceRepository;
+import com.arequiparescue.emergency.infrastructure.persistence.SpringDataTriageRuleRepository;
+import com.arequiparescue.emergency.infrastructure.persistence.SpringDataTriageRuleVersionRepository;
 import com.arequiparescue.routing.infrastructure.persistence.SpringDataGraphEdgeRepository;
 import com.arequiparescue.routing.infrastructure.persistence.SpringDataGraphNodeRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +37,18 @@ class ArequipaRescueApplicationSmokeTest {
 
     @MockitoBean
     private SpringDataGraphEdgeRepository graphEdgeRepository;
+
+    @MockitoBean
+    private SpringDataTriageRuleVersionRepository triageRuleVersionRepository;
+
+    @MockitoBean
+    private SpringDataTriageRuleRepository triageRuleRepository;
+
+    @MockitoBean
+    private SpringDataEmergencyRepository emergencyRepository;
+
+    @MockitoBean
+    private SpringDataEmergencySequenceRepository emergencySequenceRepository;
 
     @Autowired
     private TestRestTemplate restTemplate;
