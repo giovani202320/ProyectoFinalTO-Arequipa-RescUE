@@ -1,6 +1,6 @@
 # Actores e Interesados del Sistema — ARE (Arequipa RescUE)
 
-**Estado del documento:** Aprobado — Versión inicial aceptada (`DEC-009`, `DEC-015`) actualizada con la formalización de `PEN-002a` (`DEC-016`; aspectos de Sección 5 pendientes de definición)
+**Estado del documento:** Aprobado — Versión inicial aceptada (`DEC-009`, `DEC-015`) actualizada con la formalización de `PEN-002a` (`DEC-016`) y `PEN-002b` (`DEC-017`; aspectos de Sección 5 pendientes de definición)
 **Propósito:** Especificar los actores humanos que interactúan con el simulador académico **ARE – Arequipa RescUE**, sus responsabilidades aprobadas, sus límites operativos y la distinción explícita frente a los componentes internos del sistema.
 
 > [!IMPORTANT]
@@ -41,12 +41,12 @@
 - **Identificador:** `ACT-02`
 - **Naturaleza:** Actor humano operativo (rol académico simulado).
 - **Descripción:** Representa al responsable de coordinar la respuesta operativa ante las emergencias registradas y pendientes, tomando decisiones de asignación en modalidad supervisada y monitoreando el progreso de los despachos y de las unidades hasta su llegada al hospital.
-- **Responsabilidades aprobadas (`DEC-009`, `DEC-011`):**
+- **Responsabilidades aprobadas (`DEC-009`, `DEC-011`, `DEC-017`):**
   1. **Revisar emergencias:** Consultar las emergencias activas y la cola de emergencias pendientes junto con su clasificación simulada y equipamiento requerido.
   2. **Gestionar asignaciones:**
      - En **modalidad supervisada**, revisar la lista de ambulancias elegibles y la recomendación calculada por costo de desplazamiento, pudiendo seleccionar **cualquier ambulancia elegible**, aunque no sea la primera recomendada (`DEC-011`).
-     - Si la ambulancia seleccionada deja de estar disponible debido a una operación concurrente antes de confirmarse la asignación, recibir la lista actualizada de alternativas elegibles y efectuar una nueva selección (`DEC-011`).
-     - Observar el resultado de las asignaciones ejecutadas en **modalidad automática**.
+     - Si la ambulancia seleccionada en modalidad supervisada deja de estar disponible debido a una operación concurrente antes de confirmarse la asignación, recibir la lista actualizada de alternativas elegibles y efectuar una nueva selección manual, sin que aplique el límite de 3 reintentos automáticos propio de la modalidad automática (`DEC-011`, `DEC-017`).
+     - Observar el resultado de las asignaciones ejecutadas en **modalidad automática** y, cuando una operación automática agote su intento inicial y sus 3 reintentos adicionales por conflictos concurrentes, recibir un aviso visible en la interfaz web interna de ARE que le permita identificar la emergencia que permaneció en estado `pendiente`, el motivo de agotamiento de reintentos por concurrencia y que la operación automática terminó sin asignación (`DEC-017`).
   3. **Supervisar despachos:** Hacer seguimiento del estado operativo de las asignaciones, del desplazamiento simulado de las ambulancias por la ruta calculada y del arribo al hospital (`DEC-007`).
 - **Límites de responsabilidad:**
   - No puede asignar una ambulancia que no cumpla las condiciones previas de elegibilidad (disponibilidad, estado y equipamiento requerido) ni violar la regla de preservación de ambulancias especializadas (`DEC-011`).
@@ -82,7 +82,7 @@
 - **Naturaleza:** Componente interno de software (**no es un actor humano** — `DEC-009`).
 - **Propósito dentro de la arquitectura:** Ejecutar internamente la dinámica temporal y concurrente del simulador a partir de los escenarios e instrucciones iniciados por el `Administrador` o de los despachos en curso:
   - Generación o procesamiento concurrente de solicitudes de emergencia definidas en un escenario experimental.
-  - Ejecución de la evaluación y reintentos acotados en modalidad de asignación automática (`DEC-011`).
+  - Ejecución de la evaluación y reintentos acotados en modalidad de asignación automática (1 intento inicial + hasta 3 reintentos adicionales ante conflicto concurrente, con reevaluación integral y registro funcional del resultado según `DEC-011` y `DEC-017`).
   - Avance del desplazamiento simulado de las ambulancias a través de las rutas calculadas con Dijkstra hasta la llegada al hospital (`DEC-007`, `DEC-013`).
   - Recolección de marcas de tiempo y métricas de espera/despacho para su posterior consulta por el `Administrador` (`DEC-012`).
 

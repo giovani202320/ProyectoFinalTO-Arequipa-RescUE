@@ -1,10 +1,10 @@
 # Reglas de Negocio — ARE (Arequipa RescUE)
 
-**Estado del documento:** Aprobado — Línea base aceptada (`DEC-015`) y formalización de reglas de clasificación y equipamiento de `PEN-002a` (`DEC-016`), conservando `RN-ASI-005` y `RN-MET-003` como propuestas pendientes y los parámetros pendientes de `PEN-002b` a `PEN-002d`
+**Estado del documento:** Aprobado — Línea base aceptada (`DEC-015`) y formalizaciones de `PEN-002a` (`DEC-016`) y `PEN-002b` (`DEC-017`), conservando `RN-ASI-005` y `RN-MET-003` como propuestas pendientes y los parámetros pendientes de `PEN-002c` y `PEN-002d`
 **Propósito:** Formalizar las reglas de negocio e invariantes de dominio de **ARE – Arequipa RescUE** con identificadores estables, distinguiendo con exactitud qué reglas están **Aprobadas** por el responsable del proyecto y qué propuestas, parámetros o reglas específicas permanecen **Pendientes de aprobación o definición**.
 
 > [!IMPORTANT]
-> Ningún parámetro pendiente (como el número máximo de reintentos, las reglas de selección de hospital o la preparación de borradores durante escenarios activos) se convierte en una regla definitiva en este documento. Todo elemento no cerrado se declara expresamente como **Pendiente de definición**.
+> Ningún parámetro pendiente (como las reglas de selección de hospital, la liberación de ambulancia básica, los criterios de desempate o la preparación de borradores durante escenarios activos) se convierte en una regla definitiva en este documento. Todo elemento no cerrado se declara expresamente como **Pendiente de definición**.
 
 ---
 
@@ -16,7 +16,7 @@
 | **`RN-ELE`** | 2. Elegibilidad y recomendación de ambulancias | `RN-ELE-001` a `RN-ELE-004` | — |
 | **`RN-ASI`** | 3. Asignación supervisada y automática | `RN-ASI-001` a `RN-ASI-004` | `RN-ASI-005` (propuesta pendiente) |
 | **`RN-PRE`** | 4. Preservación de ambulancias especializadas | `RN-PRE-001` a `RN-PRE-003` | — |
-| **`RN-CON`** | 5. Conflictos concurrentes y reintentos | `RN-CON-001` a `RN-CON-004` | `RN-CON-005` |
+| **`RN-CON`** | 5. Conflictos concurrentes y reintentos | `RN-CON-001` a `RN-CON-009` | — *(Mecanismos técnicos en `PEN-006`)* |
 | **`RN-COL`** | 6. Cola de emergencias y FIFO | `RN-COL-001` a `RN-COL-006` | Pendiente: liberación de ambulancia básica (`PEN-002d`) |
 | **`RN-RUT`** | 7. Rutas y seguimiento | `RN-RUT-001` a `RN-RUT-005` | `RN-RUT-006` |
 | **`RN-HOS`** | 8. Hospitales | `RN-HOS-001` a `RN-HOS-003` | `RN-HOS-004` |
@@ -229,10 +229,86 @@
 - **Estado:** **Aprobada**
 - **Referencias:** `DEC-011`.
 
-#### `RN-CON-005` — Valor del número máximo de reintentos automáticos
-- **Enunciado:** El parámetro numérico exacto que define el número máximo de reintentos automáticos ante fallos por concurrencia debe establecerse y aprobarse (como constante o parámetro configurable del simulador).
-- **Estado:** **Pendiente de definición** (`PEN-002b`)
-- **Decisión faltante:** Definir el valor exacto o rango configurable del número máximo de reintentos.
+#### `RN-CON-005` — Límite máximo de intentos en asignación automática y alcance exclusivo por conflicto concurrente
+- **Enunciado:** Cada operación de **asignación automática** dispone de **1 intento inicial** y **hasta 3 reintentos automáticos adicionales**, lo que equivale a un **máximo de 4 intentos totales** dentro de una misma operación de asignación automática. Esta política se rige por las siguientes condiciones:
+  1. Los reintentos adicionales solo se activan cuando un intento falla por un **conflicto concurrente de disponibilidad** (es decir, cuando otra operación concurrente modificó o comprometió la disponibilidad de la ambulancia seleccionada antes de que la asignación actual pudiera confirmarse).
+  2. No se permiten reintentos ilimitados.
+  3. Esta política **no aplica** ni debe confundirse con la ausencia normal de ambulancias elegibles ni con errores técnicos generales del sistema.
+  4. **No se extiende** el límite de 3 reintentos automáticos a la modalidad de asignación supervisada (`RN-CON-002`).
+- **Estado:** **Aprobada** (cierra `PEN-002b`)
+- **Referencias:** `DEC-011`, `DEC-015`, `DEC-017`, `RN-CON-002`, `RN-CON-003`, `RN-CON-004`.
+
+#### `RN-CON-006` — Reevaluación integral obligatoria y finalización anticipada en cada reintento
+- **Enunciado:** Después de cada conflicto concurrente en modalidad automática, y antes de intentar una nueva asignación, el sistema debe obligatoriamente:
+  1. Consultar nuevamente la disponibilidad de ambulancias.
+  2. Reevaluar las condiciones de elegibilidad (`RN-ELE-002`).
+  3. Respetar la compatibilidad de equipamiento (`BASIC` y `SPECIALIZED`, `RN-EME-007`).
+  4. Aplicar las reglas de preservación de ambulancias especializadas (`RN-PRE-001` a `RN-PRE-003`).
+  5. Recalcular la selección según el costo de ruta mediante Dijkstra y las reglas vigentes (`RN-ELE-003`, `RN-RUT-002`).
+  No se permite reintentar a ciegas sobre una ambulancia que ya dejó de estar disponible. Asimismo, el proceso de reintentos termina de forma anticipada e inmediata cuando:
+  - Se confirma una asignación válida (deteniendo cualquier reintento adicional), o
+  - Tras una reevaluación ya no existen ambulancias elegibles disponibles; en este caso la emergencia permanece en estado **pendiente** y **no se siguen consumiendo reintentos vacíos**. Si desde el inicio no existen ambulancias elegibles, la emergencia pasa o permanece en estado **pendiente** y se consumen `0` reintentos de concurrencia.
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-011`, `DEC-013`, `DEC-016`, `DEC-017`, `RN-EME-007`, `RN-ELE-001` a `RN-ELE-003`, `RN-PRE-001` a `RN-PRE-003`, `RN-RUT-002`.
+
+#### `RN-CON-007` — Tratamiento del agotamiento del límite de reintentos y notificación interna al Despachador
+- **Enunciado:** Si el intento inicial y los 3 reintentos automáticos adicionales fallan por conflictos concurrentes (alcanzando el máximo de 4 intentos fallidos en la operación):
+  1. La emergencia permanece registrada y en estado **pendiente** (nunca se cancela ni se elimina por este motivo).
+  2. Se registra como motivo del resultado el agotamiento de reintentos por conflicto concurrente.
+  3. Se notifica al `Despachador` (`ACT-02`) mediante un aviso visible en la interfaz web de ARE, de modo que pueda identificar desde la interfaz: (a) la emergencia que quedó en estado `pendiente`, (b) el motivo de agotamiento de reintentos por concurrencia y (c) que la operación automática terminó sin asignación.
+  4. No se ejecutan más reintentos dentro de esa misma operación y no se introducen servicios externos de notificación (como correo electrónico o SMS).
+  *(Nota: no se fija en esta etapa el componente visual específico, el mecanismo de refresco de pantalla ni la tecnología de notificación interna).*
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-009`, `DEC-011`, `DEC-017`, `docs/product/stakeholders.md` (`ACT-02`).
+
+#### `RN-CON-008` — Registro funcional del resultado ante reintentos o fallo por conflicto concurrente
+- **Enunciado:** Cuando una operación de asignación automática requiera reintentos o termine sin asignación por conflicto concurrente, el sistema debe conservar al menos la siguiente información funcional:
+  1. Identificador de la emergencia.
+  2. Resultado de la operación.
+  3. Motivo del resultado, distinguiendo explícitamente el agotamiento de reintentos por concurrencia (por ejemplo, código funcional `CONCURRENCY_RETRY_EXHAUSTED`) de la falta de ambulancias elegibles y de errores técnicos generales.
+  4. Número de intentos ejecutados.
+  5. Número de reintentos adicionales consumidos.
+  6. Tipo de operación (`automática`).
+  7. Marca temporal del evento.
+  *(Nota: no se fija en esta etapa el esquema SQL ni la estructura técnica definitiva de persistencia).*
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-011`, `DEC-017`.
+
+#### `RN-CON-009` — Atomicidad funcional, preservación de invariantes e independencia del contador por operación
+- **Enunciado:** Durante la resolución de conflictos concurrentes y la ejecución de reintentos automáticos deben respetarse las siguientes invariantes de consistencia:
+  1. Ningún intento fallido puede dejar asignaciones parciales confirmadas, ni una ambulancia puede quedar asignada simultáneamente a dos emergencias incompatibles (`RN-CON-001`).
+  2. Los reintentos no alteran el orden FIFO de las colas (`RN-COL-003`), las condiciones de elegibilidad (`RN-ELE-002`), la preservación de ambulancias especializadas (`RN-PRE-001` a `RN-PRE-003`) ni el cálculo de rutas mediante Dijkstra (`RN-RUT-002`).
+  3. Cada operación de asignación independiente maneja su propio contador de intentos (hasta 1 intento inicial + 3 reintentos adicionales).
+  4. Si posteriormente se inicia una nueva operación independiente de asignación sobre una emergencia que permanecía en estado `pendiente` (por ejemplo, cuando una ambulancia vuelve a estar disponible o se ejecuta un nuevo ciclo de atención de cola), esa nueva operación inicia su propio contador desde cero.
+  *(Nota: los mecanismos técnicos de bloqueo optimista/pesimista, niveles de aislamiento, rollback, hilos/ejecutores y pruebas concurrentes se definirán en `PEN-006`).*
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-011`, `DEC-012`, `DEC-013`, `DEC-017`, `PEN-006`.
+
+#### Casos límite funcionales aprobados para conflictos concurrentes y reintentos (`DEC-017`)
+
+1. **Sin ambulancias elegibles en el intento inicial:** la emergencia queda en estado `pendiente` y se consumen `0` reintentos de concurrencia.
+2. **Éxito en el intento inicial:** se confirma la asignación y se consumen `0` reintentos adicionales.
+3. **Conflicto en el intento inicial y éxito en el primer reintento:** se confirma la nueva ambulancia elegible y se registra `1` reintento consumido.
+4. **Conflicto en el intento inicial y ausencia de elegibles en la reevaluación:** la emergencia queda `pendiente` por falta de ambulancias elegibles sin seguir consumiendo reintentos.
+5. **Agotamiento del intento inicial y de los 3 reintentos adicionales por conflictos concurrentes:** la emergencia queda `pendiente`, se registra el motivo de agotamiento de reintentos por concurrencia y se emite aviso visible al `Despachador` en la interfaz del sistema.
+6. **Preservación de ambulancias especializadas durante reintentos:** para una emergencia `BASIC`, un reintento sigue prefiriendo ambulancias `BASIC` elegibles; solo puede usar una `SPECIALIZED` si no existen `BASIC` elegibles.
+7. **Incompatibilidad de equipamiento durante reintentos:** para una emergencia `SPECIALIZED`, ningún reintento puede seleccionar una ambulancia `BASIC`; si solo quedan `BASIC`, la emergencia pasa a `pendiente` sin consumir reintentos adicionales.
+8. **Conflicto en asignación supervisada:** si la ambulancia elegida manualmente por el `Despachador` pierde disponibilidad antes de confirmar, no se confirma la asignación, se actualizan las alternativas elegibles y se solicita una nueva selección manual.
+9. **Nueva operación posterior:** si una emergencia quedó `pendiente` tras agotar reintentos y más adelante se dispara una nueva operación independiente de asignación (por ejemplo, cuando una ambulancia pasa a estar disponible), esa nueva operación inicia su propio contador desde cero.
+10. **Error técnico distinto de conflicto concurrente:** un fallo técnico general no debe tratarse ni registrarse como agotamiento de reintentos de concurrencia.
+
+#### Criterios de aceptación funcionales aprobados (`CA-CON-01` a `CA-CON-10`)
+
+- **`CA-CON-01`:** Si la ambulancia seleccionada en asignación automática sigue disponible al confirmar, la asignación se completa en el intento inicial con `0` reintentos.
+- **`CA-CON-02`:** Si el intento inicial falla por conflicto concurrente y existe otra ambulancia elegible, el sistema reevalúa y confirma la asignación en un reintento válido dentro del límite.
+- **`CA-CON-03`:** En cada reintento se recalculan disponibilidad, elegibilidad, compatibilidad de equipamiento, preservación de especializadas y costo por Dijkstra.
+- **`CA-CON-04`:** Si no existen ambulancias elegibles en el intento inicial, la emergencia queda `pendiente` con `0` reintentos de concurrencia.
+- **`CA-CON-05`:** Si tras un conflicto concurrente la reevaluación determina que ya no quedan ambulancias elegibles, el proceso termina inmediatamente y la emergencia queda `pendiente` sin consumir reintentos restantes.
+- **`CA-CON-06`:** Si fallan el intento inicial y los 3 reintentos adicionales por conflictos concurrentes, la emergencia queda `pendiente`, se registra el motivo de agotamiento de reintentos por concurrencia y se notifica al `Despachador` en la interfaz del sistema.
+- **`CA-CON-07`:** Ante operaciones concurrentes que compiten por la misma ambulancia, nunca se producen dos asignaciones activas simultáneas sobre la misma unidad.
+- **`CA-CON-08`:** Durante los reintentos para una emergencia `BASIC`, el sistema mantiene la preferencia por ambulancias `BASIC` y solo usa `SPECIALIZED` cuando no existen `BASIC` elegibles.
+- **`CA-CON-09`:** Durante los reintentos para una emergencia `SPECIALIZED`, el sistema nunca asigna una ambulancia `BASIC`.
+- **`CA-CON-10`:** En asignación supervisada, si la ambulancia elegida por el `Despachador` deja de estar disponible antes de confirmar, el sistema rechaza esa confirmación, actualiza las alternativas elegibles y solicita una nueva selección al `Despachador`.
 
 ---
 

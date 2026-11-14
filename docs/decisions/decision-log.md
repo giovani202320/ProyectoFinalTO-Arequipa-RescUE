@@ -1,10 +1,10 @@
 # Bitácora de Decisiones — ARE (Arequipa RescUE)
 
-**Estado del documento:** Aprobado — Línea base aceptada (`DEC-015`) y formalización de `PEN-002a` (`DEC-016`)
+**Estado del documento:** Aprobado — Línea base aceptada (`DEC-015`) y formalizaciones de `PEN-002a` (`DEC-016`) y `PEN-002b` (`DEC-017`)
 **Propósito:** Registrar de manera trazable las decisiones arquitectónicas, tecnológicas, funcionales y de producto formalmente acordadas en **ARE – Arequipa RescUE**, diferenciándolas estrictamente de las propuestas y definiciones que permanecen pendientes de aprobación.
 
 > [!IMPORTANT]
-> Solo llevan el estado **Aprobada** aquellas decisiones que cuentan con autorización expresa del responsable humano del proyecto. Las decisiones previas (`DEC-001` a `DEC-015`) se conservan íntegras y se amplían con `DEC-016` (que formaliza y cierra `PEN-002a`). Ningún parámetro o regla pendiente (`PEN-002b` a `PEN-008`, `RN-ASI-005`, `RN-MET-003`) se registra como decisión aprobada.
+> Solo llevan el estado **Aprobada** aquellas decisiones que cuentan con autorización expresa del responsable humano del proyecto. Las decisiones previas (`DEC-001` a `DEC-016`) se conservan íntegras y se amplían con `DEC-017` (que formaliza y cierra `PEN-002b`). Ningún parámetro o regla pendiente (`PEN-002c` a `PEN-008`, `RN-ASI-005`, `RN-MET-003`) se registra como decisión aprobada.
 
 ---
 
@@ -28,6 +28,7 @@
 | [DEC-014](#dec-014-gestión-hospitalaria-básica-y-desacoplamiento-de-la-selección-inicial-de-ambulancias) | Gestión hospitalaria básica y desacoplamiento respecto a la selección inicial de ambulancias | Dominio / Hospitales | Aprobada (reglas de hospital pendientes) | 2026-11-12 |
 | [DEC-015](#dec-015-aprobación-formal-de-la-primera-entrega-documental-definición-de-producto-y-reglas-de-negocio) | Aprobación formal de la primera entrega documental (definición de producto y reglas de negocio) | Producto / Gobernanza Documental | Aprobada (con propuestas y parámetros pendientes abiertos) | 2026-11-12 |
 | [DEC-016](#dec-016-formalización-de-pen-002a-sobre-modelo-de-clasificación-simulada-equipamiento-requerido-versionado-de-reglas-y-validaciones-de-registro) | Formalización de `PEN-002a` sobre modelo de clasificación simulada, equipamiento requerido, versionado de reglas y validaciones de registro | Dominio / Triage y Equipamiento | Aprobada (cierra `PEN-002a`; borradores en escenario activo pendientes) | 2026-11-13 |
+| [DEC-017](#dec-017-formalización-de-pen-002b-sobre-política-de-reintentos-automáticos-ante-conflictos-concurrentes-registro-funcional-aviso-al-despachador-y-criterios-de-aceptación) | Formalización de `PEN-002b` sobre política de reintentos automáticos ante conflictos concurrentes, registro funcional, aviso al despachador y criterios de aceptación | Dominio / Despacho y Concurrencia | Aprobada (cierra `PEN-002b`; mecanismos técnicos en `PEN-006`) | 2026-11-13 |
 
 ---
 
@@ -393,6 +394,79 @@
 
 ---
 
+### DEC-017: Formalización de PEN-002b sobre política de reintentos automáticos ante conflictos concurrentes, registro funcional, aviso al despachador y criterios de aceptación
+
+- **Identificador:** DEC-017
+- **Fecha:** 2026-11-13.
+- **Origen de la aprobación humana:** Autorización expresa del responsable humano del proyecto ARE posterior a `DEC-016` (commit `1cf5ae9`) para formalizar y cerrar el pendiente funcional `PEN-002b`.
+- **Título:** Formalización del comportamiento funcional de reintentos automáticos ante conflictos concurrentes de asignación de ambulancias (`PEN-002b`), incluyendo límite de intentos, reevaluación obligatoria, finalización anticipada, tratamiento del agotamiento, registro funcional, aviso interno al despachador, casos límite y criterios de aceptación (`CA-CON-01` a `CA-CON-10`).
+- **Contexto:** `DEC-011` estableció que cuando una asignación automática falla debido a que la ambulancia seleccionada dejó de estar disponible por una operación concurrente, el sistema reevalúa alternativas y reintenta automáticamente un número limitado de veces, permaneciendo la emergencia en estado pendiente si se agotan los reintentos. Quedaba pendiente en `PEN-002b` (`RN-CON-005`) fijar el número máximo de reintentos automáticos, las condiciones exactas de disparo y terminación anticipada, la información funcional a registrar, la notificación al `Despachador` y los casos límite y criterios de aceptación verificables, sin anticipar las decisiones técnicas de bloqueo o aislamiento correspondientes a `PEN-006`.
+- **Alternativas consideradas:**
+  1. **Alternativa A (Adoptada):** Política acotada a conflictos concurrentes en asignación automática con **1 intento inicial + hasta 3 reintentos automáticos adicionales (máximo 4 intentos totales)** por operación independiente, reevaluación integral obligatoria tras cada conflicto, detención inmediata ante éxito o ausencia sobrevenida de elegibles (sin consumir reintentos restantes), permanencia en estado `pendiente` al agotarse el límite, registro funcional del resultado (distinguiendo el motivo funcional como `CONCURRENCY_RETRY_EXHAUSTED` frente a falta de elegibles y errores técnicos) y aviso visible al `Despachador` en la interfaz web interna, sin extender el límite de 3 reintentos a la modalidad supervisada.
+  2. **Alternativa B (Descartada):** Reintentos ilimitados o reintentos ciegos sobre la misma unidad sin reevaluar elegibilidad, equipamiento, preservación y costo por Dijkstra, o bien consumir reintentos de concurrencia cuando inicialmente no existen ambulancias elegibles. Se descartó porque impediría la terminación determinista de la operación bajo alta contención, violaría las reglas de elegibilidad y preservación (`DEC-011`, `DEC-016`) y confundiría la escasez normal de flota con un conflicto de concurrencia.
+- **Decisión:**
+  1. **Alcance funcional de la política de reintentos:**
+     - Aplica exclusivamente a las operaciones de **asignación automática** de ambulancias cuando ocurre un **conflicto concurrente** (otra operación concurrente modificó o comprometió la disponibilidad de la ambulancia seleccionada antes de que la asignación actual pudiera confirmarse).
+     - No debe confundirse con: (a) ausencia normal de ambulancias elegibles ni (b) errores técnicos generales del sistema.
+  2. **Límite máximo de intentos:**
+     - Cada operación de asignación automática tendrá **1 intento inicial** y **hasta 3 reintentos automáticos adicionales**, lo que equivale a un **máximo de 4 intentos totales** dentro de una misma operación de asignación automática.
+     - Los reintentos adicionales solo se activan cuando un intento falla por conflicto concurrente de disponibilidad. No se permiten reintentos ilimitados.
+  3. **Reevaluación obligatoria en cada reintento:**
+     - Después de cada conflicto concurrente, y antes de intentar una nueva asignación, el sistema debe obligatoriamente:
+       1. Consultar nuevamente la disponibilidad de ambulancias.
+       2. Reevaluar las condiciones de elegibilidad (`RN-ELE-002`).
+       3. Respetar la compatibilidad de equipamiento (`BASIC` y `SPECIALIZED`, `RN-EME-007`).
+       4. Aplicar la preservación de ambulancias especializadas (`RN-PRE-001` a `RN-PRE-003`).
+       5. Recalcular la selección según el costo de ruta mediante Dijkstra y las reglas vigentes (`RN-ELE-003`, `RN-RUT-002`).
+     - No se permite reintentar a ciegas sobre una ambulancia que ya dejó de estar disponible.
+  4. **Finalización anticipada:**
+     - El proceso de reintentos termina inmediatamente cuando ocurre cualquiera de estas condiciones:
+       1. Se confirma una asignación válida.
+       2. Tras una reevaluación ya no existen ambulancias elegibles disponibles; en este caso la emergencia permanece en estado `pendiente` y **no se siguen consumiendo reintentos vacíos**.
+     - Si desde el inicio no existen ambulancias elegibles, la emergencia pasa o permanece en estado `pendiente` y se consumen `0` reintentos de concurrencia.
+  5. **Tratamiento del agotamiento del límite:**
+     - Si el intento inicial y los 3 reintentos adicionales fallan por conflictos concurrentes:
+       1. La emergencia permanece registrada y en estado `pendiente`.
+       2. Se registra como motivo el agotamiento de reintentos por conflicto concurrente.
+       3. Se notifica al `Despachador` (`ACT-02`) mediante un aviso visible en la interfaz web de ARE.
+       4. No se ejecutan más reintentos dentro de esa misma operación.
+     - La emergencia nunca se cancela ni se elimina por este motivo, y no se introducen servicios externos de notificación como correo electrónico o SMS.
+  6. **Registro funcional del resultado:**
+     - Cuando una operación automática requiera reintentos o termine sin asignación por conflicto concurrente, el sistema debe conservar al menos la siguiente información funcional:
+       1. Identificador de la emergencia.
+       2. Resultado de la operación.
+       3. Motivo del resultado, distinguiendo el agotamiento de reintentos por concurrencia (por ejemplo, código funcional `CONCURRENCY_RETRY_EXHAUSTED`) de la falta de ambulancias elegibles y de errores técnicos.
+       4. Número de intentos ejecutados.
+       5. Número de reintentos adicionales consumidos.
+       6. Tipo de operación (`automática`).
+       7. Marca temporal del evento.
+     - *(No se fija en esta etapa el esquema SQL ni la estructura técnica definitiva).*
+  7. **Notificación interna al Despachador:**
+     - El `Despachador` (`ACT-02`) debe poder identificar desde la interfaz del sistema:
+       1. La emergencia que quedó en estado `pendiente`.
+       2. El motivo de agotamiento de reintentos por concurrencia.
+       3. Que la operación automática terminó sin asignación.
+     - *(No se fija todavía el componente visual específico, el mecanismo de refresco de pantalla ni la tecnología de notificación interna).*
+  8. **Consistencia y exclusividad:**
+     - Una ambulancia nunca puede quedar asignada simultáneamente a dos emergencias incompatibles (`RN-CON-001`).
+     - Ningún intento fallido puede dejar asignaciones parciales confirmadas.
+     - Una asignación exitosa detiene inmediatamente cualquier reintento adicional.
+     - Los reintentos no alteran el orden FIFO de las colas (`DEC-012`), las reglas de elegibilidad (`DEC-011`), la preservación de ambulancias especializadas (`DEC-011`) ni el cálculo de rutas mediante Dijkstra (`DEC-013`).
+     - Cada operación de asignación independiente maneja su propio contador de intentos; si posteriormente se inicia una nueva operación independiente de asignación para la emergencia pendiente (por ejemplo, al liberarse una ambulancia o ejecutarse un nuevo ciclo de atención de cola), esa nueva operación inicia su propio contador desde cero.
+  9. **Asignación supervisada:**
+     - Se conserva sin cambios el comportamiento aprobado en `DEC-011` y `RN-CON-002`: cuando el `Despachador` selecciona manualmente una ambulancia en modo supervisado, el sistema vuelve a validar su disponibilidad y elegibilidad antes de confirmar; si dejó de estar disponible por concurrencia, la asignación no se confirma y la interfaz actualiza las alternativas elegibles para que el `Despachador` realice una nueva selección.
+     - **No se extiende el límite de 3 reintentos automáticos al modo supervisado.**
+  10. **Casos límite y criterios de aceptación:**
+      - Se aprueban e incorporan en `docs/product/requirements/business-rules.md` los diez casos límite funcionales y los diez criterios de aceptación verificables `CA-CON-01` a `CA-CON-10`.
+- **Justificación:** Proporciona una especificación funcional completa, determinista y auditable del manejo de conflictos concurrentes en asignación automática, diferenciando con precisión los fallos de concurrencia frente a la falta de flota elegible o errores técnicos, garantizando observabilidad para el `Despachador` y preservando intactas las invariantes de elegibilidad, preservación, FIFO y Dijkstra.
+- **Consecuencias:**
+  - **Positivas:** Queda cerrado `PEN-002b`; se actualiza `RN-CON-005` a estado **Aprobada** y se formalizan las reglas complementarias `RN-CON-006` a `RN-CON-009` junto con `CA-CON-01` a `CA-CON-10` en `business-rules.md`.
+  - **Restricciones/Compromisos:** Esta decisión no resuelve `PEN-006`; no se definen todavía bloqueo optimista (`@Version`) o pesimista, niveles de aislamiento transaccional, mecanismos técnicos de retry de Spring, restricciones SQL, manejo técnico de rollback, hilos/ejecutores, WebSockets/polling ni la implementación de pruebas concurrentes.
+- **Estado:** Aprobada.
+- **Referencias relacionadas:** `DEC-009`, `DEC-011`, `DEC-012`, `DEC-013`, `DEC-015`, `DEC-016`, `PEN-002b`, `PEN-006`, `docs/product/requirements/business-rules.md` (`RN-CON-001` a `RN-CON-009`, `CA-CON-01` a `CA-CON-10`), `docs/product/vision-and-scope.md`, `docs/product/stakeholders.md`.
+
+---
+
 ## 3. Decisiones y Definiciones Pendientes (No Aprobadas)
 
 A continuación se listan los aspectos que **continúan pendientes de definición o aprobación humana**. Ninguno de ellos debe asumirse como cerrado:
@@ -401,7 +475,7 @@ A continuación se listan los aspectos que **continúan pendientes de definició
 | :--- | :--- | :--- | :--- | :--- |
 | **PEN-001** | *(Resuelto por `DEC-008`)* Alcance del MVP vs. alcance total | Se conserva por trazabilidad histórica: quedó resuelto y aprobado mediante `DEC-008` (MVP equilibrado con los 8 componentes listados). | Cerrado por `DEC-008` | `DEC-008`, `docs/product/vision-and-scope.md` (Secc. 8) |
 | **PEN-002a** | *(Resuelto por `DEC-016`)* Catálogo y reglas concretas de Triage y Equipamiento | Quedó formalizado mediante `DEC-016` (modelo determinista, catálogo inicial `INC-A` a `INC-D`, equipamiento `BASIC`/`SPECIALIZED`, versionado inmutable, bloqueo de publicación/activación en escenario activo, campos del registro y validaciones). *(Nota: la posibilidad de preparar borradores de reglas durante escenarios activos se mantiene abierta en `stakeholders.md` Secc. 5.2, y los formatos físicos/SQL y mecanismos técnicos de activación atómica corresponden a `PEN-005` y `PEN-006`).* | Cerrado por `DEC-016` | `DEC-010`, `DEC-016`, `business-rules.md` (`RN-EME-007` a `RN-EME-012`) |
-| **PEN-002b** | Límite máximo de reintentos automáticos | Definir el número máximo de reintentos automáticos cuando una asignación concurrente falla porque la ambulancia dejó de estar disponible. | Pendiente de definición | `DEC-011`, `business-rules.md` (`RN-CON-005`) |
+| **PEN-002b** | *(Resuelto por `DEC-017`)* Límite máximo y política funcional de reintentos automáticos | Quedó formalizado mediante `DEC-017` (1 intento inicial + hasta 3 reintentos automáticos adicionales = máximo 4 intentos totales ante conflicto concurrente en asignación automática, reevaluación integral obligatoria, finalización anticipada, permanencia en estado `pendiente` al agotar el límite, registro funcional distinguible como `CONCURRENCY_RETRY_EXHAUSTED`, aviso visible al `Despachador` en la interfaz web y criterios `CA-CON-01` a `CA-CON-10`, sin extender el límite al modo supervisado). *(Los mecanismos técnicos de concurrencia, bloqueo, aislamiento y transacciones permanecen abiertos en `PEN-006`).* | Cerrado por `DEC-017` | `DEC-011`, `DEC-017`, `business-rules.md` (`RN-CON-005` a `RN-CON-009`, `CA-CON-01` a `CA-CON-10`) |
 | **PEN-002c** | Reglas de selección de hospital y capacidad | Definir en qué momento del ciclo se selecciona el hospital destino, con qué criterio (cercanía, capacidad) y cómo se descuenta/libera su disponibilidad simulada. | Pendiente de definición | `DEC-014`, `business-rules.md` (`RN-HOS-004`) |
 | **PEN-002d** | Cola ante liberación de unidad básica, desempate, estados, grafo y métricas | Definir el comportamiento de la cola cuando se libera una ambulancia básica, los criterios de desempate en asignación automática (`RN-ASI-005`), los nombres exactos de los estados del ciclo, los nodos/pesos del grafo simplificado de Arequipa (`RN-RUT-006`), la mecánica de avance temporal y el catálogo/auditoría de métricas experimentales (`RN-MET-003`, `RN-MET-004`). | Pendiente de definición | `DEC-007`, `DEC-012`, `DEC-013`, `business-rules.md` |
 | **PEN-003** | Versiones exactas del stack tecnológico | Definir versiones concretas de Java, Spring Boot, MySQL y configuración de Maven antes de inicializar el repositorio de código. | Pendiente de aprobación | `AGENTS.md` (Secc. 2.2), `DEC-005` |
