@@ -1,7 +1,7 @@
 # Visión y Alcance del Producto — ARE (Arequipa RescUE)
 
-**Estado del documento:** Aprobado — Versión inicial aceptada (`DEC-015`) actualizada con el cierre funcional completo del MVP (`DEC-016` a `DEC-019`, cerrando `PEN-002a` a `PEN-002d`; decisiones técnicas y de alcance diferido en `PEN-003` a `PEN-008`)
-**Naturaleza del documento:** Documento de visión y alcance del producto en su versión inicial aceptada (`DEC-015`) y actualizada con `DEC-016` a `DEC-019`, que incorpora formalmente los acuerdos funcionales y de MVP aprobados por el responsable del proyecto (`DEC-001` a `DEC-019`), distinguiéndolos de las decisiones técnicas y aspectos diferidos que continúan pendientes de definición (`PEN-003` a `PEN-008` y `stakeholders.md` Secc. 5).
+**Estado del documento:** Aprobado — Versión inicial aceptada (`DEC-015`), actualizada con el cierre funcional completo del MVP (`DEC-016` a `DEC-019`, cerrando `PEN-002a` a `PEN-002d`) y con la Entrega técnica 1 (`DEC-020` / `ADR-0001`, cerrando `PEN-003`, `PEN-004`, `PEN-005` y `PEN-007`; pendientes abiertos en `PEN-006` y `PEN-008`)
+**Naturaleza del documento:** Documento de visión y alcance del producto en su versión inicial aceptada (`DEC-015`) y actualizada con `DEC-016` a `DEC-020`, que incorpora formalmente los acuerdos funcionales, de MVP y de base arquitectónica/técnica aprobados por el responsable del proyecto (`DEC-001` a `DEC-020`), distinguiéndolos de las decisiones técnicas y aspectos diferidos que continúan pendientes de definición (`PEN-006`, `PEN-008` y `stakeholders.md` Secc. 5).
 
 ---
 
@@ -155,11 +155,11 @@ De acuerdo con `DEC-001`, `DEC-002`, `DEC-007` y `DEC-008`, quedan **explícitam
 ## 10. Restricciones y supuestos
 
 ### 10.1 Restricciones obligatorias (Aprobadas)
-- **Arquitectónicas (`DEC-002`, `DEC-003`):**
-  - Monolito modular con principios de arquitectura hexagonal y MVC (Spring MVC + Thymeleaf) en la capa de presentación.
-  - Independencia total del paquete `domain/` (sin anotaciones ni dependencias de Spring, JPA, Hibernate o Servlet) y prohibición de exponer entidades JPA en controladores o vistas.
-- **Tecnológicas (`DEC-005`):**
-  - Stack fijo: Java, Spring Boot, Spring MVC, Thymeleaf, Spring Data JPA, Hibernate, MySQL y Maven (versiones específicas pendientes de aprobación).
+- **Arquitectónicas (`DEC-002`, `DEC-003`, `DEC-020` / `ADR-0001`):**
+  - Monolito modular en un único proyecto Maven bajo `com.arequiparescue` con 7 módulos funcionales (`emergency`, `ambulance`, `dispatch`, `routing`, `hospital`, `simulation`, `reporting`) más `shared`, aplicando principios de arquitectura hexagonal (`domain`, `application`, `infrastructure`, `presentation`) y MVC (Spring MVC + Thymeleaf) en la capa de presentación.
+  - Independencia total del paquete `domain/` (sin anotaciones ni dependencias de Spring, JPA, Hibernate o Servlet), prohibición de exponer entidades JPA en controladores o vistas y migraciones SQL versionadas con Flyway (`ddl-auto=validate`).
+- **Tecnológicas (`DEC-005`, `DEC-020` / `ADR-0001`):**
+  - Stack fijo y versiones aprobadas: Java `21` LTS, Spring Boot `3.4.5` (BOM oficial con Spring MVC `6.2.x`, Thymeleaf `3.1.3.RELEASE`, Spring Data JPA `3.4.x` / Hibernate `6.6.x`, Flyway `10.20.x`, `mysql-connector-j`), MySQL `8.4` LTS y Apache Maven `3.9.9` mediante Maven Wrapper (`mvnw`).
 - **Funcionales y de diseño algorítmico (`DEC-010` a `DEC-014`):**
   - No confundir la necesidad técnica de equipamiento con prioridad clínica (`DEC-012`).
   - No confundir el algoritmo de cálculo de rutas (Dijkstra) con los mecanismos de asignación concurrente (`DEC-013`).
@@ -189,9 +189,9 @@ De acuerdo con `DEC-001`, `DEC-002`, `DEC-007` y `DEC-008`, quedan **explícitam
 ### 11.2 Resumen de definiciones pendientes antes de la implementación
 1. *(Resuelto por `DEC-016`)* Modelo de clasificación simulada, catálogo inicial `INC-A` a `INC-D`, equipamiento `BASIC`/`SPECIALIZED`, versionado inmutable y validaciones de registro (`PEN-002a` cerrado; queda pendiente definir la preparación de borradores durante escenarios activos en `stakeholders.md` Secc. 5.2).
 2. *(Resuelto por `DEC-017`)* Política funcional y límite máximo de reintentos en asignación automática ante fallos concurrentes: 1 intento inicial + hasta 3 reintentos automáticos adicionales (`PEN-002b` cerrado; los mecanismos técnicos de concurrencia corresponden a `PEN-006`).
-3. *(Resuelto por `DEC-018`)* Reglas de selección de hospital tras confirmar recogida, capacidad numérica simulada (`C`, `R`, `O`, `D`), reserva concurrente (1 intento inicial + hasta 2 reintentos), cola FIFO de espera de destino, transformación en ocupación al llegar y alta simulada (`PEN-002c` cerrado; quedan diferidos la cancelación/reasignación de reservas confirmadas y los permisos exactos para el alta simulada en `stakeholders.md` Secc. 5, y los mecanismos técnicos en `PEN-005`/`PEN-006`).
+3. *(Resuelto por `DEC-018`)* Reglas de selección de hospital tras confirmar recogida, capacidad numérica simulada (`C`, `R`, `O`, `D`), reserva concurrente (1 intento inicial + hasta 2 reintentos), cola FIFO de espera de destino, transformación en ocupación al llegar y alta simulada (`PEN-002c` cerrado; quedan diferidos la cancelación/reasignación de reservas confirmadas y los permisos exactos para el alta simulada en `stakeholders.md` Secc. 5, y los mecanismos técnicos de concurrencia en `PEN-006`).
 4. *(Resuelto por `DEC-019`)* Comportamiento de la cola al liberarse una ambulancia básica (`RN-COL-007`), criterio de desempate determinista entre ambulancias elegibles de igual costo (`RN-ASI-005`), catálogo de 7 estados de emergencia y 4 de ambulancia (`RN-RUT-007`), liberación de ambulancia a la llegada al hospital (`RN-RUT-008`), grafo inicial de 10 nodos de Arequipa (`RN-RUT-006`), simulación por eventos discretos con avance manual (`RN-RUT-009`), registro experimental trazable (`RN-MET-003`) y catálogo de 7 métricas (`RN-MET-004`) (`PEN-002d` cerrado).
-5. Versiones concretas del stack (`PEN-003`) y ADR arquitectónicos pendientes (`PEN-004` a `PEN-007`).
+5. *(Resuelto parcialmente por `DEC-020` / `ADR-0001`)* Versiones concretas del stack (`PEN-003` cerrado), estructura modular hexagonal (`PEN-004` cerrado), persistencia, identificadores, transacciones y migraciones con Flyway (`PEN-005` cerrado) y estrategia de pruebas (`PEN-007` cerrado). Permanecen pendientes únicamente el ADR de mecanismos técnicos de concurrencia en BD y aplicación (`PEN-006`) y la alineación de rutas documentales en `AGENTS.md` (`PEN-008`).
 
 ---
 
