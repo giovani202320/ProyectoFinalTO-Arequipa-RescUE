@@ -1,6 +1,6 @@
 # Actores e Interesados del Sistema — ARE (Arequipa RescUE)
 
-**Estado del documento:** Aprobado — Versión inicial aceptada (`DEC-009`, `DEC-015`) actualizada con la formalización de `PEN-002a` (`DEC-016`), `PEN-002b` (`DEC-017`) y `PEN-002c` (`DEC-018`; aspectos de Sección 5 pendientes de definición)
+**Estado del documento:** Aprobado — Versión inicial aceptada (`DEC-009`, `DEC-015`) actualizada con las formalizaciones de `PEN-002a` a `PEN-002d` (`DEC-016` a `DEC-019`; aspectos de Sección 5 pendientes de definición)
 **Propósito:** Especificar los actores humanos que interactúan con el simulador académico **ARE – Arequipa RescUE**, sus responsabilidades aprobadas, sus límites operativos y la distinción explícita frente a los componentes internos del sistema.
 
 > [!IMPORTANT]
@@ -60,13 +60,13 @@
 - **Identificador:** `ACT-03`
 - **Naturaleza:** Actor humano de configuración, administración y experimentación académica.
 - **Descripción:** Representa al responsable de configurar los recursos base, las reglas y parámetros del simulador, así como de diseñar, ejecutar y evaluar los experimentos académicos de concurrencia y desempeño.
-- **Responsabilidades aprobadas (`DEC-009`, `DEC-010`, `DEC-012`, `DEC-016`, `DEC-018`):**
-  1. **Gestionar ambulancias:** Registrar y administrar las ambulancias del simulador (básicas `BASIC` y especializadas `SPECIALIZED`), sus características de equipamiento, ubicación inicial y estado operativo.
+- **Responsabilidades aprobadas (`DEC-009`, `DEC-010`, `DEC-012`, `DEC-016`, `DEC-018`, `DEC-019`):**
+  1. **Gestionar ambulancias:** Registrar y administrar las ambulancias del simulador (básicas `BASIC` y especializadas `SPECIALIZED`), sus características de equipamiento, ubicación inicial en el grafo de 10 nodos (`N01` a `N10`) y estado operativo (`AVAILABLE`, `ASSIGNED`, `AT_INCIDENT`, `TRANSPORTING`).
   2. **Gestionar hospitales:** Registrar y administrar los hospitales del simulador, su ubicación en la red simplificada, su estado de habilitación y su capacidad numérica simulada (`C`, con plazas reservadas `R`, ocupadas `O` y disponibles `D = C - R - O`, preservando siempre `R + O <= C` según `DEC-014` y `DEC-018`).
   3. **Gestionar reglas de clasificación (triage):** Configurar y publicar versiones inmutables de reglas de clasificación —manteniendo la trazabilidad de la versión aplicada en cada emergencia según `DEC-010` y `DEC-016`— mediante las cuales el sistema determina de manera determinista la prioridad simulada informativa y el equipamiento requerido (`BASIC` o `SPECIALIZED`) para cada categoría de incidente, sin modificar retroactivamente emergencias ya clasificadas.
-  4. **Gestionar parámetros del simulador:** Configurar los parámetros operativos del sistema (como la modalidad de asignación o los parámetros de control pendientes de definición).
-  5. **Configurar y ejecutar escenarios experimentales:** Definir y disparar escenarios de simulación concurrente para estudiar el comportamiento del sistema ante solicitudes simultáneas y competencia por recursos (`DEC-008`, `DEC-009`).
-  6. **Consultar métricas:** Inspeccionar los resultados y métricas generadas por la operación y los escenarios experimentales, incluyendo tiempos de espera en cola y evidencia sobre posibles situaciones de *starvation* (`DEC-008`, `DEC-012`).
+  4. **Gestionar parámetros del simulador:** Configurar los parámetros operativos del sistema (como la modalidad de asignación o la configuración del escenario sobre el grafo inicial de 10 nodos).
+  5. **Configurar y ejecutar escenarios experimentales:** Definir y disparar escenarios de simulación concurrente y por eventos discretos con avance manual (`DEC-008`, `DEC-009`, `DEC-019`).
+  6. **Consultar métricas y registro experimental:** Inspeccionar el registro experimental trazable (`RN-MET-003`) y el catálogo mínimo de 7 métricas (`RN-MET-004`), incluyendo tiempos de espera de ambulancia y de hospital, tiempos de respuesta y traslado, emergencias completadas, utilización de ambulancias y conteo de conflictos/reintentos (`DEC-008`, `DEC-012`, `DEC-019`).
 - **Límites de responsabilidad:**
   - Las reglas de clasificación configuradas son estrictamente académicas y simuladas; no constituyen protocolos clínicos reales (`DEC-001`, `DEC-010`, `DEC-016`).
   - No puede modificar versiones de reglas ya publicadas (son inmutables), ni publicar versiones con categorías duplicadas, incompletas o con reglas contradictorias (`DEC-016`).
@@ -84,8 +84,8 @@
 - **Propósito dentro de la arquitectura:** Ejecutar internamente la dinámica temporal y concurrente del simulador a partir de los escenarios e instrucciones iniciados por el `Administrador` o de los despachos en curso:
   - Generación o procesamiento concurrente de solicitudes de emergencia definidas en un escenario experimental.
   - Ejecución de la evaluación y reintentos acotados en modalidad de asignación automática (1 intento inicial + hasta 3 reintentos adicionales ante conflicto concurrente, con reevaluación integral y registro funcional del resultado según `DEC-011` y `DEC-017`).
-  - Selección automática del hospital elegible de menor costo por Dijkstra al confirmar la recogida, reserva concurrente de plaza hospitalaria (1 intento inicial + hasta 2 reintentos adicionales), gestión de la cola FIFO de espera de destino hospitalario con reevaluación automática ante liberación de capacidad, avance del desplazamiento simulado hasta el hospital y transformación de la reserva en ocupación a la llegada (`DEC-007`, `DEC-013`, `DEC-018`).
-  - Recolección de marcas de tiempo y métricas de espera/despacho para su posterior consulta por el `Administrador` (`DEC-012`).
+  - Selección automática del hospital elegible de menor costo por Dijkstra al confirmar la recogida, reserva concurrente de plaza hospitalaria (1 intento inicial + hasta 2 reintentos adicionales), gestión de la cola FIFO de espera de destino hospitalario con reevaluación automática ante liberación de capacidad, avance por eventos discretos con tiempo lógico monotónico y desempate determinista hasta el hospital, transformación de la reserva en ocupación y liberación inmediata de la ambulancia (`TRANSPORTING -> AVAILABLE`) al completar la entrega simulada (`DEC-007`, `DEC-013`, `DEC-018`, `DEC-019`).
+  - Recolección del registro experimental trazable (`RN-MET-003`) y cálculo de las 7 métricas mínimas (`RN-MET-004`) para su consulta por el `Administrador` (`DEC-012`, `DEC-019`).
 
 ---
 
