@@ -1,7 +1,7 @@
 # Visión y Alcance del Producto — ARE (Arequipa RescUE)
 
-**Estado del documento:** Aprobado — Versión inicial aceptada de la definición del producto (`DEC-015`, con parámetros y decisiones pendientes en `PEN-002a` a `PEN-008`)
-**Naturaleza del documento:** Documento de visión y alcance del producto en su versión inicial aceptada (`DEC-015`), que incorpora formalmente los acuerdos funcionales y de MVP aprobados por el responsable del proyecto (`DEC-001` a `DEC-014`), distinguiéndolos de las propuestas y parámetros que continúan pendientes de definición (`PEN-002a` a `PEN-008`).
+**Estado del documento:** Aprobado — Versión inicial aceptada (`DEC-015`) actualizada con la formalización de `PEN-002a` (`DEC-016`; parámetros y decisiones pendientes en `PEN-002b` a `PEN-008`)
+**Naturaleza del documento:** Documento de visión y alcance del producto en su versión inicial aceptada (`DEC-015`) y actualizada con `DEC-016`, que incorpora formalmente los acuerdos funcionales y de MVP aprobados por el responsable del proyecto (`DEC-001` a `DEC-016`), distinguiéndolos de las propuestas y parámetros que continúan pendientes de definición (`PEN-002b` a `PEN-008`).
 
 ---
 
@@ -84,10 +84,10 @@ Construir un **simulador académico web con nivel de realismo intermedio** que r
 El funcionamiento aprobado para el ciclo simulado comprende las siguientes etapas y reglas operativas:
 
 1. **Configuración de recursos y reglas (Administrador):**
-   - Administración de ambulancias (disponibilidad, estado, ubicación en la red y equipamiento), hospitales (ubicación y disponibilidad simulada), versión de reglas configurables de clasificación (triage) y parámetros del simulador.
+   - Administración de ambulancias (disponibilidad, estado, ubicación en la red y equipamiento `BASIC` o `SPECIALIZED`), hospitales (ubicación y disponibilidad simulada), versiones inmutables de reglas configurables de clasificación (con bloqueo de publicación/activación durante escenarios experimentales activos según `DEC-016`) y parámetros del simulador.
 2. **Registro y clasificación reproducible de la emergencia (Operador de recepción / Escenario experimental):**
-   - Se registra la emergencia con sus datos de entrada y ubicación en la representación geográfica simplificada de Arequipa.
-   - El sistema aplica las reglas configurables vigentes para determinar de forma **reproducible y trazable** la clasificación simulada y el equipamiento requerido (`DEC-010`).
+   - Se registra la emergencia ingresando la categoría ficticia del incidente (obligatoria; catálogo inicial `INC-A`, `INC-B`, `INC-C`, `INC-D`), el nodo de ubicación en el grafo simplificado de Arequipa (obligatorio) y una descripción ficticia (opcional) (`DEC-016`).
+   - El sistema consulta la versión activa de reglas configurables para determinar de forma **determinista, reproducible y trazable** la prioridad simulada informativa (`Alta`, `Media`, `Baja`) y la categoría de equipamiento requerido (`BASIC` o `SPECIALIZED`), conservando en la emergencia la referencia a la versión aplicada sin emitir diagnósticos clínicos reales (`DEC-010`, `DEC-016`). La prioridad simulada es exclusivamente informativa y no altera el orden FIFO, la preservación de ambulancias especializadas, la elegibilidad ni el costo de ruta por Dijkstra (`DEC-016`).
 3. **Determinación de elegibilidad y recomendación de ambulancias (`DEC-011`, `DEC-013`, `DEC-014`):**
    - Antes de emitir cualquier recomendación, el sistema filtra las ambulancias **elegibles** según disponibilidad, estado operativo y equipamiento requerido.
    - **La disponibilidad hospitalaria no interviene en la selección inicial de ambulancias** (`DEC-014`). *(Nota de trazabilidad: se corrige el supuesto preliminar de la versión anterior que vinculaba ambos pasos en la selección inicial).*
@@ -128,7 +128,7 @@ Los siguientes ocho componentes forman parte **aprobada y confirmada** del MVP d
 - **Envejecimiento automático (*aging*) en cola (`DEC-012`):** Excluido de la primera versión para permitir observar el comportamiento puro de la cola y posibles situaciones de *starvation*; podría evaluarse en versiones posteriores.
 
 ### 8.3 Aspectos funcionales pendientes de definición
-- **Parámetros y reglas concretas del triage (`PEN-002a`):** Niveles específicos de clasificación, variables de entrada, categorías exactas de equipamiento y catálogo inicial de reglas.
+- **Clasificación simulada y equipamiento (`PEN-002a` — Cerrado por `DEC-016`):** Quedaron aprobados el catálogo inicial (`INC-A` a `INC-D`), las categorías de equipamiento (`BASIC`, `SPECIALIZED`), el carácter informativo de la prioridad simulada, el versionado inmutable de reglas (con bloqueo de publicación/activación durante escenarios activos), los campos del registro y sus validaciones (`RN-EME-007` a `RN-EME-012`). Permanece pendiente de definición si se permitirá o no preparar borradores de reglas durante escenarios activos (`stakeholders.md` Secc. 5.2).
 - **Límite de reintentos automáticos (`PEN-002b`):** Número máximo de reintentos cuando una asignación automática falla por concurrencia.
 - **Selección de hospital, capacidad hospitalaria y reserva de camas (`PEN-002c`):** Reglas para elegir el hospital de destino, administrar su capacidad simulada y definir si existirá o no reserva de camas durante el ciclo (no se asume la reserva concurrente de camas como comportamiento aprobado).
 - **Comportamiento de cola al liberar ambulancias básicas, desempate, estados, grafo y métricas (`PEN-002d`):** Comportamiento de la cola cuando se libera una ambulancia básica, criterios de desempate ante igualdad de costo (`RN-ASI-005`), nombres exactos de los estados de emergencia y ambulancia, topología concreta del grafo simplificado de Arequipa, mecánica de avance del reloj de simulación y catálogo detallado de métricas experimentales (`RN-MET-003`, `RN-MET-004`).
@@ -185,7 +185,7 @@ De acuerdo con `DEC-001`, `DEC-002`, `DEC-007` y `DEC-008`, quedan **explícitam
 | **RIE-05** | **Divergencia de rutas documentales respecto a `AGENTS.md` Secc. 8.2/8.3** | Documental | `AGENTS.md` ilustra como propuesta inicial `docs/project/` y `docs/adr/`, mientras que la estructura autorizada utiliza `docs/product/` y `docs/decisions/adr/`. | Registrado en `PEN-008` para actualizar las Secciones 8.2 y 8.3 de `AGENTS.md` cuando el responsable humano lo autorice. |
 
 ### 11.2 Resumen de definiciones pendientes antes de la implementación
-1. Niveles, variables, categorías y reglas concretas del triage configurable (`PEN-002a`).
+1. *(Resuelto por `DEC-016`)* Modelo de clasificación simulada, catálogo inicial `INC-A` a `INC-D`, equipamiento `BASIC`/`SPECIALIZED`, versionado inmutable y validaciones de registro (`PEN-002a` cerrado; queda pendiente definir la preparación de borradores durante escenarios activos en `stakeholders.md` Secc. 5.2).
 2. Número máximo de reintentos en asignación automática ante fallos concurrentes (`PEN-002b`).
 3. Reglas de selección de hospital, administración de su capacidad simulada y eventual reserva de camas hospitalarias (`PEN-002c`).
 4. Comportamiento de la cola al liberarse una ambulancia básica, criterio de desempate entre ambulancias elegibles de igual costo (`RN-ASI-005`), catálogo exacto de estados, nodos/aristas del grafo de Arequipa, modelo de avance de tiempo simulado y métricas experimentales detalladas (`RN-MET-003`, `RN-MET-004`) (`PEN-002d`).

@@ -1,10 +1,10 @@
 # Bitácora de Decisiones — ARE (Arequipa RescUE)
 
-**Estado del documento:** Aprobado — Versión inicial aceptada de la Primera Entrega Documental (`DEC-015`)
+**Estado del documento:** Aprobado — Línea base aceptada (`DEC-015`) y formalización de `PEN-002a` (`DEC-016`)
 **Propósito:** Registrar de manera trazable las decisiones arquitectónicas, tecnológicas, funcionales y de producto formalmente acordadas en **ARE – Arequipa RescUE**, diferenciándolas estrictamente de las propuestas y definiciones que permanecen pendientes de aprobación.
 
 > [!IMPORTANT]
-> Solo llevan el estado **Aprobada** aquellas decisiones que cuentan con autorización expresa del responsable humano del proyecto. Las decisiones previas (`DEC-001` a `DEC-006`) se conservan íntegras y se amplían con los acuerdos funcionales y de gobernanza documental aprobados (`DEC-007` a `DEC-015`). Ningún parámetro o regla pendiente (`PEN-002a` a `PEN-008`, `RN-ASI-005`, `RN-MET-003`) se registra como decisión aprobada.
+> Solo llevan el estado **Aprobada** aquellas decisiones que cuentan con autorización expresa del responsable humano del proyecto. Las decisiones previas (`DEC-001` a `DEC-015`) se conservan íntegras y se amplían con `DEC-016` (que formaliza y cierra `PEN-002a`). Ningún parámetro o regla pendiente (`PEN-002b` a `PEN-008`, `RN-ASI-005`, `RN-MET-003`) se registra como decisión aprobada.
 
 ---
 
@@ -27,6 +27,7 @@
 | [DEC-013](#dec-013-cálculo-de-rutas-mediante-dijkstra-sobre-red-vial-simplificada-de-arequipa) | Cálculo de rutas mediante Dijkstra sobre red vial simplificada de Arequipa | Dominio / Rutas | Aprobada | 2026-11-12 |
 | [DEC-014](#dec-014-gestión-hospitalaria-básica-y-desacoplamiento-de-la-selección-inicial-de-ambulancias) | Gestión hospitalaria básica y desacoplamiento respecto a la selección inicial de ambulancias | Dominio / Hospitales | Aprobada (reglas de hospital pendientes) | 2026-11-12 |
 | [DEC-015](#dec-015-aprobación-formal-de-la-primera-entrega-documental-definición-de-producto-y-reglas-de-negocio) | Aprobación formal de la primera entrega documental (definición de producto y reglas de negocio) | Producto / Gobernanza Documental | Aprobada (con propuestas y parámetros pendientes abiertos) | 2026-11-12 |
+| [DEC-016](#dec-016-formalización-de-pen-002a-sobre-modelo-de-clasificación-simulada-equipamiento-requerido-versionado-de-reglas-y-validaciones-de-registro) | Formalización de `PEN-002a` sobre modelo de clasificación simulada, equipamiento requerido, versionado de reglas y validaciones de registro | Dominio / Triage y Equipamiento | Aprobada (cierra `PEN-002a`; borradores en escenario activo pendientes) | 2026-11-13 |
 
 ---
 
@@ -344,6 +345,54 @@
 
 ---
 
+### DEC-016: Formalización de PEN-002a sobre modelo de clasificación simulada, equipamiento requerido, versionado de reglas y validaciones de registro
+
+- **Identificador:** DEC-016
+- **Fecha:** 2026-11-13.
+- **Origen de la aprobación humana:** Autorización expresa del responsable humano del proyecto ARE posterior a la línea base `DEC-015` (commit `cc1c190`) y al diagnóstico preliminar de ingeniería de requisitos, con el fin de cerrar el pendiente funcional `PEN-002a`.
+- **Título:** Formalización del paquete funcional de `PEN-002a`: modelo determinista de clasificación por categorías ficticias, catálogo inicial, compatibilidad de equipamiento (`BASIC` / `SPECIALIZED`), versionado inmutable de reglas, campos del registro y validaciones.
+- **Contexto:** `DEC-010` aprobó el uso de reglas configurables, reproducibles y trazables para la clasificación simulada de emergencias, pero dejó abierto en `PEN-002a` (`RN-EME-007`) el catálogo concreto de categorías de incidente, niveles de prioridad simulada, categorías de equipamiento, reglas de versionado, estructura de campos del registro de emergencia y validaciones funcionales, así como la restricción de activación de reglas durante escenarios activos relacionada con la Sección 5.2 de `docs/product/stakeholders.md`.
+- **Alternativas consideradas:**
+  1. **Alternativa A (Adoptada):** Modelo determinista basado en categorías ficticias de incidente (`INC-A`, `INC-B`, `INC-C`, `INC-D`), prioridad simulada exclusivamente informativa (`Alta`, `Media`, `Baja`), dos únicas categorías de equipamiento (`BASIC` y `SPECIALIZED`), reglas configurables con versiones publicadas inmutables, bloqueo de publicación/activación de reglas durante escenarios experimentales activos y validaciones estrictas de entrada sin clasificaciones por defecto.
+  2. **Alternativa B (Descartada):** Modelo clínico multifactorial con evaluación de síntomas médicos o múltiples subcategorías de equipamiento individual y edición libre de reglas activas durante la ejecución de un escenario experimental. Se descartó porque infringe el límite académico no clínico (`DEC-001`, `DEC-010`) y compromete la reproducibilidad e integridad experimental de las corridas concurrentes.
+- **Decisión:**
+  1. **Modelo de clasificación determinista:** ARE utilizará un modelo determinista de clasificación mediante categorías ficticias y reglas configurables, consultando una versión activa de reglas para determinar la **prioridad simulada informativa** y la **categoría de equipamiento requerido**, sin algoritmos de diagnóstico clínico ni criterios médicos reales.
+  2. **Catálogo inicial aprobado (exclusivamente académico):**
+     - `INC-A`: Prioridad simulada `Alta` | Equipamiento requerido `Especializado` (`SPECIALIZED`).
+     - `INC-B`: Prioridad simulada `Media` | Equipamiento requerido `Básico` (`BASIC`).
+     - `INC-C`: Prioridad simulada `Baja` | Equipamiento requerido `Básico` (`BASIC`).
+     - `INC-D`: Prioridad simulada `Alta` | Equipamiento requerido `Básico` (`BASIC`).
+  3. **Independencia entre prioridad simulada y asignación:** La prioridad simulada es **únicamente informativa** y no altera el orden FIFO aprobado para las colas (`DEC-012`), la preservación de ambulancias especializadas (`DEC-011`), las condiciones de elegibilidad (`DEC-011`) ni el ordenamiento por costo de ruta mediante Dijkstra (`DEC-013`). El equipamiento requerido sí determina la compatibilidad de las ambulancias.
+  4. **Compatibilidad de equipamiento:** Se establecen exclusivamente dos categorías iniciales sin crear categorías adicionales:
+     - `BASIC`: equipamiento básico.
+     - `SPECIALIZED`: equipamiento especializado, compatible también con necesidades básicas.
+     Una ambulancia básica (`BASIC`) no puede satisfacer una necesidad especializada (`SPECIALIZED`). Una ambulancia especializada (`SPECIALIZED`) puede satisfacer una necesidad básica (`BASIC`), respetando las reglas ya aprobadas de preservación de unidades especializadas (`DEC-011`, `RN-PRE-001` a `RN-PRE-003`).
+  5. **Versionado de reglas:**
+     - Existirá una versión activa de reglas aplicable a los nuevos registros.
+     - Cada emergencia conservará la referencia a la versión que produjo su clasificación.
+     - Las versiones publicadas serán inmutables; cualquier cambio se incorporará mediante una nueva versión y su publicación no modificará retroactivamente las emergencias ya clasificadas.
+     - Durante la ejecución de un escenario experimental activo no se permitirá publicar ni activar cambios de reglas.
+     - La preparación de borradores durante escenarios activos no queda aprobada ni prohibida por esta decisión; permanece pendiente de definición.
+  6. **Campos del registro de emergencia:**
+     - *Introducidos por el Operador de recepción (`ACT-01`):* Categoría del incidente (obligatoria), Nodo de ubicación en el grafo (obligatorio) y Descripción ficticia (opcional).
+     - *Generados o determinados automáticamente:* Identificador único de emergencia, Marca temporal de registro, Prioridad simulada, Equipamiento requerido e Identificador o referencia de versión de reglas aplicada.
+  7. **Validaciones aprobadas:**
+     - Rechazar registros sin categoría, con categorías inexistentes o inactivas, o con ubicaciones que no correspondan a nodos válidos del grafo configurado.
+     - Permitir descripción vacía.
+     - Exigir una regla válida y no ambigua para clasificar la categoría, sin generar clasificaciones por defecto cuando falte una regla válida.
+     - Impedir la publicación de versiones con categorías duplicadas, incompletas o reglas contradictorias.
+     - Mantener la referencia histórica a la versión aplicada.
+     - Si no existen ambulancias elegibles, conservar la emergencia registrada y pasarla a estado pendiente (`DEC-011`, `RN-ASI-004`); una falla de asignación por falta de ambulancias no equivale a una falla del registro de emergencia.
+  8. **Consistencia funcional:** Para una misma categoría y versión de reglas, el resultado de clasificación debe ser determinista, y cada emergencia debe quedar asociada a una única versión consistente incluso cuando existan operaciones concurrentes.
+- **Justificación:** Cierra de manera completa y verificable la definición funcional del triage simulado y de la compatibilidad de equipamiento en total coherencia con `DEC-010`, `DEC-011` y `DEC-012`, garantizando determinismo e inmutabilidad histórica en escenarios concurrentes sin introducir criterios médicos reales.
+- **Consecuencias:**
+  - **Positivas:** Queda cerrado `PEN-002a` y se formalizan las reglas `RN-EME-007` a `RN-EME-012` en `business-rules.md`; `INC-D` (`Alta` / `BASIC`) frente a `INC-A` (`Alta` / `SPECIALIZED`) permite demostrar empíricamente que la compatibilidad depende del equipamiento requerido y no de la etiqueta informativa de prioridad.
+  - **Restricciones/Compromisos:** No se deciden todavía el formato físico de los identificadores, tipos SQL, precisión temporal, catálogo concreto de nodos del grafo ni el mecanismo técnico de persistencia, bloqueo o activación atómica de versiones (que corresponden a `PEN-002d`, `PEN-005` y `PEN-006`). Tampoco se aprueba ni prohíbe aún la preparación de borradores de reglas durante escenarios activos.
+- **Estado:** Aprobada.
+- **Referencias relacionadas:** `DEC-010`, `DEC-011`, `DEC-012`, `DEC-015`, `PEN-002a`, `docs/product/requirements/business-rules.md` (`RN-EME-007` a `RN-EME-012`), `docs/product/vision-and-scope.md`, `docs/product/stakeholders.md`.
+
+---
+
 ## 3. Decisiones y Definiciones Pendientes (No Aprobadas)
 
 A continuación se listan los aspectos que **continúan pendientes de definición o aprobación humana**. Ninguno de ellos debe asumirse como cerrado:
@@ -351,7 +400,7 @@ A continuación se listan los aspectos que **continúan pendientes de definició
 | ID Temporal | Tema Pendiente | Descripción de qué decisión falta | Estado | Referencia |
 | :--- | :--- | :--- | :--- | :--- |
 | **PEN-001** | *(Resuelto por `DEC-008`)* Alcance del MVP vs. alcance total | Se conserva por trazabilidad histórica: quedó resuelto y aprobado mediante `DEC-008` (MVP equilibrado con los 8 componentes listados). | Cerrado por `DEC-008` | `DEC-008`, `docs/product/vision-and-scope.md` (Secc. 8) |
-| **PEN-002a** | Catálogo y reglas concretas de Triage y Equipamiento | Definir niveles de clasificación, variables de entrada, categorías de ambulancia/equipamiento y reglas concretas iniciales del triage configurable. | Pendiente de definición | `DEC-010`, `business-rules.md` (`RN-EME-007`) |
+| **PEN-002a** | *(Resuelto por `DEC-016`)* Catálogo y reglas concretas de Triage y Equipamiento | Quedó formalizado mediante `DEC-016` (modelo determinista, catálogo inicial `INC-A` a `INC-D`, equipamiento `BASIC`/`SPECIALIZED`, versionado inmutable, bloqueo de publicación/activación en escenario activo, campos del registro y validaciones). *(Nota: la posibilidad de preparar borradores de reglas durante escenarios activos se mantiene abierta en `stakeholders.md` Secc. 5.2, y los formatos físicos/SQL y mecanismos técnicos de activación atómica corresponden a `PEN-005` y `PEN-006`).* | Cerrado por `DEC-016` | `DEC-010`, `DEC-016`, `business-rules.md` (`RN-EME-007` a `RN-EME-012`) |
 | **PEN-002b** | Límite máximo de reintentos automáticos | Definir el número máximo de reintentos automáticos cuando una asignación concurrente falla porque la ambulancia dejó de estar disponible. | Pendiente de definición | `DEC-011`, `business-rules.md` (`RN-CON-005`) |
 | **PEN-002c** | Reglas de selección de hospital y capacidad | Definir en qué momento del ciclo se selecciona el hospital destino, con qué criterio (cercanía, capacidad) y cómo se descuenta/libera su disponibilidad simulada. | Pendiente de definición | `DEC-014`, `business-rules.md` (`RN-HOS-004`) |
 | **PEN-002d** | Cola ante liberación de unidad básica, desempate, estados, grafo y métricas | Definir el comportamiento de la cola cuando se libera una ambulancia básica, los criterios de desempate en asignación automática (`RN-ASI-005`), los nombres exactos de los estados del ciclo, los nodos/pesos del grafo simplificado de Arequipa (`RN-RUT-006`), la mecánica de avance temporal y el catálogo/auditoría de métricas experimentales (`RN-MET-003`, `RN-MET-004`). | Pendiente de definición | `DEC-007`, `DEC-012`, `DEC-013`, `business-rules.md` |

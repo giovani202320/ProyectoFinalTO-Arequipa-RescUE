@@ -1,6 +1,6 @@
 # Actores e Interesados del Sistema — ARE (Arequipa RescUE)
 
-**Estado del documento:** Aprobado — Versión inicial aceptada de definición de actores (`DEC-009`, `DEC-015`; aspectos de Sección 5 pendientes de definición)
+**Estado del documento:** Aprobado — Versión inicial aceptada (`DEC-009`, `DEC-015`) actualizada con la formalización de `PEN-002a` (`DEC-016`; aspectos de Sección 5 pendientes de definición)
 **Propósito:** Especificar los actores humanos que interactúan con el simulador académico **ARE – Arequipa RescUE**, sus responsabilidades aprobadas, sus límites operativos y la distinción explícita frente a los componentes internos del sistema.
 
 > [!IMPORTANT]
@@ -25,12 +25,13 @@
 - **Identificador:** `ACT-01`
 - **Naturaleza:** Actor humano operativo (rol académico simulado).
 - **Descripción:** Representa al personal encargado del primer contacto en el ciclo de atención simulado. Introduce en el sistema los datos de cada emergencia médica entrante para que el simulador determine de manera reproducible su clasificación y requerimientos de equipamiento, y realiza el seguimiento informativo del estado de las solicitudes.
-- **Responsabilidades aprobadas (`DEC-009`):**
-  1. **Registrar emergencias:** Ingresar los datos de nuevas solicitudes de emergencia y su ubicación dentro de la representación geográfica simplificada de Arequipa.
-  2. **Consultar información y estados:** Visualizar el detalle de las emergencias registradas, la clasificación simulada obtenida, los requisitos de equipamiento determinados y el estado actual de cada solicitud a lo largo del ciclo simulado.
+- **Responsabilidades aprobadas (`DEC-009`, `DEC-016`):**
+  1. **Registrar emergencias:** Ingresar los campos de entrada aprobados para una nueva solicitud de emergencia: **categoría del incidente** (obligatoria; catálogo inicial `INC-A` a `INC-D`), **nodo de ubicación en el grafo** simplificado de Arequipa (obligatorio) y **descripción ficticia** (opcional), a partir de los cuales el sistema genera el identificador único y la marca temporal de registro y determina automáticamente, según la versión activa de reglas, la prioridad simulada informativa, el equipamiento requerido (`BASIC` o `SPECIALIZED`) y la referencia a la versión de reglas aplicada (`DEC-010`, `DEC-016`).
+  2. **Consultar información y estados:** Visualizar el detalle de las emergencias registradas, la prioridad simulada informativa, el equipamiento requerido, la versión de reglas aplicada y el estado actual de cada solicitud a lo largo del ciclo simulado.
 - **Límites de responsabilidad:**
-  - No realiza diagnósticos ni toma decisiones clínicas reales (`DEC-001`, `DEC-010`).
-  - No ejecuta la selección ni asignación de ambulancias (responsabilidad del `Despachador` o del modo automático).
+  - No realiza diagnósticos ni toma decisiones clínicas reales (`DEC-001`, `DEC-010`, `DEC-016`).
+  - No introduce manualmente la prioridad simulada ni el equipamiento requerido (son determinados por la versión activa de reglas configurables según la categoría ingresada), ni puede registrar emergencias sin categoría, con categorías inexistentes/inactivas o con nodos de ubicación inválidos (`DEC-016`).
+  - No ejecuta la selección ni asignación de ambulancias (responsabilidad del `Despachador` o del modo automático); si al registrar una emergencia válida no existen ambulancias elegibles, el registro se conserva y la emergencia pasa a estado pendiente (`DEC-011`, `DEC-016`).
   - No administra el catálogo de ambulancias, hospitales, reglas de triage ni escenarios experimentales (responsabilidad del `Administrador`).
 
 ---
@@ -59,15 +60,17 @@
 - **Identificador:** `ACT-03`
 - **Naturaleza:** Actor humano de configuración, administración y experimentación académica.
 - **Descripción:** Representa al responsable de configurar los recursos base, las reglas y parámetros del simulador, así como de diseñar, ejecutar y evaluar los experimentos académicos de concurrencia y desempeño.
-- **Responsabilidades aprobadas (`DEC-009`, `DEC-010`, `DEC-012`):**
-  1. **Gestionar ambulancias:** Registrar y administrar las ambulancias del simulador (básicas y especializadas), sus características de equipamiento, ubicación inicial y estado operativo.
+- **Responsabilidades aprobadas (`DEC-009`, `DEC-010`, `DEC-012`, `DEC-016`):**
+  1. **Gestionar ambulancias:** Registrar y administrar las ambulancias del simulador (básicas `BASIC` y especializadas `SPECIALIZED`), sus características de equipamiento, ubicación inicial y estado operativo.
   2. **Gestionar hospitales:** Registrar y administrar de forma básica los hospitales del simulador, su ubicación en la red simplificada y su disponibilidad simulada (`DEC-014`).
-  3. **Gestionar reglas de clasificación (triage):** Configurar las reglas, manteniendo la trazabilidad de la versión o configuración aplicada según `DEC-010`, mediante las cuales el sistema determina de manera reproducible la clasificación simulada y el equipamiento requerido de cada emergencia.
+  3. **Gestionar reglas de clasificación (triage):** Configurar y publicar versiones inmutables de reglas de clasificación —manteniendo la trazabilidad de la versión aplicada en cada emergencia según `DEC-010` y `DEC-016`— mediante las cuales el sistema determina de manera determinista la prioridad simulada informativa y el equipamiento requerido (`BASIC` o `SPECIALIZED`) para cada categoría de incidente, sin modificar retroactivamente emergencias ya clasificadas.
   4. **Gestionar parámetros del simulador:** Configurar los parámetros operativos del sistema (como la modalidad de asignación o los parámetros de control pendientes de definición).
   5. **Configurar y ejecutar escenarios experimentales:** Definir y disparar escenarios de simulación concurrente para estudiar el comportamiento del sistema ante solicitudes simultáneas y competencia por recursos (`DEC-008`, `DEC-009`).
   6. **Consultar métricas:** Inspeccionar los resultados y métricas generadas por la operación y los escenarios experimentales, incluyendo tiempos de espera en cola y evidencia sobre posibles situaciones de *starvation* (`DEC-008`, `DEC-012`).
 - **Límites de responsabilidad:**
-  - Las reglas de clasificación configuradas son estrictamente académicas y simuladas; no constituyen protocolos clínicos reales (`DEC-001`, `DEC-010`).
+  - Las reglas de clasificación configuradas son estrictamente académicas y simuladas; no constituyen protocolos clínicos reales (`DEC-001`, `DEC-010`, `DEC-016`).
+  - No puede modificar versiones de reglas ya publicadas (son inmutables), ni publicar versiones con categorías duplicadas, incompletas o con reglas contradictorias (`DEC-016`).
+  - **No puede publicar ni activar cambios de reglas de clasificación durante la ejecución de un escenario experimental activo (`DEC-016`, `RN-EME-012`).**
 
 ---
 
@@ -106,4 +109,6 @@
 Los siguientes detalles no han sido cerrados todavía y se mantienen como **pendientes de definición** antes del diseño de la capa de presentación:
 
 1. **Mecanismo de acceso y cambio de rol en la interfaz web:** Definir si los tres actores humanos (`Operador de recepción`, `Despachador` y `Administrador`) operarán mediante vistas/consolas separadas con un selector académico de rol o si se requerirá algún esquema de inicio de sesión.
-2. **Permisos detallados de edición sobre catálogos durante una simulación activa:** Precisar si el `Administrador` puede modificar ambulancias, hospitales o reglas de triage mientras un escenario experimental está en ejecución o únicamente antes/después de cada ejecución.
+2. **Edición de otros catálogos y preparación de borradores de reglas durante una simulación activa:** Aunque `DEC-016` (`RN-EME-012`) ya aprobó que **no se permite publicar ni activar cambios en las reglas de clasificación durante la ejecución de un escenario experimental activo**, permanece pendiente de definición:
+   - Si el `Administrador` podrá o no preparar **borradores** de reglas de clasificación durante un escenario experimental activo (`DEC-016`).
+   - Si el `Administrador` podrá modificar los demás catálogos (`ambulancias`, `hospitales`) mientras un escenario experimental está en ejecución o únicamente antes/después de cada ejecución.

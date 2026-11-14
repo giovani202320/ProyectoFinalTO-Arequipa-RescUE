@@ -1,10 +1,10 @@
 # Reglas de Negocio — ARE (Arequipa RescUE)
 
-**Estado del documento:** Aprobado — Versión inicial aceptada de reglas de negocio (`DEC-015`, conservando `RN-ASI-005` y `RN-MET-003` como propuestas pendientes y los parámetros pendientes de `PEN-002a` a `PEN-002d`)
+**Estado del documento:** Aprobado — Línea base aceptada (`DEC-015`) y formalización de reglas de clasificación y equipamiento de `PEN-002a` (`DEC-016`), conservando `RN-ASI-005` y `RN-MET-003` como propuestas pendientes y los parámetros pendientes de `PEN-002b` a `PEN-002d`
 **Propósito:** Formalizar las reglas de negocio e invariantes de dominio de **ARE – Arequipa RescUE** con identificadores estables, distinguiendo con exactitud qué reglas están **Aprobadas** por el responsable del proyecto y qué propuestas, parámetros o reglas específicas permanecen **Pendientes de aprobación o definición**.
 
 > [!IMPORTANT]
-> Ningún parámetro pendiente (como los niveles concretos de triage, el número máximo de reintentos o las reglas de selección de hospital) se convierte en una regla definitiva en este documento. Todo elemento no cerrado se declara expresamente como **Pendiente de definición**.
+> Ningún parámetro pendiente (como el número máximo de reintentos, las reglas de selección de hospital o la preparación de borradores durante escenarios activos) se convierte en una regla definitiva en este documento. Todo elemento no cerrado se declara expresamente como **Pendiente de definición**.
 
 ---
 
@@ -12,7 +12,7 @@
 
 | Prefijo | Tema | Reglas Aprobadas | Reglas / Parámetros Pendientes |
 | :--- | :--- | :---: | :---: |
-| **`RN-EME`** | 1. Registro y clasificación de emergencias | `RN-EME-001` a `RN-EME-006` | `RN-EME-007` |
+| **`RN-EME`** | 1. Registro y clasificación de emergencias | `RN-EME-001` a `RN-EME-012` | Pendiente: preparación de borradores en escenarios activos (`DEC-016`, `stakeholders.md` Secc. 5.2) |
 | **`RN-ELE`** | 2. Elegibilidad y recomendación de ambulancias | `RN-ELE-001` a `RN-ELE-004` | — |
 | **`RN-ASI`** | 3. Asignación supervisada y automática | `RN-ASI-001` a `RN-ASI-004` | `RN-ASI-005` (propuesta pendiente) |
 | **`RN-PRE`** | 4. Preservación de ambulancias especializadas | `RN-PRE-001` a `RN-PRE-003` | — |
@@ -58,10 +58,77 @@
 - **Estado:** **Aprobada**
 - **Referencias:** `DEC-009`, `docs/product/stakeholders.md`.
 
-#### `RN-EME-007` — Catálogo concreto de niveles, variables, categorías y reglas de triage
-- **Enunciado:** Los niveles específicos de clasificación, las variables de entrada del formulario de emergencia, las categorías concretas de equipamiento y las expresiones/condiciones de las reglas de triage deberán definirse antes de su implementación.
-- **Estado:** **Pendiente de definición** (`PEN-002a`)
-- **Decisión faltante:** Aprobar el catálogo concreto de niveles, variables de entrada y categorías de equipamiento.
+#### `RN-EME-007` — Catálogo inicial de categorías de incidente, prioridad simulada y equipamiento requerido
+- **Enunciado:** El sistema utiliza un modelo determinista de clasificación mediante categorías ficticias y reglas configurables (sin algoritmos de diagnóstico clínico ni criterios médicos reales), consultando la versión activa de reglas para determinar la prioridad simulada informativa y la categoría de equipamiento requerido conforme al siguiente catálogo inicial exclusivamente académico:
+
+  | Categoría | Prioridad simulada | Equipamiento requerido |
+  | :--- | :--- | :--- |
+  | `INC-A` | Alta | Especializado (`SPECIALIZED`) |
+  | `INC-B` | Media | Básico (`BASIC`) |
+  | `INC-C` | Baja | Básico (`BASIC`) |
+  | `INC-D` | Alta | Básico (`BASIC`) |
+
+  Se establecen únicamente dos categorías iniciales de equipamiento sin crear categorías adicionales:
+  - `BASIC`: equipamiento básico.
+  - `SPECIALIZED`: equipamiento especializado, compatible también con necesidades básicas.
+  Una ambulancia básica (`BASIC`) no puede satisfacer una necesidad especializada (`SPECIALIZED`), mientras que una ambulancia especializada (`SPECIALIZED`) puede satisfacer una necesidad básica (`BASIC`) respetando las reglas aprobadas de preservación (`RN-PRE-001` a `RN-PRE-003`).
+- **Estado:** **Aprobada** (cierra `PEN-002a`)
+- **Referencias:** `DEC-001`, `DEC-010`, `DEC-011`, `DEC-015`, `DEC-016`, `RN-PRE-001` a `RN-PRE-003`.
+
+#### `RN-EME-008` — Carácter exclusivamente informativo de la prioridad simulada
+- **Enunciado:** La prioridad simulada (`Alta`, `Media`, `Baja`) asignada a una emergencia es únicamente informativa. No altera:
+  1. El orden FIFO aprobado para las colas (`RN-COL-003`).
+  2. La preservación de ambulancias especializadas (`RN-PRE-001` a `RN-PRE-003`).
+  3. Las condiciones de elegibilidad (`RN-ELE-002`).
+  4. El ordenamiento por costo de ruta mediante Dijkstra (`RN-ELE-003`, `RN-RUT-002`).
+  El equipamiento requerido (`BASIC` o `SPECIALIZED`) es el atributo que determina la compatibilidad de las ambulancias.
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-010`, `DEC-011`, `DEC-012`, `DEC-013`, `DEC-016`.
+
+#### `RN-EME-009` — Campos del registro de emergencia (introducidos y determinados automáticamente)
+- **Enunciado:** Todo registro de emergencia comprende:
+  - **Campos introducidos por el `Operador de recepción` (`ACT-01`):**
+    1. Categoría del incidente: obligatoria.
+    2. Nodo de ubicación en el grafo: obligatorio.
+    3. Descripción ficticia: opcional (se permite descripción vacía).
+  - **Campos generados o determinados automáticamente por el sistema:**
+    1. Identificador único de emergencia.
+    2. Marca temporal de registro.
+    3. Prioridad simulada.
+    4. Equipamiento requerido (`BASIC` o `SPECIALIZED`).
+    5. Identificador o referencia de la versión de reglas aplicada.
+  *(Nota: el formato físico de los identificadores, tipos SQL, precisión temporal y catálogo concreto de nodos del grafo se definirán en las decisiones pendientes correspondientes).*
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-009`, `DEC-010`, `DEC-016`, `docs/product/stakeholders.md` (`ACT-01`).
+
+#### `RN-EME-010` — Validaciones del registro de emergencia e independencia frente a falta de ambulancias
+- **Enunciado:** Al registrar una emergencia, el sistema debe:
+  1. Rechazar registros sin categoría.
+  2. Rechazar categorías inexistentes o inactivas.
+  3. Rechazar ubicaciones que no correspondan a nodos válidos del grafo configurado.
+  4. Permitir que la descripción ficticia esté vacía.
+  5. Exigir una regla válida y no ambigua en la versión activa para clasificar la categoría, sin generar clasificaciones por defecto cuando falte una regla válida.
+  6. Mantener la referencia histórica a la versión de reglas aplicada.
+  7. Si una vez registrada y clasificada la emergencia no existen ambulancias elegibles, conservar la emergencia registrada y pasarla a estado **pendiente** según las reglas aprobadas (`RN-ASI-004`). Una falla de asignación por falta de ambulancias no equivale a una falla del registro de emergencia.
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-010`, `DEC-011`, `DEC-016`, `RN-ASI-004`.
+
+#### `RN-EME-011` — Versionado inmutable de reglas de clasificación y consistencia de asociación
+- **Enunciado:** Las reglas de clasificación son configurables y versionadas bajo las siguientes invariantes:
+  1. Existirá una única versión activa de reglas aplicable a los nuevos registros.
+  2. Cada emergencia conservará la referencia histórica a la versión que produjo su clasificación.
+  3. Las versiones publicadas son inmutables; cualquier cambio debe incorporarse mediante la creación y publicación de una nueva versión.
+  4. Publicar una nueva versión no modifica retroactivamente las emergencias ya clasificadas.
+  5. Se debe impedir la publicación de versiones con categorías duplicadas, incompletas o con reglas contradictorias.
+  6. Para una misma categoría y versión de reglas, el resultado de clasificación debe ser determinista (`RN-EME-003`), y cada emergencia debe quedar asociada a una única versión consistente incluso cuando existan operaciones concurrentes. *(La estrategia técnica de persistencia, bloqueo o activación atómica se definirá posteriormente en arquitectura y persistencia).*
+- **Estado:** **Aprobada**
+- **Referencias:** `DEC-010`, `DEC-016`, `RN-EME-003`, `RN-EME-004`.
+
+#### `RN-EME-012` — Bloqueo de publicación y activación de reglas durante escenarios experimentales activos
+- **Enunciado:** Durante la ejecución de un escenario experimental activo no se permite publicar ni activar cambios en las reglas de clasificación.
+- **Estado:** **Aprobada**
+- **Nota de alcance pendiente:** La preparación de borradores de reglas durante escenarios activos no queda aprobada ni prohibida por `DEC-016` y permanece **Pendiente de definición** (`stakeholders.md` Sección 5.2).
+- **Referencias:** `DEC-010`, `DEC-016`, `docs/product/stakeholders.md` (`ACT-03`, Sección 5.2).
 
 ---
 
