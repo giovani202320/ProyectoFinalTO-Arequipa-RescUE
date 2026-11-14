@@ -124,9 +124,16 @@
         <a th:href="@{/}">Inicio</a>
         <a th:href="@{/emergencies}">Listado de emergencias (HU-02)</a>
         <a th:href="@{/emergencies/new}">Registrar nueva emergencia (HU-01)</a>
+        <a th:if="${emergency.stateCode == 'REGISTERED' or emergency.stateCode == 'WAITING_AMBULANCE'}"
+           th:href="@{/dispatch/emergencies/{id}(id=${emergency.id})}">Evaluar y asignar ambulancia (HU-05/06)</a>
     </nav>
 
     <span class="badge">Actor: Operador de recepción (ACT-01) — HU-01 / HU-02</span>
+
+    <div class="banner-success" th:if="${dispatchSuccessMessage != null}">
+        <strong>Asignación supervisada confirmada (HU-06):</strong>
+        <span th:text="${dispatchSuccessMessage}">Ambulancia asignada correctamente.</span>
+    </div>
 
     <div class="banner-success" th:if="${justRegistered}">
         <strong>Emergencia registrada y clasificada correctamente (HU-01):</strong>

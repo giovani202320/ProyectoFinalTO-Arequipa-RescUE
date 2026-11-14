@@ -179,7 +179,12 @@
             <td th:text="${item.assignedAmbulanceId != null ? item.assignedAmbulanceId : '—'}">—</td>
             <td th:text="${item.reservedOrOccupiedHospitalId != null ? item.reservedOrOccupiedHospitalId : '—'}">—</td>
             <td><code th:text="${'t=' + item.registeredAtTicks}">t=0</code></td>
-            <td><a th:href="@{/emergencies/{id}(id=${item.id})}">Ver ficha</a></td>
+            <td>
+                <a th:href="@{/emergencies/{id}(id=${item.id})}">Ver ficha</a>
+                <span th:if="${item.stateCode == 'REGISTERED' or item.stateCode == 'WAITING_AMBULANCE'}">
+                    | <a th:href="@{/dispatch/emergencies/{id}(id=${item.id})}">Despachar (HU-05/06)</a>
+                </span>
+            </td>
         </tr>
         </tbody>
     </table>

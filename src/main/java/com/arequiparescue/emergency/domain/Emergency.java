@@ -299,6 +299,101 @@ public final class Emergency {
      * Indica si el ciclo prehospitalario simulado de la emergencia ha concluido en el hospital
      * sin etapas intrahospitalarias posteriores (HU-02 CA-3, RN-EME-001, RN-RUT-005).
      */
+    /**
+     * Ejecuta T-EME-01 (REGISTERED -> ASSIGNED) o T-EME-03 (WAITING_AMBULANCE -> ASSIGNED)
+     * vinculando la ambulancia seleccionada y sellando assignedAt (HU-06 CA-1, INV-SM-03).
+     */
+    public Emergency assignAmbulance(String ambulanceId, LogicalTime at) {
+        Objects.requireNonNull(at, "El instante lógico de asignación no puede ser nulo.");
+        if (ambulanceId == null || ambulanceId.isBlank()) {
+            throw new IllegalArgumentException("El identificador de la ambulancia asignada es obligatorio.");
+        }
+        if (this.state != EmergencyState.REGISTERED && this.state != EmergencyState.WAITING_AMBULANCE) {
+            throw new IllegalStateException(
+                    "Solo una emergencia en estado REGISTERED o WAITING_AMBULANCE puede recibir asignación de ambulancia. Estado actual: "
+                            + this.state);
+        }
+        if (this.assignedAmbulanceId != null) {
+            throw new IllegalStateException(
+                    "La emergencia " + this.id + " ya tiene una ambulancia vinculada: " + this.assignedAmbulanceId);
+        }
+        return new Emergency(
+                this.id,
+                this.category,
+                this.locationNode,
+                this.description,
+                this.simulatedPriority,
+                this.requiredEquipment,
+                this.appliedRuleVersionId,
+                EmergencyState.ASSIGNED,
+                ambulanceId.trim(),
+                this.reservedOrOccupiedHospitalId,
+                this.registeredAt,
+                this.queueEnteredAt,
+                at,
+                this.atIncidentAt,
+                this.hospitalQueueEnteredAt,
+                this.inTransportAt,
+                this.completedAt,
+                null
+        );
+    }
+
+    /**
+     * Ejecuta T-EME-02 (REGISTERED -> WAITING_AMBULANCE) o conserva WAITING_AMBULANCE sin alterar
+     * su marca FIFO original cuando no quedan ambulancias elegibles disponibles (RN-ASI-004, HU-06 CA-3).
+     */
+    public Emergency enterOrRemainInWaitingAmbulance(LogicalTime at, String outcomeReason) {
+        Objects.requireNonNull(at, "El instante lógico de ingreso a cola no puede ser nulo.");
+        if (this.state == EmergencyState.WAITING_AMBULANCE) {
+            return new Emergency(
+                    this.id,
+                    this.category,
+                    this.locationNode,
+                    this.description,
+                    this.simulatedPriority,
+                    this.requiredEquipment,
+                    this.appliedRuleVersionId,
+                    EmergencyState.WAITING_AMBULANCE,
+                    null,
+                    this.reservedOrOccupiedHospitalId,
+                    this.registeredAt,
+                    this.queueEnteredAt,
+                    this.assignedAt,
+                    this.atIncidentAt,
+                    this.hospitalQueueEnteredAt,
+                    this.inTransportAt,
+                    this.completedAt,
+                    outcomeReason
+            );
+        }
+        if (this.state != EmergencyState.REGISTERED) {
+            throw new IllegalStateException(
+                    "Solo una emergencia en estado REGISTERED o WAITING_AMBULANCE puede pasar o permanecer en espera de ambulancia. Estado actual: "
+                            + this.state);
+        }
+        return new Emergency(
+                this.id,
+                this.category,
+                this.locationNode,
+                this.description,
+                this.simulatedPriority,
+                this.requiredEquipment,
+                this.appliedRuleVersionId,
+                EmergencyState.WAITING_AMBULANCE,
+                null,
+                this.reservedOrOccupiedHospitalId,
+                this.registeredAt,
+                at,
+                this.assignedAt,
+                this.atIncidentAt,
+                this.hospitalQueueEnteredAt,
+                this.inTransportAt,
+                this.completedAt,
+                outcomeReason
+        );
+    }
+
     public boolean isCycleClosed() {
         return this.state == EmergencyState.COMPLETED;
     }

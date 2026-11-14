@@ -41,6 +41,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 
@@ -53,6 +54,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * el versionado inmutable de reglas (RUL-V01 -> RUL-V02) y la topología N01–N10 (HU-03 y HU-04).
  */
 @SpringBootTest
+@ActiveProfiles("mysql-test")
 @Tag("mysql-integration")
 @EnabledIfSystemProperty(named = "are.mysql.integration", matches = "true")
 @DisplayName("Integración MySQL 8.4 + Flyway V4 + Catálogos HU-03 y Versionado de Reglas HU-04")
@@ -94,6 +96,7 @@ class CatalogsAndRulesMySqlIntegrationTest {
     @BeforeEach
     @AfterEach
     void resetDatabaseState() {
+        MySqlTestSchemaGuard.assertIsolatedTestSchema(jdbcTemplate);
         springDataAmbulanceRepository.deleteAll();
         springDataEmergencyRepository.deleteAll();
         springDataHospitalRepository.deleteAll();

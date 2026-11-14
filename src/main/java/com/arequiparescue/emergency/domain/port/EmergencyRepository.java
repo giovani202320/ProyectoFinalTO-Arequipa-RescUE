@@ -16,6 +16,8 @@ public interface EmergencyRepository {
 
     Optional<Emergency> findById(EmergencyId id);
 
+    Optional<Emergency> findByIdForUpdate(EmergencyId id);
+
     List<Emergency> findAllOrderByRegisteredAtAndId();
 
     long nextSequenceNumber();

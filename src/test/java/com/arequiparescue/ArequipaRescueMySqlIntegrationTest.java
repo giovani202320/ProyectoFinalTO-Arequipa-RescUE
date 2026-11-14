@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Se habilita con {@code -Dare.mysql.integration=true} cuando el servidor MySQL está disponible.
  */
 @SpringBootTest
+@ActiveProfiles("mysql-test")
 @Tag("mysql-integration")
 @EnabledIfSystemProperty(named = "are.mysql.integration", matches = "true")
 @DisplayName("Integración MySQL 8.4 + Flyway V1/V2 + RoadGraphJpaAdapter")
@@ -25,9 +28,13 @@ class ArequipaRescueMySqlIntegrationTest {
     @Autowired
     private RoadGraphRepository roadGraphRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     @Test
     @DisplayName("Ejecuta migraciones Flyway V1 y V2 en MySQL 8.4 y carga el grafo de 10 nodos y 12 aristas")
     void shouldLoadSeededGraphFromMySql() {
+        MySqlTestSchemaGuard.assertIsolatedTestSchema(jdbcTemplate);
         RoadGraph graph = roadGraphRepository.loadGraph();
 
         assertThat(graph.nodeCount()).isEqualTo(10);

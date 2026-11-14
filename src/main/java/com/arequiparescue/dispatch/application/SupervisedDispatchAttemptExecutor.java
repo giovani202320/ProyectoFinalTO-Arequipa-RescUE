@@ -1,0 +1,144 @@
+package com.arequiparescue.dispatch.application;
+
+import com.arequiparescue.ambulance.domain.Ambulance;
+import com.arequiparescue.ambulance.domain.AmbulanceId;
+import com.arequiparescue.ambulance.domain.AmbulanceState;
+import com.arequiparescue.ambulance.domain.port.AmbulanceRepository;
+import com.arequiparescue.dispatch.domain.AmbulanceEligibilityPolicy;
+import com.arequiparescue.dispatch.domain.EligibleAmbulanceCandidate;
+import com.arequiparescue.emergency.domain.Emergency;
+import com.arequiparescue.emergency.domain.EmergencyId;
+import com.arequiparescue.emergency.domain.EmergencyState;
+import com.arequiparescue.emergency.domain.port.EmergencyRepository;
+import com.arequiparescue.routing.domain.RoadGraph;
+import com.arequiparescue.routing.domain.port.RoadGraphRepository;
+import com.arequiparescue.shared.domain.LogicalTime;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * Ejecutor de intento atómico para asignación supervisada bajo bloqueo pesimista
+ * {@code SELECT ... FOR UPDATE} en orden canónico {@code Emergency -> Ambulance}
+ * conforme a {@code ADR-0002} (Decisiones 1, 3 y 7) e {@code INV-SM-08}.
+ */
+@Component
+public class SupervisedDispatchAttemptExecutor {
+
+    public record AttemptOutcome(
+            boolean succeeded,
+            boolean conflict,
+            Emergency emergency,
+            Ambulance ambulance,
+            String reason
+    ) {
+    }
+
+    private final EmergencyRepository emergencyRepository;
+    private final AmbulanceRepository ambulanceRepository;
+    private final RoadGraphRepository roadGraphRepository;
+    private final AmbulanceEligibilityPolicy eligibilityPolicy;
+
+    public SupervisedDispatchAttemptExecutor(
+            EmergencyRepository emergencyRepository,
+            AmbulanceRepository ambulanceRepository,
+            RoadGraphRepository roadGraphRepository
+    ) {
+        this.emergencyRepository = Objects.requireNonNull(emergencyRepository);
+        this.ambulanceRepository = Objects.requireNonNull(ambulanceRepository);
+        this.roadGraphRepository = Objects.requireNonNull(roadGraphRepository);
+        this.eligibilityPolicy = new AmbulanceEligibilityPolicy();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED, timeout = 5)
+    public AttemptOutcome executeSupervisedAssignmentAttempt(
+            EmergencyId emergencyId,
+            AmbulanceId ambulanceId,
+            LogicalTime at
+    ) {
+        // Orden canónico de bloqueos ADR-0002 Decisión 7: Emergency -> Ambulance
+        Emergency emergency = emergencyRepository.findByIdForUpdate(emergencyId)
+                .orElseThrow(() -> new DispatchValidationException(
+                        "No existe ninguna emergencia con identificador " + emergencyId.value() + "."
+                ));
+
+        if (emergency.state() != EmergencyState.REGISTERED
+                && emergency.state() != EmergencyState.WAITING_AMBULANCE) {
+            throw new DispatchValidationException(
+                    "La emergencia " + emergencyId.value() + " se encuentra en estado " + emergency.state()
+                            + " y no admite asignación de ambulancia.");
+        }
+
+        Ambulance ambulance = ambulanceRepository.findByIdForUpdate(ambulanceId)
+                .orElseThrow(() -> new DispatchValidationException(
+                        "No existe ninguna ambulancia con identificador " + ambulanceId.value() + "."
+                ));
+
+        if (ambulance.state() != AmbulanceState.AVAILABLE || ambulance.assignedEmergencyId() != null) {
+            return new AttemptOutcome(
+                    false,
+                    true,
+                    emergency,
+                    ambulance,
+                    "La ambulancia " + ambulanceId.value()
+                            + " dejó de estar AVAILABLE antes de confirmarse la asignación (estado actual: "
+                            + ambulance.state() + ")."
+            );
+        }
+
+        List<Ambulance> catalog = ambulanceRepository.findAllOrderById();
+        RoadGraph graph = roadGraphRepository.loadGraph();
+        List<EligibleAmbulanceCandidate> eligible =
+                eligibilityPolicy.evaluateEligibleCandidates(emergency, catalog, graph);
+
+        boolean stillEligible = eligible.stream()
+                .anyMatch(c -> c.ambulance().id().equals(ambulanceId));
+        if (!stillEligible) {
+            return new AttemptOutcome(
+                    false,
+                    true,
+                    emergency,
+                    ambulance,
+                    "La ambulancia " + ambulanceId.value()
+                            + " ya no cumple las condiciones de elegibilidad/preservación vigentes al revalidar."
+            );
+        }
+
+        Emergency assignedEmergency = emergency.assignAmbulance(ambulance.id().value(), at);
+        Ambulance assignedAmbulance = ambulance.assignToEmergency(emergency.id());
+
+        Emergency savedEmergency = emergencyRepository.save(assignedEmergency);
+        Ambulance savedAmbulance = ambulanceRepository.save(assignedAmbulance);
+
+        return new AttemptOutcome(
+                true,
+                false,
+                savedEmergency,
+                savedAmbulance,
+                "Asignación supervisada confirmada: " + savedEmergency.id().value()
+                        + " -> " + savedAmbulance.id().value() + "."
+        );
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED, timeout = 5)
+    public Emergency moveEmergencyToWaitingAmbulance(
+            EmergencyId emergencyId,
+            LogicalTime at,
+            String reason
+    ) {
+        Emergency emergency = emergencyRepository.findByIdForUpdate(emergencyId)
+                .orElseThrow(() -> new DispatchValidationException(
+                        "No existe ninguna emergencia con identificador " + emergencyId.value() + "."
+                ));
+        if (emergency.state() != EmergencyState.REGISTERED
+                && emergency.state() != EmergencyState.WAITING_AMBULANCE) {
+            return emergency;
+        }
+        Emergency waiting = emergency.enterOrRemainInWaitingAmbulance(at, reason);
+        return emergencyRepository.save(waiting);
+    }
+}

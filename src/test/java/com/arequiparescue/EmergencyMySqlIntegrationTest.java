@@ -22,6 +22,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +45,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * bloqueo pesimista SELECT ... FOR UPDATE (HU-01, HU-02, ADR-0002).
  */
 @SpringBootTest
+@ActiveProfiles("mysql-test")
 @Tag("mysql-integration")
 @EnabledIfSystemProperty(named = "are.mysql.integration", matches = "true")
 @DisplayName("Integración MySQL 8.4 + Flyway V3 + Registro, Consulta y Secuencia Concurrente de Emergencias (HU-01 y HU-02)")
@@ -60,8 +63,12 @@ class EmergencyMySqlIntegrationTest {
     @Autowired
     private SpringDataEmergencySequenceRepository springDataEmergencySequenceRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     @BeforeEach
     void resetDatabaseState() {
+        MySqlTestSchemaGuard.assertIsolatedTestSchema(jdbcTemplate);
         springDataEmergencyRepository.deleteAll();
         springDataEmergencySequenceRepository.saveAndFlush(
                 new EmergencySequenceJpaEntity(EmergencyJpaAdapter.EMERGENCY_SEQUENCE_NAME, 1L)
@@ -70,6 +77,7 @@ class EmergencyMySqlIntegrationTest {
 
     @AfterEach
     void cleanUpEmergencies() {
+        MySqlTestSchemaGuard.assertIsolatedTestSchema(jdbcTemplate);
         springDataEmergencyRepository.deleteAll();
         springDataEmergencySequenceRepository.saveAndFlush(
                 new EmergencySequenceJpaEntity(EmergencyJpaAdapter.EMERGENCY_SEQUENCE_NAME, 1L)

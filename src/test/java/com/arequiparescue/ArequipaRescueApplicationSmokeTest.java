@@ -1,6 +1,8 @@
 package com.arequiparescue;
 
 import com.arequiparescue.ambulance.infrastructure.persistence.SpringDataAmbulanceRepository;
+import com.arequiparescue.dispatch.infrastructure.persistence.SpringDataExperimentOperationResultRepository;
+import com.arequiparescue.dispatch.infrastructure.persistence.SpringDataOperationAttemptLogRepository;
 import com.arequiparescue.emergency.infrastructure.persistence.SpringDataEmergencyRepository;
 import com.arequiparescue.emergency.infrastructure.persistence.SpringDataEmergencySequenceRepository;
 import com.arequiparescue.emergency.infrastructure.persistence.SpringDataTriageRuleRepository;
@@ -61,6 +63,12 @@ class ArequipaRescueApplicationSmokeTest {
 
     @MockitoBean
     private SpringDataHospitalRepository hospitalRepository;
+
+    @MockitoBean
+    private SpringDataOperationAttemptLogRepository operationAttemptLogRepository;
+
+    @MockitoBean
+    private SpringDataExperimentOperationResultRepository experimentOperationResultRepository;
 
     @Autowired
     private TestRestTemplate restTemplate;

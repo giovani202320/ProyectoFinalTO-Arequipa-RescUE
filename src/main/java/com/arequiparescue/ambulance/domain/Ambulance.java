@@ -96,6 +96,25 @@ public final class Ambulance {
         }
     }
 
+    /**
+     * Ejecuta la transición T-AMB-01 (AVAILABLE -> ASSIGNED) vinculando la emergencia activa
+     * bajo invariante INV-SM-02 (HU-06 CA-1).
+     */
+    public Ambulance assignToEmergency(EmergencyId emergencyId) {
+        Objects.requireNonNull(emergencyId, "El identificador de la emergencia a asignar es obligatorio.");
+        if (this.state != AmbulanceState.AVAILABLE || this.assignedEmergencyId != null) {
+            throw new IllegalStateException(
+                    "La ambulancia " + this.id + " no está disponible para asignación. Estado actual: " + this.state);
+        }
+        return new Ambulance(
+                this.id,
+                this.equipmentType,
+                this.currentNode,
+                AmbulanceState.ASSIGNED,
+                emergencyId
+        );
+    }
+
     public AmbulanceId id() {
         return id;
     }

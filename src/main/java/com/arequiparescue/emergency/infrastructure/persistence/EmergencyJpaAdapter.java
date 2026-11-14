@@ -50,6 +50,14 @@ public class EmergencyJpaAdapter implements EmergencyRepository {
     }
 
     @Override
+    public Optional<Emergency> findByIdForUpdate(EmergencyId id) {
+        Objects.requireNonNull(id, "El identificador de la emergencia a bloquear no puede ser nulo.");
+        return springDataEmergencyRepository
+                .findByIdForUpdate(id.value())
+                .map(EmergencyPersistenceMapper::toDomain);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<Emergency> findAllOrderByRegisteredAtAndId() {
         return springDataEmergencyRepository
