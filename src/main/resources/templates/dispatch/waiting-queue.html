@@ -1,223 +1,171 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cola WAITING_AMBULANCE (FIFO) — ARE (Arequipa RescUE)</title>
-    <style>
-        :root {
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --border: #cbd5e1;
-            --primary: #1e3a8a;
-            --primary-hover: #1d4ed8;
-            --text: #0f172a;
-            --muted: #475569;
-            --badge-bg: #dbeafe;
-            --badge-fg: #1e40af;
-            --error-bg: #fef2f2;
-            --error-border: #fca5a5;
-            --error-fg: #991b1b;
-            --success-bg: #ecfdf5;
-            --success-border: #6ee7b7;
-            --success-fg: #065f46;
-            --warn-bg: #fffbeb;
-            --warn-border: #fcd34d;
-            --warn-fg: #92400e;
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            padding: 2.5rem 1.25rem;
-            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-        }
-        main {
-            max-width: 1020px;
-            margin: 0 auto;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 2rem;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
-        }
-        nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.25rem;
-            font-size: 0.92rem;
-        }
-        nav a { color: var(--primary); text-decoration: none; font-weight: 600; }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            background: var(--badge-bg);
-            color: var(--badge-fg);
-            font-weight: 600;
-            font-size: 0.85rem;
-            margin-bottom: 0.75rem;
-        }
-        h1 { margin: 0 0 0.5rem 0; color: var(--primary); font-size: 1.65rem; }
-        h2 { margin: 1.5rem 0 0.5rem 0; color: var(--primary); font-size: 1.15rem; }
-        .alert-error {
-            background: var(--error-bg);
-            border: 1px solid var(--error-border);
-            color: var(--error-fg);
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-        .alert-success {
-            background: var(--success-bg);
-            border: 1px solid var(--success-border);
-            color: var(--success-fg);
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-        .alert-warn {
-            background: var(--warn-bg);
-            border: 1px solid var(--warn-border);
-            color: var(--warn-fg);
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 0.75rem;
-            font-size: 0.92rem;
-        }
-        th, td {
-            padding: 0.65rem 0.7rem;
-            border-bottom: 1px solid var(--border);
-            text-align: left;
-        }
-        th { background: #f8fafc; font-weight: 600; }
-        .btn-primary {
-            background: var(--primary);
-            color: #ffffff;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.88rem;
-        }
-        .btn-primary:hover { background: var(--primary-hover); }
-    </style>
-</head>
-<body>
-<main>
-    <nav>
+<head th:replace="~{fragments/layout :: head('Cola de espera de ambulancias')}"></head>
+<body th:replace="~{fragments/layout :: appShell('Cola de espera de ambulancias', 'Evaluación FIFO de emergencias en espera de ambulancia (HU-08)', 'dispatch', ~{::waitingQueueContent})}">
+
+<th:block th:fragment="waitingQueueContent">
+    <!-- Header -->
+    <section class="are-card mb-4" aria-labelledby="waiting-queue-page-title">
+        <div class="are-card-body d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <div>
+                <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
+                    <span th:replace="~{fragments/components :: statusBadge('Despachador (ACT-02) — HU-08', 'navy')}"></span>
+                </div>
+                <h2 id="waiting-queue-page-title" class="h4 fw-bold mb-1" style="color: var(--are-navy);">
+                    Cola de emergencias en espera de ambulancia (FIFO)
+                </h2>
+                <p class="text-secondary small mb-0">
+                    El orden FIFO estricto se determina por <code>queue_entered_at_t ASC, id ASC</code>.
+                    La prioridad clínica informativa no altera la posición en cola (<code>RN-COL-004</code>, <code>RN-COL-005</code>).
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+                <a th:replace="~{fragments/components :: actionLink(@{/emergencies}, 'Emergencias', 'outline', 'siren')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/dispatch/hospital-queue}, 'Cola hospitalaria', 'outline', 'hospital')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/triage-rules(actor='ACT-02')}, 'Reglas vigentes', 'outline', 'shield-check')}"></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Evaluation Result & Exhausted Notices -->
+    <div th:if="${evaluationResult != null}" class="are-alert are-alert-success mb-3" role="status">
+        <i data-lucide="check-circle-2" class="are-nav-icon mt-1" aria-hidden="true"></i>
         <div>
-            <a th:href="@{/}">Inicio</a> |
-            <a th:href="@{/emergencies}">Emergencias</a> |
-            <a th:href="@{/dispatch/hospital-queue}">Cola WAITING_HOSPITAL (HU-09/10)</a> |
-            <a th:href="@{/ambulances}">Ambulancias</a>
+            <strong>Resultado de evaluación de cola (HU-08):</strong>
+            <span th:text="${evaluationResult.summaryMessage}">Evaluación ejecutada.</span>
         </div>
-        <a th:href="@{/triage-rules(actor='ACT-02')}">Reglas vigentes (Solo lectura)</a>
-    </nav>
-
-    <span class="badge">ACT-02 Despachador — HU-08 (Cola WAITING_AMBULANCE FIFO)</span>
-    <h1>Cola de emergencias en espera de ambulancia (FIFO)</h1>
-    <p style="color: var(--muted); margin-top: 0;">
-        El orden FIFO estricto se determina por <code>queue_entered_at_t ASC, id ASC</code>.
-        La prioridad clínica informativa no altera la posición en cola (<code>RN-COL-004</code>, <code>RN-COL-005</code>).
-    </p>
-
-    <div th:if="${errorMessage != null}" class="alert-error" th:text="${errorMessage}">Error</div>
-
-    <div th:if="${evaluationResult != null}" class="alert-success">
-        <strong>Resultado de evaluación de cola (HU-08):</strong>
-        <span th:text="${evaluationResult.summaryMessage}">Evaluación ejecutada.</span>
     </div>
 
-    <div th:if="${!#lists.isEmpty(exhaustedNotices)}" class="alert-error">
-        <strong>Avisos recientes de agotamiento por concurrencia (<code>CONCURRENCY_RETRY_EXHAUSTED</code> — HU-07):</strong>
-        <ul style="margin: 0.4rem 0 0 1.25rem; padding: 0;">
-            <li th:each="notice : ${exhaustedNotices}">
-                <code th:text="${notice.emergencyId}">EMG-00001</code> —
-                <span th:text="${notice.outcomeReason}">Agotamiento</span>
-                (t = <span th:text="${notice.logicalTicks}">0</span>)
-            </li>
-        </ul>
+    <div th:if="${!#lists.isEmpty(exhaustedNotices)}" class="are-alert are-alert-danger mb-3" role="alert">
+        <i data-lucide="alert-octagon" class="are-nav-icon mt-1" aria-hidden="true"></i>
+        <div>
+            <strong>Avisos recientes de agotamiento por concurrencia (<code>CONCURRENCY_RETRY_EXHAUSTED</code> — HU-07):</strong>
+            <ul class="mb-0 mt-1 ps-3">
+                <li th:each="notice : ${exhaustedNotices}">
+                    <span class="are-mono fw-semibold" th:text="${notice.emergencyId}">EMG-00001</span> —
+                    <span th:text="${notice.outcomeReason}">Agotamiento</span>
+                    (t = <span class="are-mono" th:text="${notice.logicalTicks}">0</span>)
+                </li>
+            </ul>
+        </div>
     </div>
 
-    <section>
-        <h2>1. Ambulancias actualmente AVAILABLE (<span th:text="${#lists.size(availableAmbulances)}">0</span>)</h2>
-        <div th:if="${#lists.isEmpty(availableAmbulances)}" class="alert-warn">
-            No existen ambulancias en estado <code>AVAILABLE</code> en este momento.
+    <!-- Section 1: Available Ambulances -->
+    <section class="are-card mb-4" aria-labelledby="available-ambulances-heading">
+        <div class="are-card-header d-flex align-items-center justify-content-between">
+            <h3 id="available-ambulances-heading" class="are-card-title">
+                1. Ambulancias actualmente disponibles
+            </h3>
+            <span class="are-badge are-badge-neutral are-mono"
+                  th:text="${#lists.size(availableAmbulances)} + ' disponible(s)'">0 disponible(s)</span>
         </div>
-        <div th:if="${!#lists.isEmpty(availableAmbulances)}">
-            <form th:action="@{/dispatch/waiting-queue/evaluate}" method="post" style="margin-bottom: 0.75rem;">
-                <button type="submit" class="btn-primary">Evaluar cola WAITING_AMBULANCE para unidades AVAILABLE</button>
-            </form>
-            <table>
-                <thead>
-                <tr>
-                    <th>ID Unidad</th>
-                    <th>Equipamiento</th>
-                    <th>Nodo actual</th>
-                    <th>Evaluar unidad liberada</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="amb : ${availableAmbulances}">
-                    <td><strong th:text="${amb.id.value}">AMB-01</strong></td>
-                    <td th:text="${amb.equipmentType.name()}">BASIC</td>
-                    <td><code th:text="${amb.currentNode.value}">N01</code></td>
-                    <td>
-                        <form th:action="@{/dispatch/waiting-queue/evaluate}" method="post">
-                            <input type="hidden" name="ambulanceId" th:value="${amb.id.value}">
-                            <button type="submit" class="btn-primary">Atender cola con esta unidad</button>
-                        </form>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
+        <div class="are-card-body">
+            <div th:if="${#lists.isEmpty(availableAmbulances)}" class="are-alert are-alert-warning mb-0" role="status">
+                <i data-lucide="alert-triangle" class="are-nav-icon mt-1" aria-hidden="true"></i>
+                <div>
+                    No existen ambulancias en estado <strong th:text="${@areUi.ambulanceStateLabel('AVAILABLE')}">Disponible</strong> en este momento.
+                </div>
+            </div>
+
+            <div th:if="${!#lists.isEmpty(availableAmbulances)}">
+                <form th:action="@{/dispatch/waiting-queue/evaluate}" method="post" class="mb-3">
+                    <button type="submit" class="btn btn-are-primary d-inline-flex align-items-center gap-2">
+                        <i data-lucide="play" class="are-nav-icon" aria-hidden="true"></i>
+                        <span>Evaluar cola de espera para unidades disponibles</span>
+                    </button>
+                </form>
+
+                <div class="are-table-wrap">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>ID Unidad</th>
+                            <th>Equipamiento</th>
+                            <th>Nodo actual</th>
+                            <th>Evaluar unidad liberada</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="amb : ${availableAmbulances}">
+                            <td><span class="are-mono fw-bold" th:text="${amb.id.value}">AMB-01</span></td>
+                            <td>
+                                <span class="are-badge"
+                                      th:classappend="'are-badge-' + ${@areUi.badgeTone('EQUIPMENT', amb.equipmentType.name())}"
+                                      th:text="${@areUi.equipmentLabel(amb.equipmentType.name())}">Básica</span>
+                            </td>
+                            <td><span class="are-mono" th:text="${amb.currentNode.value}">N01</span></td>
+                            <td>
+                                <form th:action="@{/dispatch/waiting-queue/evaluate}" method="post">
+                                    <input type="hidden" name="ambulanceId" th:value="${amb.id.value}">
+                                    <button type="submit" class="btn btn-sm btn-are-primary d-inline-flex align-items-center gap-1">
+                                        <i data-lucide="play" class="are-badge-icon" aria-hidden="true"></i>
+                                        <span>Atender cola con esta unidad</span>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </section>
 
-    <section>
-        <h2>2. Emergencias en WAITING_AMBULANCE (<span th:text="${#lists.size(waitingQueue)}">0</span>)</h2>
-        <p th:if="${#lists.isEmpty(waitingQueue)}" style="color: var(--muted);">
-            No hay emergencias pendientes en <code>WAITING_AMBULANCE</code>.
-        </p>
-        <table th:if="${!#lists.isEmpty(waitingQueue)}">
-            <thead>
-            <tr>
-                <th>Posición FIFO</th>
-                <th>ID Emergencia</th>
-                <th>Equipamiento requerido</th>
-                <th>Nodo incidente</th>
-                <th>Ingreso a cola (t)</th>
-                <th>Prioridad informativa</th>
-                <th>Acciones</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="emg, iter : ${waitingQueue}">
-                <td th:text="${iter.count}">1</td>
-                <td><strong th:text="${emg.id}">EMG-00001</strong></td>
-                <td th:text="${emg.requiredEquipmentCode}">BASIC</td>
-                <td><code th:text="${emg.nodeId}">N01</code></td>
-                <td><code>t = <span th:text="${emg.queueEnteredAtTicks}">0</span></code></td>
-                <td th:text="${emg.simulatedPriorityLabel}">Media</td>
-                <td>
-                    <a th:href="@{/dispatch/emergencies/{id}(id=${emg.id})}">Panel de despacho (HU-06/07)</a>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+    <!-- Section 2: Waiting Queue -->
+    <section class="are-card" aria-labelledby="waiting-emergencies-heading">
+        <div class="are-card-header d-flex align-items-center justify-content-between">
+            <h3 id="waiting-emergencies-heading" class="are-card-title">
+                2. Emergencias en espera de ambulancia
+            </h3>
+            <span class="are-badge are-badge-neutral are-mono"
+                  th:text="${#lists.size(waitingQueue)} + ' en cola'">0 en cola</span>
+        </div>
+        <div class="are-card-body">
+            <p th:if="${#lists.isEmpty(waitingQueue)}" class="text-secondary mb-0">
+                No hay emergencias pendientes en espera de ambulancia.
+            </p>
+
+            <div th:if="${!#lists.isEmpty(waitingQueue)}" class="are-table-wrap">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Posición FIFO</th>
+                        <th>ID Emergencia</th>
+                        <th>Equipamiento requerido</th>
+                        <th>Nodo incidente</th>
+                        <th>Ingreso a cola (t)</th>
+                        <th>Prioridad informativa</th>
+                        <th>Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="emg, iter : ${waitingQueue}">
+                        <td class="are-mono fw-semibold" th:text="${iter.count}">1</td>
+                        <td><span class="are-mono fw-bold" th:text="${emg.id}">EMG-00001</span></td>
+                        <td>
+                            <span class="are-badge"
+                                  th:classappend="'are-badge-' + ${@areUi.badgeTone('EQUIPMENT', emg.requiredEquipmentCode)}"
+                                  th:text="${@areUi.equipmentLabel(emg.requiredEquipmentCode)}">Básica</span>
+                        </td>
+                        <td><span class="are-mono" th:text="${emg.nodeId}">N01</span></td>
+                        <td class="are-mono">t = <span th:text="${emg.queueEnteredAtTicks}">0</span></td>
+                        <td>
+                            <span class="are-badge are-badge-neutral" th:text="${emg.simulatedPriorityLabel}">Media</span>
+                        </td>
+                        <td>
+                            <a th:href="@{/dispatch/emergencies/{id}(id=${emg.id})}"
+                               class="btn btn-sm btn-are-outline d-inline-flex align-items-center gap-1">
+                                <i data-lucide="arrow-right" class="are-badge-icon" aria-hidden="true"></i>
+                                <span>Panel de despacho (HU-06/07)</span>
+                            </a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </section>
-</main>
+</th:block>
+
 </body>
 </html>

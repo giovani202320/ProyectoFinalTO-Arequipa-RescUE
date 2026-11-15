@@ -14,15 +14,19 @@ import com.arequiparescue.emergency.domain.TriageClassification;
 import com.arequiparescue.emergency.domain.TriageRuleVersionId;
 import com.arequiparescue.routing.domain.NodeId;
 import com.arequiparescue.shared.domain.LogicalTime;
+import com.arequiparescue.shared.presentation.AreUiFormatter;
+import com.arequiparescue.shared.presentation.HtmlStructureAssertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -32,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(WaitingQueueController.class)
+@Import(AreUiFormatter.class)
 @DisplayName("WaitingQueueController — Vista y evaluación FIFO de WAITING_AMBULANCE (HU-08)")
 class WaitingQueueControllerTest {
 
@@ -65,12 +70,19 @@ class WaitingQueueControllerTest {
                 )
         ));
 
-        mockMvc.perform(get("/dispatch/waiting-queue"))
+        String html = mockMvc.perform(get("/dispatch/waiting-queue"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("dispatch/waiting-queue"))
                 .andExpect(content().string(containsString("EMG-00001")))
                 .andExpect(content().string(containsString("AMB-01")))
-                .andExpect(content().string(containsString("CONCURRENCY_RETRY_EXHAUSTED")));
+                .andExpect(content().string(containsString("CONCURRENCY_RETRY_EXHAUSTED")))
+                .andExpect(content().string(containsString("Básica")))
+                .andExpect(content().string(containsString("/css/are-design-system.css")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(html, "waiting-queue-page-title");
+        assertThat(HtmlStructureAssertions.countOccurrences(html, "<form")).isEqualTo(2);
     }
 
     @Test

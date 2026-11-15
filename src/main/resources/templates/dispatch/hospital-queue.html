@@ -1,386 +1,376 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Llegada al incidente y cola WAITING_HOSPITAL — ARE (Arequipa RescUE)</title>
-    <style>
-        :root {
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --border: #cbd5e1;
-            --primary: #1e3a8a;
-            --primary-hover: #1d4ed8;
-            --text: #0f172a;
-            --muted: #475569;
-            --badge-bg: #dbeafe;
-            --badge-fg: #1e40af;
-            --error-bg: #fef2f2;
-            --error-border: #fca5a5;
-            --error-fg: #991b1b;
-            --success-bg: #ecfdf5;
-            --success-border: #6ee7b7;
-            --success-fg: #065f46;
-            --warn-bg: #fffbeb;
-            --warn-border: #fcd34d;
-            --warn-fg: #92400e;
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            padding: 2.5rem 1.25rem;
-            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-        }
-        main {
-            max-width: 1080px;
-            margin: 0 auto;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 2rem;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
-        }
-        nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.25rem;
-            font-size: 0.92rem;
-        }
-        nav a { color: var(--primary); text-decoration: none; font-weight: 600; }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            background: var(--badge-bg);
-            color: var(--badge-fg);
-            font-weight: 600;
-            font-size: 0.85rem;
-            margin-bottom: 0.75rem;
-        }
-        h1 { margin: 0 0 0.5rem 0; color: var(--primary); font-size: 1.65rem; }
-        h2 { margin: 1.5rem 0 0.5rem 0; color: var(--primary); font-size: 1.15rem; }
-        .alert-error {
-            background: var(--error-bg);
-            border: 1px solid var(--error-border);
-            color: var(--error-fg);
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-        .alert-success {
-            background: var(--success-bg);
-            border: 1px solid var(--success-border);
-            color: var(--success-fg);
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-        .alert-warn {
-            background: var(--warn-bg);
-            border: 1px solid var(--warn-border);
-            color: var(--warn-fg);
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 0.75rem;
-            font-size: 0.92rem;
-        }
-        th, td {
-            padding: 0.65rem 0.7rem;
-            border-bottom: 1px solid var(--border);
-            text-align: left;
-        }
-        th { background: #f8fafc; font-weight: 600; }
-        .btn-primary {
-            background: var(--primary);
-            color: #ffffff;
-            border: none;
-            border-radius: 6px;
-            padding: 0.55rem 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        .btn-primary:hover { background: var(--primary-hover); }
-        .btn-secondary {
-            background: #f1f5f9;
-            color: var(--text);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 0.4rem 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.85rem;
-        }
-        .btn-secondary:hover { background: #e2e8f0; }
-        .muted { color: var(--muted); font-size: 0.9rem; }
-        .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-weight: 600; }
-        .pill {
-            display: inline-block;
-            padding: 0.15rem 0.5rem;
-            border-radius: 999px;
-            background: #e2e8f0;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-    </style>
-</head>
-<body>
-<main>
-    <nav>
+<head th:replace="~{fragments/layout :: head('Despacho y cola hospitalaria')}"></head>
+<body th:replace="~{fragments/layout :: appShell('Despacho y cola hospitalaria', 'Llegada al incidente, reserva hospitalaria, traslado y alta simulada (HU-09 a HU-12)', 'hospital-queue', ~{::hospitalQueueContent})}">
+
+<th:block th:fragment="hospitalQueueContent">
+    <!-- Header -->
+    <section class="are-card mb-4" aria-labelledby="hospital-queue-page-title">
+        <div class="are-card-body d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <div>
+                <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
+                    <span th:replace="~{fragments/components :: statusBadge('Despachador (ACT-02) — HU-09 a HU-12', 'navy')}"></span>
+                </div>
+                <h2 id="hospital-queue-page-title" class="h4 fw-bold mb-1" style="color: var(--are-navy);">
+                    Gestión hospitalaria y cola de espera hospitalaria
+                </h2>
+                <p class="text-secondary small mb-0">
+                    Confirma la llegada de la ambulancia al incidente, selecciona el hospital habilitado alcanzable de menor costo con cupo disponible (<code>D &gt;= 1</code>)
+                    y administra en orden FIFO la cola de espera hospitalaria preservando la ambulancia retenida en sitio.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+                <a th:replace="~{fragments/components :: actionLink(@{/emergencies}, 'Emergencias', 'outline', 'siren')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/dispatch/waiting-queue}, 'Cola de ambulancias', 'outline', 'clock')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/hospitals}, 'Hospitales', 'outline', 'hospital')}"></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Operational Alerts -->
+    <div th:if="${dischargeSuccessMessage != null}" class="are-alert are-alert-success mb-3" role="status">
+        <i data-lucide="check-circle-2" class="are-nav-icon mt-1" aria-hidden="true"></i>
         <div>
-            <a th:href="@{/}">Inicio</a> |
-            <a th:href="@{/emergencies}">Emergencias</a> |
-            <a th:href="@{/dispatch/waiting-queue}">Cola WAITING_AMBULANCE (HU-08)</a> |
-            <a th:href="@{/hospitals}">Hospitales</a>
-        </div>
-        <span class="muted">Actor operativo: Despachador (ACT-02)</span>
-    </nav>
-
-    <span class="badge">HU-09 / HU-10 — Llegada al incidente, reserva hospitalaria (1+2) y cola WAITING_HOSPITAL</span>
-    <h1>Gestión hospitalaria y cola WAITING_HOSPITAL</h1>
-    <p class="muted">
-        Confirma la llegada de la ambulancia al incidente (<code>ASSIGNED -&gt; AT_INCIDENT</code>), selecciona el hospital
-        habilitado alcanzable de menor costo con cupo disponible (<code>D &gt;= 1</code>) y administra en orden FIFO la cola
-        <code>WAITING_HOSPITAL</code> preservando la ambulancia retenida en <code>AT_INCIDENT</code>.
-    </p>
-
-    <div class="alert-error" th:if="${errorMessage != null}" th:text="${errorMessage}">Error</div>
-
-    <div class="alert-success" th:if="${dischargeSuccessMessage != null}">
-        <strong>Alta hospitalaria simulada confirmada (HU-12):</strong>
-        <span th:text="${dischargeSuccessMessage}">Alta ejecutada</span>
-    </div>
-
-    <div class="alert-warn" th:if="${dischargeDuplicateMessage != null}">
-        <strong>Alta simulada rechazada o duplicada (HU-12):</strong>
-        <span th:text="${dischargeDuplicateMessage}">Duplicada</span>
-    </div>
-
-    <div class="alert-success" th:if="${evaluationResult != null}">
-        <strong>Resultado de evaluación FIFO:</strong>
-        <span th:text="${evaluationResult.summaryMessage}">Resumen</span>
-    </div>
-
-    <h2>1. Disponibilidad hospitalaria vigente (C / R / O / D)</h2>
-    <p class="muted" th:if="${#lists.isEmpty(hospitals)}">No hay hospitales registrados.</p>
-    <table th:if="${!#lists.isEmpty(hospitals)}">
-        <thead>
-        <tr>
-            <th>Hospital</th>
-            <th>Nombre</th>
-            <th>Nodo</th>
-            <th>Estado</th>
-            <th>C (Total)</th>
-            <th>R (Reservadas)</th>
-            <th>O (Ocupadas)</th>
-            <th>D (Disponibles)</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="h : ${hospitals}">
-            <td class="mono" th:text="${h.id}">HOSP-01</td>
-            <td th:text="${h.name}">Hospital</td>
-            <td class="mono" th:text="${h.nodeId}">N-04</td>
-            <td><span class="pill" th:text="${h.enabled ? 'Habilitado' : 'Deshabilitado'}">Habilitado</span></td>
-            <td th:text="${h.totalCapacity}">2</td>
-            <td th:text="${h.reservedSlots}">0</td>
-            <td th:text="${h.occupiedSlots}">0</td>
-            <td class="mono" th:text="${h.availableSlots}">2</td>
-        </tr>
-        </tbody>
-    </table>
-
-    <h2>2. Emergencias en estado ASSIGNED (confirmar llegada al incidente — HU-09)</h2>
-    <p class="muted" th:if="${#lists.isEmpty(assignedEmergencies)}">
-        No hay emergencias en estado <code>ASSIGNED</code> pendientes de llegada al incidente.
-    </p>
-    <table th:if="${!#lists.isEmpty(assignedEmergencies)}">
-        <thead>
-        <tr>
-            <th>Emergencia</th>
-            <th>Prioridad</th>
-            <th>Nodo</th>
-            <th>Ambulancia asignada</th>
-            <th>Acción</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="emg : ${assignedEmergencies}">
-            <td class="mono">
-                <a th:href="@{/emergencies/{id}(id=${emg.id})}" th:text="${emg.id}">EMG-00001</a>
-            </td>
-            <td th:text="${emg.simulatedPriorityLabel}">ALTA</td>
-            <td class="mono" th:text="${emg.nodeId}">N01</td>
-            <td class="mono" th:text="${emg.assignedAmbulanceId}">AMB-01</td>
-            <td>
-                <form th:action="@{/dispatch/emergencies/{id}/arrive(id=${emg.id})}" method="post" style="margin:0;">
-                    <button type="submit" class="btn-primary">Confirmar llegada (AT_INCIDENT) y reservar hospital</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-
-    <h2>3. Cola FIFO WAITING_HOSPITAL (HU-10)</h2>
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
-        <p class="muted" style="margin:0;">
-            Orden estricto por marca de ingreso <code>hospitalQueueEnteredAt</code> y desempate por ID.
-            Si una emergencia no tiene hospital alcanzable o disponible, conserva su posición original.
-        </p>
-        <form th:action="@{/dispatch/hospital-queue/evaluate}" method="post" style="margin:0;">
-            <button type="submit" class="btn-primary">Reevaluar cola WAITING_HOSPITAL (HU-10)</button>
-        </form>
-    </div>
-
-    <p class="muted" th:if="${#lists.isEmpty(waitingHospitalQueue)}">
-        La cola <code>WAITING_HOSPITAL</code> está vacía.
-    </p>
-    <table th:if="${!#lists.isEmpty(waitingHospitalQueue)}">
-        <thead>
-        <tr>
-            <th>Posición FIFO</th>
-            <th>Emergencia</th>
-            <th>Prioridad</th>
-            <th>Nodo</th>
-            <th>Ambulancia retenida (AT_INCIDENT)</th>
-            <th>Ingreso a cola hospitalaria (tick)</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="emg, iter : ${waitingHospitalQueue}">
-            <td class="mono" th:text="${iter.index + 1}">1</td>
-            <td class="mono">
-                <a th:href="@{/emergencies/{id}(id=${emg.id})}" th:text="${emg.id}">EMG-00001</a>
-            </td>
-            <td th:text="${emg.simulatedPriorityLabel}">ALTA</td>
-            <td class="mono" th:text="${emg.nodeId}">N01</td>
-            <td class="mono" th:text="${emg.assignedAmbulanceId}">AMB-01</td>
-            <td class="mono" th:text="${emg.hospitalQueueEnteredAtTicks}">5</td>
-        </tr>
-        </tbody>
-    </table>
-
-    <h2>4. Emergencias en traslado IN_TRANSPORT (confirmar entrega hospitalaria — HU-11)</h2>
-    <p class="muted" th:if="${#lists.isEmpty(inTransportEmergencies)}">
-        No hay emergencias en estado <code>IN_TRANSPORT</code> pendientes de entrega hospitalaria.
-    </p>
-    <table th:if="${!#lists.isEmpty(inTransportEmergencies)}">
-        <thead>
-        <tr>
-            <th>Emergencia</th>
-            <th>Prioridad</th>
-            <th>Ambulancia (TRANSPORTING)</th>
-            <th>Hospital reservado</th>
-            <th>Acción</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="emg : ${inTransportEmergencies}">
-            <td class="mono">
-                <a th:href="@{/emergencies/{id}(id=${emg.id})}" th:text="${emg.id}">EMG-00001</a>
-            </td>
-            <td th:text="${emg.simulatedPriorityLabel}">ALTA</td>
-            <td class="mono" th:text="${emg.assignedAmbulanceId}">AMB-01</td>
-            <td class="mono" th:text="${emg.reservedOrOccupiedHospitalId}">HOSP-01</td>
-            <td>
-                <form th:action="@{/dispatch/emergencies/{id}/deliver(id=${emg.id})}" method="post" style="margin:0;">
-                    <button type="submit" class="btn-primary">Confirmar entrega (COMPLETED) y liberar ambulancia</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-
-    <h2>5. Reservas y ocupaciones hospitalarias (RESERVED / OCCUPIED / DISCHARGED — HU-11 / HU-12)</h2>
-    <p class="muted" th:if="${#lists.isEmpty(hospitalReservations)}">
-        No existen reservas u ocupaciones hospitalarias registradas.
-    </p>
-    <table th:if="${!#lists.isEmpty(hospitalReservations)}">
-        <thead>
-        <tr>
-            <th>Reserva</th>
-            <th>Emergencia</th>
-            <th>Hospital</th>
-            <th>Estado</th>
-            <th>t reserva</th>
-            <th>t ocupación</th>
-            <th>t alta</th>
-            <th>Acción (HU-12)</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="res : ${hospitalReservations}">
-            <td class="mono" th:text="${res.id}">RES-1</td>
-            <td class="mono">
-                <a th:href="@{/emergencies/{id}(id=${res.emergencyId})}" th:text="${res.emergencyId}">EMG-00001</a>
-            </td>
-            <td class="mono" th:text="${res.hospitalId}">HOSP-01</td>
-            <td><span class="pill" th:text="${res.status}">OCCUPIED</span></td>
-            <td class="mono" th:text="${res.reservedAtTicks}">3</td>
-            <td class="mono" th:text="${res.occupiedAtTicks != null ? res.occupiedAtTicks : '-'}">-</td>
-            <td class="mono" th:text="${res.dischargedAtTicks != null ? res.dischargedAtTicks : '-'}">-</td>
-            <td>
-                <form th:if="${res.status == 'OCCUPIED'}"
-                      th:action="@{/dispatch/hospital-reservations/{reservationId}/discharge(reservationId=${res.id})}"
-                      method="post" style="margin:0;">
-                    <button type="submit" class="btn-secondary">Ejecutar alta simulada (HU-12)</button>
-                </form>
-                <span class="muted" th:if="${res.status != 'OCCUPIED'}">—</span>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-
-    <h2>6. Emergencias cerradas COMPLETED (HU-11)</h2>
-    <p class="muted" th:if="${#lists.isEmpty(completedEmergencies)}">
-        No hay emergencias en estado <code>COMPLETED</code>.
-    </p>
-    <table th:if="${!#lists.isEmpty(completedEmergencies)}">
-        <thead>
-        <tr>
-            <th>Emergencia</th>
-            <th>Prioridad</th>
-            <th>Ambulancia histórica</th>
-            <th>Hospital de entrega</th>
-            <th>t cierre</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="emg : ${completedEmergencies}">
-            <td class="mono">
-                <a th:href="@{/emergencies/{id}(id=${emg.id})}" th:text="${emg.id}">EMG-00001</a>
-            </td>
-            <td th:text="${emg.simulatedPriorityLabel}">ALTA</td>
-            <td class="mono" th:text="${emg.assignedAmbulanceId}">AMB-01</td>
-            <td class="mono" th:text="${emg.reservedOrOccupiedHospitalId}">HOSP-01</td>
-            <td class="mono" th:text="${emg.completedAtTicks}">6</td>
-        </tr>
-        </tbody>
-    </table>
-
-    <h2>7. Avisos recientes de agotamiento de reintentos hospitalarios (CA-SIM-03)</h2>
-    <p class="muted" th:if="${#lists.isEmpty(exhaustedNotices)}">
-        No se registran agotamientos recientes de reintentos de reserva hospitalaria.
-    </p>
-    <div th:if="${!#lists.isEmpty(exhaustedNotices)}">
-        <div class="alert-warn" th:each="notice : ${exhaustedNotices}">
-            <strong class="mono" th:text="${notice.emergencyId}">EMG-00001</strong> —
-            <span class="mono" th:text="${notice.outcomeCode}">HOSPITAL_RESERVATION_RETRY_EXHAUSTED</span>
-            (<span th:text="${notice.attemptsExecuted}">3</span> intentos, tick <span th:text="${notice.logicalTick}">5</span>):
-            <span th:text="${notice.message}">Agotamiento</span>
+            <strong>Alta hospitalaria simulada confirmada (HU-12):</strong>
+            <span th:text="${dischargeSuccessMessage}">Alta ejecutada</span>
         </div>
     </div>
-</main>
+
+    <div th:if="${dischargeDuplicateMessage != null}" class="are-alert are-alert-warning mb-3" role="status">
+        <i data-lucide="alert-triangle" class="are-nav-icon mt-1" aria-hidden="true"></i>
+        <div>
+            <strong>Alta simulada rechazada o duplicada (HU-12):</strong>
+            <span th:text="${dischargeDuplicateMessage}">Duplicada</span>
+        </div>
+    </div>
+
+    <div th:if="${evaluationResult != null}" class="are-alert are-alert-success mb-3" role="status">
+        <i data-lucide="check-circle-2" class="are-nav-icon mt-1" aria-hidden="true"></i>
+        <div>
+            <strong>Resultado de evaluación FIFO:</strong>
+            <span th:text="${evaluationResult.summaryMessage}">Resumen</span>
+        </div>
+    </div>
+
+    <!-- 1. Hospital Availability -->
+    <section class="are-card mb-4" aria-labelledby="hosp-availability-heading">
+        <div class="are-card-header d-flex align-items-center justify-content-between">
+            <h3 id="hosp-availability-heading" class="are-card-title">
+                1. Disponibilidad hospitalaria vigente (C / R / O / D)
+            </h3>
+            <span class="are-badge are-badge-neutral are-mono"
+                  th:text="${#lists.size(hospitals)} + ' hospital(es)'">0 hospital(es)</span>
+        </div>
+        <div class="are-card-body">
+            <p class="text-secondary mb-0" th:if="${#lists.isEmpty(hospitals)}">No hay hospitales registrados.</p>
+            <div th:if="${!#lists.isEmpty(hospitals)}" class="are-table-wrap">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Hospital</th>
+                        <th>Nombre</th>
+                        <th>Nodo</th>
+                        <th>Estado</th>
+                        <th>C (Total)</th>
+                        <th>R (Reservadas)</th>
+                        <th>O (Ocupadas)</th>
+                        <th>D (Disponibles)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="h : ${hospitals}">
+                        <td class="are-mono fw-bold" th:text="${h.id}">HOSP-01</td>
+                        <td th:text="${h.name}">Hospital</td>
+                        <td class="are-mono" th:text="${h.nodeId}">N-04</td>
+                        <td>
+                            <span class="are-badge"
+                                  th:classappend="${h.enabled ? 'are-badge-success' : 'are-badge-neutral'}"
+                                  th:text="${h.enabled ? 'Habilitado' : 'Deshabilitado'}">Habilitado</span>
+                        </td>
+                        <td class="are-mono" th:text="${h.totalCapacity}">2</td>
+                        <td class="are-mono" th:text="${h.reservedSlots}">0</td>
+                        <td class="are-mono" th:text="${h.occupiedSlots}">0</td>
+                        <td class="are-mono fw-bold" th:text="${h.availableSlots}">2</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. Assigned Emergencies (Confirm Arrival) -->
+    <section class="are-card mb-4" aria-labelledby="assigned-emergencies-heading">
+        <div class="are-card-header d-flex align-items-center justify-content-between">
+            <h3 id="assigned-emergencies-heading" class="are-card-title">
+                2. Emergencias asignadas (confirmar llegada al incidente — HU-09)
+            </h3>
+            <span class="are-badge are-badge-neutral are-mono"
+                  th:text="${#lists.size(assignedEmergencies)} + ' asignada(s)'">0 asignada(s)</span>
+        </div>
+        <div class="are-card-body">
+            <p class="text-secondary mb-0" th:if="${#lists.isEmpty(assignedEmergencies)}">
+                No hay emergencias asignadas pendientes de llegada al incidente.
+            </p>
+            <div th:if="${!#lists.isEmpty(assignedEmergencies)}" class="are-table-wrap">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Emergencia</th>
+                        <th>Prioridad</th>
+                        <th>Nodo</th>
+                        <th>Ambulancia asignada</th>
+                        <th>Acción</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="emg : ${assignedEmergencies}">
+                        <td class="are-mono fw-bold">
+                            <a th:href="@{/emergencies/{id}(id=${emg.id})}" th:text="${emg.id}">EMG-00001</a>
+                        </td>
+                        <td><span class="are-badge are-badge-neutral" th:text="${emg.simulatedPriorityLabel}">Alta</span></td>
+                        <td class="are-mono" th:text="${emg.nodeId}">N01</td>
+                        <td class="are-mono" th:text="${emg.assignedAmbulanceId}">AMB-01</td>
+                        <td>
+                            <form th:action="@{/dispatch/emergencies/{id}/arrive(id=${emg.id})}" method="post">
+                                <button type="submit" class="btn btn-sm btn-are-primary d-inline-flex align-items-center gap-1">
+                                    <i data-lucide="map-pin" class="are-badge-icon" aria-hidden="true"></i>
+                                    <span>Confirmar llegada y reservar hospital</span>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. FIFO Waiting Hospital Queue -->
+    <section class="are-card mb-4" aria-labelledby="waiting-hospital-heading">
+        <div class="are-card-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+            <div>
+                <h3 id="waiting-hospital-heading" class="are-card-title">
+                    3. Cola FIFO en espera de hospital (HU-10)
+                </h3>
+                <p class="text-secondary small mb-0 mt-1">
+                    Orden estricto por marca de ingreso <code>hospitalQueueEnteredAt</code> y desempate por ID.
+                    Si una emergencia no tiene hospital alcanzable o disponible, conserva su posición original.
+                </p>
+            </div>
+            <form th:action="@{/dispatch/hospital-queue/evaluate}" method="post" class="flex-shrink-0">
+                <button type="submit" class="btn btn-are-primary d-inline-flex align-items-center gap-2">
+                    <i data-lucide="refresh-cw" class="are-nav-icon" aria-hidden="true"></i>
+                    <span>Reevaluar cola hospitalaria (HU-10)</span>
+                </button>
+            </form>
+        </div>
+        <div class="are-card-body">
+            <p class="text-secondary mb-0" th:if="${#lists.isEmpty(waitingHospitalQueue)}">
+                La cola de espera hospitalaria está vacía.
+            </p>
+            <div th:if="${!#lists.isEmpty(waitingHospitalQueue)}" class="are-table-wrap">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Posición FIFO</th>
+                        <th>Emergencia</th>
+                        <th>Prioridad</th>
+                        <th>Nodo</th>
+                        <th>Ambulancia retenida (en sitio)</th>
+                        <th>Ingreso a cola hospitalaria (tick)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="emg, iter : ${waitingHospitalQueue}">
+                        <td class="are-mono fw-semibold" th:text="${iter.index + 1}">1</td>
+                        <td class="are-mono fw-bold">
+                            <a th:href="@{/emergencies/{id}(id=${emg.id})}" th:text="${emg.id}">EMG-00001</a>
+                        </td>
+                        <td><span class="are-badge are-badge-neutral" th:text="${emg.simulatedPriorityLabel}">Alta</span></td>
+                        <td class="are-mono" th:text="${emg.nodeId}">N01</td>
+                        <td class="are-mono" th:text="${emg.assignedAmbulanceId}">AMB-01</td>
+                        <td class="are-mono" th:text="${emg.hospitalQueueEnteredAtTicks}">5</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. In-Transport Emergencies (Confirm Delivery) -->
+    <section class="are-card mb-4" aria-labelledby="in-transport-heading">
+        <div class="are-card-header d-flex align-items-center justify-content-between">
+            <h3 id="in-transport-heading" class="are-card-title">
+                4. Emergencias en traslado (confirmar entrega hospitalaria — HU-11)
+            </h3>
+            <span class="are-badge are-badge-neutral are-mono"
+                  th:text="${#lists.size(inTransportEmergencies)} + ' en traslado'">0 en traslado</span>
+        </div>
+        <div class="are-card-body">
+            <p class="text-secondary mb-0" th:if="${#lists.isEmpty(inTransportEmergencies)}">
+                No hay emergencias en traslado pendientes de entrega hospitalaria.
+            </p>
+            <div th:if="${!#lists.isEmpty(inTransportEmergencies)}" class="are-table-wrap">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Emergencia</th>
+                        <th>Prioridad</th>
+                        <th>Ambulancia (en traslado)</th>
+                        <th>Hospital reservado</th>
+                        <th>Acción</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="emg : ${inTransportEmergencies}">
+                        <td class="are-mono fw-bold">
+                            <a th:href="@{/emergencies/{id}(id=${emg.id})}" th:text="${emg.id}">EMG-00001</a>
+                        </td>
+                        <td><span class="are-badge are-badge-neutral" th:text="${emg.simulatedPriorityLabel}">Alta</span></td>
+                        <td class="are-mono" th:text="${emg.assignedAmbulanceId}">AMB-01</td>
+                        <td class="are-mono" th:text="${emg.reservedOrOccupiedHospitalId}">HOSP-01</td>
+                        <td>
+                            <form th:action="@{/dispatch/emergencies/{id}/deliver(id=${emg.id})}" method="post">
+                                <button type="submit" class="btn btn-sm btn-are-primary d-inline-flex align-items-center gap-1">
+                                    <i data-lucide="check-circle-2" class="are-badge-icon" aria-hidden="true"></i>
+                                    <span>Confirmar entrega y liberar ambulancia</span>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. Hospital Reservations & Simulated Discharge -->
+    <section class="are-card mb-4" aria-labelledby="reservations-heading">
+        <div class="are-card-header d-flex align-items-center justify-content-between">
+            <h3 id="reservations-heading" class="are-card-title">
+                5. Reservas y ocupaciones hospitalarias (HU-11 / HU-12)
+            </h3>
+            <span class="are-badge are-badge-neutral are-mono"
+                  th:text="${#lists.size(hospitalReservations)} + ' registro(s)'">0 registro(s)</span>
+        </div>
+        <div class="are-card-body">
+            <p class="text-secondary mb-0" th:if="${#lists.isEmpty(hospitalReservations)}">
+                No existen reservas u ocupaciones hospitalarias registradas.
+            </p>
+            <div th:if="${!#lists.isEmpty(hospitalReservations)}" class="are-table-wrap">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Reserva</th>
+                        <th>Emergencia</th>
+                        <th>Hospital</th>
+                        <th>Estado</th>
+                        <th>t reserva</th>
+                        <th>t ocupación</th>
+                        <th>t alta</th>
+                        <th>Acción (HU-12)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="res : ${hospitalReservations}">
+                        <td class="are-mono fw-bold" th:text="${res.id}">RES-1</td>
+                        <td class="are-mono">
+                            <a th:href="@{/emergencies/{id}(id=${res.emergencyId})}" th:text="${res.emergencyId}">EMG-00001</a>
+                        </td>
+                        <td class="are-mono" th:text="${res.hospitalId}">HOSP-01</td>
+                        <td>
+                            <span class="are-badge"
+                                  th:classappend="${res.status == 'OCCUPIED' ? 'are-badge-info' : (res.status == 'RESERVED' ? 'are-badge-warning' : (res.status == 'DISCHARGED' ? 'are-badge-success' : 'are-badge-neutral'))}"
+                                  th:text="${res.status == 'RESERVED' ? 'Reservada' : (res.status == 'OCCUPIED' ? 'Ocupada' : (res.status == 'DISCHARGED' ? 'Alta simulada' : res.status))}">Ocupada</span>
+                        </td>
+                        <td class="are-mono" th:text="${res.reservedAtTicks}">3</td>
+                        <td class="are-mono" th:text="${res.occupiedAtTicks != null ? res.occupiedAtTicks : '-'}">-</td>
+                        <td class="are-mono" th:text="${res.dischargedAtTicks != null ? res.dischargedAtTicks : '-'}">-</td>
+                        <td>
+                            <form th:if="${res.status == 'OCCUPIED'}"
+                                  th:action="@{/dispatch/hospital-reservations/{reservationId}/discharge(reservationId=${res.id})}"
+                                  method="post">
+                                <button type="submit" class="btn btn-sm btn-are-outline d-inline-flex align-items-center gap-1">
+                                    <i data-lucide="log-out" class="are-badge-icon" aria-hidden="true"></i>
+                                    <span>Ejecutar alta simulada (HU-12)</span>
+                                </button>
+                            </form>
+                            <span class="text-secondary" th:if="${res.status != 'OCCUPIED'}">—</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. Completed Emergencies -->
+    <section class="are-card mb-4" aria-labelledby="completed-emergencies-heading">
+        <div class="are-card-header d-flex align-items-center justify-content-between">
+            <h3 id="completed-emergencies-heading" class="are-card-title">
+                6. Emergencias cerradas (HU-11)
+            </h3>
+            <span class="are-badge are-badge-neutral are-mono"
+                  th:text="${#lists.size(completedEmergencies)} + ' cerrada(s)'">0 cerrada(s)</span>
+        </div>
+        <div class="are-card-body">
+            <p class="text-secondary mb-0" th:if="${#lists.isEmpty(completedEmergencies)}">
+                No hay emergencias cerradas.
+            </p>
+            <div th:if="${!#lists.isEmpty(completedEmergencies)}" class="are-table-wrap">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Emergencia</th>
+                        <th>Prioridad</th>
+                        <th>Ambulancia histórica</th>
+                        <th>Hospital de entrega</th>
+                        <th>t cierre</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="emg : ${completedEmergencies}">
+                        <td class="are-mono fw-bold">
+                            <a th:href="@{/emergencies/{id}(id=${emg.id})}" th:text="${emg.id}">EMG-00001</a>
+                        </td>
+                        <td><span class="are-badge are-badge-neutral" th:text="${emg.simulatedPriorityLabel}">Alta</span></td>
+                        <td class="are-mono" th:text="${emg.assignedAmbulanceId}">AMB-01</td>
+                        <td class="are-mono" th:text="${emg.reservedOrOccupiedHospitalId}">HOSP-01</td>
+                        <td class="are-mono" th:text="${emg.completedAtTicks}">6</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. Exhausted Hospital Retry Notices -->
+    <section class="are-card" aria-labelledby="hospital-exhausted-heading">
+        <div class="are-card-header d-flex align-items-center justify-content-between">
+            <h3 id="hospital-exhausted-heading" class="are-card-title">
+                7. Avisos recientes de agotamiento de reintentos hospitalarios (CA-SIM-03)
+            </h3>
+            <span class="are-badge are-badge-neutral are-mono"
+                  th:text="${#lists.size(exhaustedNotices)} + ' aviso(s)'">0 aviso(s)</span>
+        </div>
+        <div class="are-card-body">
+            <p class="text-secondary mb-0" th:if="${#lists.isEmpty(exhaustedNotices)}">
+                No se registran agotamientos recientes de reintentos de reserva hospitalaria.
+            </p>
+            <div th:if="${!#lists.isEmpty(exhaustedNotices)}" class="d-flex flex-column gap-2">
+                <div class="are-alert are-alert-warning mb-0" th:each="notice : ${exhaustedNotices}" role="status">
+                    <i data-lucide="alert-triangle" class="are-nav-icon mt-1" aria-hidden="true"></i>
+                    <div>
+                        <strong class="are-mono" th:text="${notice.emergencyId}">EMG-00001</strong> —
+                        <span class="are-mono" th:text="${notice.outcomeCode}">HOSPITAL_RESERVATION_RETRY_EXHAUSTED</span>
+                        (<span th:text="${notice.attemptsExecuted}">3</span> intentos, tick <span class="are-mono" th:text="${notice.logicalTick}">5</span>):
+                        <span th:text="${notice.message}">Agotamiento</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</th:block>
+
 </body>
 </html>

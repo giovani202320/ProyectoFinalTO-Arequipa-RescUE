@@ -21,18 +21,25 @@ import com.arequiparescue.hospital.domain.HospitalDispatchOutcome;
 import com.arequiparescue.hospital.domain.HospitalId;
 import com.arequiparescue.routing.domain.NodeId;
 import com.arequiparescue.shared.domain.LogicalTime;
+import com.arequiparescue.shared.presentation.AreUiFormatter;
+import com.arequiparescue.shared.presentation.HtmlStructureAssertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -40,6 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(HospitalDispatchController.class)
+@Import(AreUiFormatter.class)
 @DisplayName("HospitalDispatchController — Vistas MVC de llegada, cola, entrega y alta hospitalaria (HU-09 a HU-12)")
 class HospitalDispatchControllerTest {
 
@@ -73,12 +81,20 @@ class HospitalDispatchControllerTest {
         when(deliveryAndDischargeApplicationService.listCompletedEmergencies()).thenReturn(List.of());
         when(deliveryAndDischargeApplicationService.listHospitalReservations()).thenReturn(List.of());
 
-        mockMvc.perform(get("/dispatch/hospital-queue"))
+        String html = mockMvc.perform(get("/dispatch/hospital-queue"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("dispatch/hospital-queue"))
                 .andExpect(model().attributeExists(
                         "hospitals", "assignedEmergencies", "waitingHospitalQueue",
-                        "inTransportEmergencies", "completedEmergencies", "hospitalReservations", "exhaustedNotices"));
+                        "inTransportEmergencies", "completedEmergencies", "hospitalReservations", "exhaustedNotices"))
+                .andExpect(content().string(containsString("HOSP-01")))
+                .andExpect(content().string(containsString("Habilitado")))
+                .andExpect(content().string(containsString("/css/are-design-system.css")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(html, "hospital-queue-page-title");
+        assertThat(HtmlStructureAssertions.countOccurrences(html, "<form")).isEqualTo(1);
     }
 
     @Test

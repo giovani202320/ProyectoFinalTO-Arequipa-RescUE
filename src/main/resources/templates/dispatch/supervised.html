@@ -1,264 +1,198 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Despacho supervisado — ARE (Arequipa RescUE)</title>
-    <style>
-        :root {
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --border: #cbd5e1;
-            --primary: #1e3a8a;
-            --primary-hover: #1d4ed8;
-            --text: #0f172a;
-            --muted: #475569;
-            --badge-bg: #dbeafe;
-            --badge-fg: #1e40af;
-            --error-bg: #fef2f2;
-            --error-border: #fca5a5;
-            --error-fg: #991b1b;
-            --warn-bg: #fffbeb;
-            --warn-border: #fcd34d;
-            --warn-fg: #92400e;
-            --rec-bg: #dcfce7;
-            --rec-fg: #166534;
-        }
-        * {
-            box-sizing: border-box;
-        }
-        body {
-            margin: 0;
-            padding: 2.5rem 1.25rem;
-            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-        }
-        main {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 2rem;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
-        }
-        nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.25rem;
-            font-size: 0.92rem;
-        }
-        nav a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            background: var(--badge-bg);
-            color: var(--badge-fg);
-            font-weight: 600;
-            font-size: 0.85rem;
-            margin-bottom: 0.75rem;
-        }
-        .badge-rec {
-            display: inline-block;
-            padding: 0.15rem 0.55rem;
-            border-radius: 999px;
-            background: var(--rec-bg);
-            color: var(--rec-fg);
-            font-weight: 600;
-            font-size: 0.78rem;
-        }
-        h1 {
-            margin: 0 0 0.5rem 0;
-            color: var(--primary);
-            font-size: 1.65rem;
-        }
-        h2 {
-            margin: 1.5rem 0 0.5rem 0;
-            color: var(--primary);
-            font-size: 1.15rem;
-        }
-        .meta-bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.25rem;
-            padding: 0.75rem 1rem;
-            background: #f1f5f9;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            margin-bottom: 1.25rem;
-        }
-        .alert-error {
-            background: var(--error-bg);
-            border: 1px solid var(--error-border);
-            color: var(--error-fg);
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-        .alert-warn {
-            background: var(--warn-bg);
-            border: 1px solid var(--warn-border);
-            color: var(--warn-fg);
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 0.75rem;
-            font-size: 0.92rem;
-        }
-        th, td {
-            padding: 0.65rem 0.7rem;
-            border-bottom: 1px solid var(--border);
-            text-align: left;
-        }
-        th {
-            background: #f8fafc;
-            font-weight: 600;
-        }
-        .btn-primary {
-            background: var(--primary);
-            color: #ffffff;
-            border: none;
-            padding: 0.45rem 0.9rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.85rem;
-        }
-        .btn-primary:hover {
-            background: var(--primary-hover);
-        }
-        .btn-secondary {
-            background: #334155;
-            color: #ffffff;
-            border: none;
-            padding: 0.55rem 1rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-<main>
-    <nav>
+<head th:replace="~{fragments/layout :: head('Despacho supervisado')}"></head>
+<body th:replace="~{fragments/layout :: appShell('Despacho supervisado', 'Evaluación de ambulancias elegibles y asignación supervisada o automática (HU-05 a HU-07)', 'dispatch', ~{::supervisedContent})}">
+
+<th:block th:fragment="supervisedContent">
+    <!-- Header -->
+    <section class="are-card mb-4" aria-labelledby="supervised-page-title">
+        <div class="are-card-body d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <div>
+                <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
+                    <span th:replace="~{fragments/components :: statusBadge('Despachador (ACT-02) — HU-05 a HU-07', 'navy')}"></span>
+                </div>
+                <h2 id="supervised-page-title" class="h4 fw-bold mb-1" style="color: var(--are-navy);">
+                    Evaluación de ambulancias elegibles y asignación supervisada
+                </h2>
+                <p class="text-secondary small mb-0">
+                    Revise la elegibilidad y el costo mínimo por Dijkstra para asignar una unidad de forma supervisada o ejecutar la modalidad automática diferenciada.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+                <a th:replace="~{fragments/components :: actionLink(@{/dispatch/waiting-queue}, 'Cola de espera', 'outline', 'clock')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/triage-rules(actor='ACT-02')}, 'Reglas vigentes', 'outline', 'shield-check')}"></a>
+                <a th:if="${emergency != null}"
+                   th:replace="~{fragments/components :: actionLink(@{'/emergencies/' + ${emergency.id}}, 'Ver ficha de emergencia', 'outline', 'file-text')}"></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Operational dispatch alerts -->
+    <div th:if="${conflictMessage != null}" class="are-alert are-alert-danger mb-3" role="alert">
+        <i data-lucide="alert-circle" class="are-nav-icon mt-1" aria-hidden="true"></i>
         <div>
-            <a th:href="@{/}">Inicio</a> |
-            <a th:href="@{/emergencies}">Emergencias</a> |
-            <a th:href="@{/dispatch/waiting-queue}">Cola WAITING_AMBULANCE (HU-08)</a> |
-            <a th:href="@{/triage-rules(actor='ACT-02')}">Reglas vigentes (Solo lectura)</a>
+            <strong>Conflicto concurrente detectado (RN-CON-002):</strong>
+            <span th:text="${conflictMessage}">La ambulancia dejó de estar disponible.</span>
         </div>
-        <div th:if="${emergency != null}">
-            <a th:href="@{'/emergencies/' + ${emergency.id}}">Ver ficha de emergencia</a>
+    </div>
+
+    <div th:if="${exhaustedMessage != null}" class="are-alert are-alert-danger mb-3" role="alert">
+        <i data-lucide="alert-octagon" class="are-nav-icon mt-1" aria-hidden="true"></i>
+        <div>
+            <strong>Agotamiento de reintentos en asignación automática (CONCURRENCY_RETRY_EXHAUSTED — HU-07):</strong>
+            <span th:text="${exhaustedMessage}">La operación automática agotó los 4 intentos y dejó la emergencia en espera de ambulancia.</span>
         </div>
-    </nav>
-
-    <span class="badge">ACT-02 Despachador — HU-05 y HU-06 (Modalidad supervisada)</span>
-    <h1>Evaluación de ambulancias elegibles y asignación supervisada</h1>
-
-    <div th:if="${errorMessage != null}" class="alert-error" th:text="${errorMessage}">
-        Error de despacho.
     </div>
 
-    <div th:if="${conflictMessage != null}" class="alert-error">
-        <strong>Conflicto concurrente detectado (RN-CON-002):</strong>
-        <span th:text="${conflictMessage}">La ambulancia dejó de estar disponible.</span>
-    </div>
-
-    <div th:if="${exhaustedMessage != null}" class="alert-error">
-        <strong>Agotamiento de reintentos en asignación automática (CONCURRENCY_RETRY_EXHAUSTED — HU-07):</strong>
-        <span th:text="${exhaustedMessage}">La operación automática agotó los 4 intentos y dejó la emergencia en WAITING_AMBULANCE.</span>
-    </div>
-
-    <div th:if="${waitingMessage != null}" class="alert-warn">
-        <strong>Sin ambulancias elegibles (RN-ASI-004):</strong>
-        <span th:text="${waitingMessage}">La emergencia permanece en WAITING_AMBULANCE.</span>
+    <div th:if="${waitingMessage != null}" class="are-alert are-alert-warning mb-3" role="status">
+        <i data-lucide="alert-triangle" class="are-nav-icon mt-1" aria-hidden="true"></i>
+        <div>
+            <strong>Sin ambulancias elegibles (RN-ASI-004):</strong>
+            <span th:text="${waitingMessage}">La emergencia permanece en espera de ambulancia.</span>
+        </div>
     </div>
 
     <section th:if="${emergency != null}">
-        <div class="meta-bar">
-            <span><strong>Emergencia:</strong> <code th:text="${emergency.id}">EMG-00001</code></span>
-            <span><strong>Estado:</strong> <strong th:text="${emergency.stateCode}">REGISTERED</strong></span>
-            <span><strong>Nodo incidente:</strong> <code th:text="${emergency.nodeId}">N01</code></span>
-            <span><strong>Equipamiento requerido:</strong> <strong th:text="${emergency.requiredEquipmentCode}">BASIC</strong></span>
-            <span><strong>Prioridad informativa:</strong> <span th:text="${emergency.simulatedPriorityLabel}">Media</span></span>
+        <!-- Emergency Summary -->
+        <div class="are-card mb-4">
+            <div class="are-card-header">
+                <h3 class="are-card-title">Resumen de la emergencia</h3>
+            </div>
+            <div class="are-card-body">
+                <div class="row g-3">
+                    <div class="col-6 col-md-2">
+                        <div class="text-secondary small">Emergencia</div>
+                        <div class="are-mono fw-bold" th:text="${emergency.id}">EMG-00001</div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-secondary small">Estado</div>
+                        <span class="are-badge"
+                              th:classappend="'are-badge-' + ${@areUi.badgeTone('EMERGENCY', emergency.stateCode)}"
+                              th:text="${@areUi.emergencyStateLabel(emergency.stateCode)}">Registrada</span>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="text-secondary small">Nodo incidente</div>
+                        <div class="are-mono fw-semibold" th:text="${emergency.nodeId}">N01</div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-secondary small">Equipamiento requerido</div>
+                        <span class="are-badge"
+                              th:classappend="'are-badge-' + ${@areUi.badgeTone('EQUIPMENT', emergency.requiredEquipmentCode)}"
+                              th:text="${@areUi.equipmentLabel(emergency.requiredEquipmentCode)}">Básica</span>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <div class="text-secondary small">Prioridad informativa</div>
+                        <span class="are-badge are-badge-neutral" th:text="${emergency.simulatedPriorityLabel}">Media</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="alert-warn" style="background:#eff6ff; border-color:#93c5fd; color:#1e3a8a;"
+        <!-- Automatic Dispatch Banner -->
+        <div class="are-alert are-alert-info mb-4"
              th:if="${emergency.stateCode == 'REGISTERED' or emergency.stateCode == 'WAITING_AMBULANCE'}">
-            <strong>Modalidad automática diferenciada (HU-07):</strong>
-            selecciona automáticamente la unidad óptima con reevaluación integral y hasta <code>1 + 3</code> intentos ante conflictos concurrentes.
-            <form th:action="@{'/dispatch/emergencies/' + ${emergency.id} + '/assign-automatic'}"
-                  method="post" style="margin-top:0.6rem;">
-                <button type="submit" class="btn-primary">Ejecutar asignación automática (HU-07)</button>
-            </form>
+            <i data-lucide="zap" class="are-nav-icon mt-1" aria-hidden="true"></i>
+            <div class="flex-grow-1">
+                <div class="mb-2">
+                    <strong>Modalidad automática diferenciada (HU-07):</strong>
+                    selecciona automáticamente la unidad óptima con reevaluación integral y hasta <code>1 + 3</code> intentos ante conflictos concurrentes.
+                </div>
+                <form th:action="@{'/dispatch/emergencies/' + ${emergency.id} + '/assign-automatic'}" method="post">
+                    <button type="submit" class="btn btn-are-primary d-inline-flex align-items-center gap-2">
+                        <i data-lucide="zap" class="are-nav-icon" aria-hidden="true"></i>
+                        <span>Ejecutar asignación automática (HU-07)</span>
+                    </button>
+                </form>
+            </div>
         </div>
 
-        <div th:if="${hasSupplementalNotice}" class="alert-warn">
-            <strong>Uso excepcional de unidades especializadas (RN-PRE-002):</strong>
-            no existen ambulancias <code>BASIC</code> disponibles y alcanzables en este momento; se habilitan unidades <code>SPECIALIZED</code> elegibles.
+        <!-- Supplemental Specialized Units Notice -->
+        <div th:if="${hasSupplementalNotice}" class="are-alert are-alert-warning mb-4" role="status">
+            <i data-lucide="alert-triangle" class="are-nav-icon mt-1" aria-hidden="true"></i>
+            <div>
+                <strong>Uso excepcional de unidades especializadas (RN-PRE-002):</strong>
+                no existen ambulancias <strong th:text="${@areUi.equipmentLabel('BASIC')}">Básica</strong> disponibles y alcanzables en este momento;
+                se habilitan unidades <strong th:text="${@areUi.equipmentLabel('SPECIALIZED')}">Especializada</strong> elegibles.
+            </div>
         </div>
 
-        <h2>Ambulancias elegibles ordenadas (Preservación → Costo Dijkstra → ID ascendente)</h2>
-
-        <div th:if="${#lists.isEmpty(candidates)}">
-            <p style="color: var(--muted);">
-                No existen ambulancias elegibles disponibles y alcanzables hacia el nodo
-                <code th:text="${emergency.nodeId}">N01</code> en este momento.
-            </p>
-            <form th:if="${emergency.stateCode == 'REGISTERED'}"
-                  th:action="@{'/dispatch/emergencies/' + ${emergency.id} + '/wait'}"
-                  method="post">
-                <button type="submit" class="btn-secondary">Confirmar pase a cola WAITING_AMBULANCE (0 reintentos)</button>
-            </form>
-        </div>
-
-        <table th:if="${!#lists.isEmpty(candidates)}">
-            <thead>
-            <tr>
-                <th>ID Unidad</th>
-                <th>Equipamiento</th>
-                <th>Nodo actual</th>
-                <th>Estado</th>
-                <th>Costo Dijkstra</th>
-                <th>Ruta calculada</th>
-                <th>Acción supervisada (RN-ASI-002)</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="cand : ${candidates}">
-                <td>
-                    <strong th:text="${cand.id}">AMB-01</strong>
-                    <span th:if="${cand.topRecommended}" class="badge-rec">Recomendada</span>
-                </td>
-                <td th:text="${cand.equipmentTypeCode}">BASIC</td>
-                <td th:text="${cand.currentNodeId}">N01</td>
-                <td th:text="${cand.stateCode}">AVAILABLE</td>
-                <td><strong th:text="${cand.routeCost}">4</strong></td>
-                <td><code th:text="${cand.routePathFormatted}">N01 -> N02</code></td>
-                <td>
-                    <form th:action="@{'/dispatch/emergencies/' + ${emergency.id} + '/assign'}" method="post">
-                        <input type="hidden" name="ambulanceId" th:value="${cand.id}">
-                        <button type="submit" class="btn-primary">Asignar unidad</button>
+        <!-- Eligible Ambulances Table -->
+        <div class="are-card" aria-labelledby="candidates-heading">
+            <div class="are-card-header d-flex align-items-center justify-content-between">
+                <h3 id="candidates-heading" class="are-card-title">
+                    Ambulancias elegibles ordenadas (Preservación → Costo Dijkstra → ID ascendente)
+                </h3>
+                <span class="are-badge are-badge-neutral are-mono"
+                      th:text="${#lists.size(candidates)} + ' candidata(s)'">0 candidata(s)</span>
+            </div>
+            <div class="are-card-body">
+                <div th:if="${#lists.isEmpty(candidates)}">
+                    <p class="text-secondary mb-3">
+                        No existen ambulancias elegibles disponibles y alcanzables hacia el nodo
+                        <span class="are-mono fw-semibold" th:text="${emergency.nodeId}">N01</span> en este momento.
+                    </p>
+                    <form th:if="${emergency.stateCode == 'REGISTERED'}"
+                          th:action="@{'/dispatch/emergencies/' + ${emergency.id} + '/wait'}"
+                          method="post">
+                        <button type="submit" class="btn btn-are-outline d-inline-flex align-items-center gap-2">
+                            <i data-lucide="clock" class="are-nav-icon" aria-hidden="true"></i>
+                            <span>Confirmar pase a cola de espera (0 reintentos)</span>
+                        </button>
                     </form>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+                </div>
+
+                <div th:if="${!#lists.isEmpty(candidates)}" class="are-table-wrap">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>ID Unidad</th>
+                            <th>Equipamiento</th>
+                            <th>Nodo actual</th>
+                            <th>Estado</th>
+                            <th>Costo Dijkstra</th>
+                            <th>Ruta calculada</th>
+                            <th>Acción supervisada (RN-ASI-002)</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="cand : ${candidates}">
+                            <td>
+                                <span class="are-mono fw-bold" th:text="${cand.id}">AMB-01</span>
+                                <span th:if="${cand.topRecommended}" class="are-badge are-badge-success ms-1">
+                                    <i data-lucide="star" class="are-badge-icon" aria-hidden="true"></i>
+                                    <span>Recomendada</span>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="are-badge"
+                                      th:classappend="'are-badge-' + ${@areUi.badgeTone('EQUIPMENT', cand.equipmentTypeCode)}"
+                                      th:text="${@areUi.equipmentLabel(cand.equipmentTypeCode)}">Básica</span>
+                            </td>
+                            <td class="are-mono" th:text="${cand.currentNodeId}">N01</td>
+                            <td>
+                                <span class="are-badge"
+                                      th:classappend="'are-badge-' + ${@areUi.badgeTone('AMBULANCE', cand.stateCode)}"
+                                      th:text="${@areUi.ambulanceStateLabel(cand.stateCode)}">Disponible</span>
+                            </td>
+                            <td><strong class="are-mono" th:text="${cand.routeCost}">4</strong></td>
+                            <td><code class="are-mono" th:text="${cand.routePathFormatted}">N01 -> N02</code></td>
+                            <td>
+                                <form th:action="@{'/dispatch/emergencies/' + ${emergency.id} + '/assign'}" method="post">
+                                    <input type="hidden" name="ambulanceId" th:value="${cand.id}">
+                                    <button type="submit" class="btn btn-sm btn-are-primary d-inline-flex align-items-center gap-1">
+                                        <i data-lucide="check" class="are-badge-icon" aria-hidden="true"></i>
+                                        <span>Asignar unidad</span>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </section>
-</main>
+</th:block>
+
 </body>
 </html>
