@@ -16,11 +16,13 @@ import com.arequiparescue.emergency.domain.TriageRuleVersionId;
 import com.arequiparescue.routing.domain.GraphNode;
 import com.arequiparescue.routing.domain.NodeId;
 import com.arequiparescue.shared.domain.LogicalTime;
+import com.arequiparescue.shared.presentation.AreUiFormatter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -40,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(EmergencyController.class)
+@Import(AreUiFormatter.class)
 @DisplayName("EmergencyController — Registro HTTP y consulta Thymeleaf (HU-01, HU-02)")
 class EmergencyControllerTest {
 
@@ -102,9 +105,10 @@ class EmergencyControllerTest {
                 .andExpect(content().string(containsString("INC-A")))
                 .andExpect(content().string(containsString("N01")))
                 .andExpect(content().string(containsString("Alta")))
-                .andExpect(content().string(containsString("SPECIALIZED")))
+                .andExpect(content().string(containsString("Especializada")))
                 .andExpect(content().string(containsString("RUL-V01")))
-                .andExpect(content().string(containsString("REGISTERED")));
+                .andExpect(content().string(containsString("Registrada")))
+                .andExpect(content().string(containsString("/css/are-design-system.css")));
     }
 
     @Test
@@ -176,8 +180,10 @@ class EmergencyControllerTest {
                 .andExpect(content().string(containsString("EMG-00001")))
                 .andExpect(content().string(containsString("INC-C")))
                 .andExpect(content().string(containsString("Baja")))
-                .andExpect(content().string(containsString("BASIC")))
-                .andExpect(content().string(containsString("REGISTERED")));
+                .andExpect(content().string(containsString("Básica")))
+                .andExpect(content().string(containsString("Registrada")))
+                .andExpect(content().string(containsString("/css/are-design-system.css")))
+                .andExpect(content().string(containsString("aria-current=\"page\"")));
 
         mockMvc.perform(get("/emergencies/EMG-00001"))
                 .andExpect(status().isOk())

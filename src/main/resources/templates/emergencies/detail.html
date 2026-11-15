@@ -1,286 +1,237 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${'Emergencia ' + emergency.id + ' — ARE (Arequipa RescUE)'}">Detalle de emergencia — ARE</title>
-    <style>
-        :root {
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --border: #cbd5e1;
-            --primary: #1e3a8a;
-            --text: #0f172a;
-            --muted: #475569;
-            --badge-bg: #dbeafe;
-            --badge-fg: #1e40af;
-            --success-bg: #ecfdf5;
-            --success-border: #6ee7b7;
-            --success-fg: #065f46;
-            --warn-bg: #fffbeb;
-            --warn-border: #fcd34d;
-            --warn-fg: #92400e;
-        }
-        * {
-            box-sizing: border-box;
-        }
-        body {
-            margin: 0;
-            padding: 2.5rem 1.25rem;
-            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-        }
-        main {
-            max-width: 820px;
-            margin: 0 auto;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 2rem;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
-        }
-        nav {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1.25rem;
-            font-size: 0.92rem;
-        }
-        nav a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 600;
-        }
-        nav a:hover {
-            text-decoration: underline;
-        }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            background: var(--badge-bg);
-            color: var(--badge-fg);
-            font-weight: 600;
-            font-size: 0.85rem;
-            margin-bottom: 0.75rem;
-        }
-        .banner-success {
-            background: var(--success-bg);
-            border: 1px solid var(--success-border);
-            color: var(--success-fg);
-            padding: 0.85rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.25rem;
-            font-size: 0.94rem;
-        }
-        .banner-warn {
-            background: var(--warn-bg);
-            border: 1px solid var(--warn-border);
-            color: var(--warn-fg);
-            padding: 0.85rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.25rem;
-            font-size: 0.94rem;
-        }
-        h1 {
-            margin: 0 0 0.5rem 0;
-            color: var(--primary);
-            font-size: 1.65rem;
-        }
-        h2 {
-            margin: 1.5rem 0 0.75rem 0;
-            color: var(--primary);
-            font-size: 1.15rem;
-            border-top: 1px solid var(--border);
-            padding-top: 1.1rem;
-        }
-        dl {
-            display: grid;
-            grid-template-columns: 260px 1fr;
-            gap: 0.55rem 1rem;
-            margin: 0;
-        }
-        dt {
-            font-weight: 600;
-            color: var(--text);
-        }
-        dd {
-            margin: 0;
-            color: var(--muted);
-        }
-        footer {
-            margin-top: 1.75rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border);
-            font-size: 0.84rem;
-            color: var(--muted);
-        }
-    </style>
-</head>
+<head th:replace="~{fragments/layout :: head('Ficha ' + ${emergency.id})}"></head>
 <body>
-<main>
-    <nav>
-        <a th:href="@{/}">Inicio</a>
-        <a th:href="@{/emergencies}">Listado de emergencias (HU-02)</a>
-        <a th:href="@{/emergencies/new}">Registrar nueva emergencia (HU-01)</a>
-        <a th:href="@{/dispatch/waiting-queue}">Cola WAITING_AMBULANCE (HU-08)</a>
-        <a th:href="@{/dispatch/hospital-queue}">Cola WAITING_HOSPITAL (HU-09/10)</a>
-        <a th:if="${emergency.stateCode == 'REGISTERED' or emergency.stateCode == 'WAITING_AMBULANCE'}"
-           th:href="@{/dispatch/emergencies/{id}(id=${emergency.id})}">Evaluar y asignar ambulancia (HU-05/06/07)</a>
-    </nav>
 
-    <span class="badge">Actor: Operador de recepción (ACT-01) — HU-01 / HU-02</span>
+<div th:replace="~{fragments/layout :: appShell('Ficha de emergencia ' + ${emergency.id}, 'Seguimiento trazable del ciclo prehospitalario simulado (HU-01 / HU-02)', 'emergencies', ~{::emergencyDetailContent})}"></div>
 
-    <div class="banner-success" th:if="${dispatchSuccessMessage != null}">
-        <strong>Asignación supervisada confirmada (HU-06):</strong>
-        <span th:text="${dispatchSuccessMessage}">Ambulancia asignada correctamente.</span>
+<th:block th:fragment="emergencyDetailContent">
+    <!-- Operational Banners (Success / Warning / Danger) -->
+    <div th:replace="~{fragments/components :: alertBanner('success', ${dispatchSuccessMessage})}"></div>
+    <div th:replace="~{fragments/components :: alertBanner('success', ${hospitalDispatchMessage})}"></div>
+    <div th:replace="~{fragments/components :: alertBanner('warning', ${hospitalWaitingMessage})}"></div>
+    <div th:replace="~{fragments/components :: alertBanner('danger', ${hospitalExhaustedMessage})}"></div>
+    <div th:replace="~{fragments/components :: alertBanner('success', ${deliverySuccessMessage})}"></div>
+    <div th:replace="~{fragments/components :: alertBanner('warning', ${deliveryDuplicateMessage})}"></div>
+
+    <div class="are-alert are-alert-success mb-3" th:if="${justRegistered}" role="status">
+        <i data-lucide="check-circle-2" class="are-nav-icon mt-1" aria-hidden="true"></i>
+        <div>
+            <strong>Emergencia registrada y clasificada correctamente (HU-01):</strong>
+            se persistió la solicitud <span class="are-mono fw-semibold" th:text="${emergency.id}">EMG-00001</span>
+            en estado inicial <strong th:text="${@areUi.emergencyStateLabel(emergency.stateCode)}">Registrada</strong>.
+        </div>
     </div>
 
-    <div class="banner-success" th:if="${hospitalDispatchMessage != null}">
-        <strong>Llegada y reserva hospitalaria confirmadas (HU-09):</strong>
-        <span th:text="${hospitalDispatchMessage}">Hospital reservado correctamente.</span>
+    <div class="are-alert are-alert-warning mb-3" th:if="${emergency.retainsAmbulanceAtIncidentWaitingHospital}" role="status">
+        <i data-lucide="alert-triangle" class="are-nav-icon mt-1" aria-hidden="true"></i>
+        <div>
+            <strong>Espera de destino hospitalario (RN-RUT-007):</strong>
+            la emergencia espera plaza hospitalaria conservando su ambulancia asignada
+            (<span class="are-mono fw-semibold" th:text="${emergency.assignedAmbulanceId}">AMB-01</span>)
+            retenida y ocupada en estado
+            <strong th:text="${@areUi.ambulanceStateLabel('AT_INCIDENT')}">En el incidente</strong>,
+            diferenciándose de
+            <strong th:text="${@areUi.emergencyStateLabel('WAITING_AMBULANCE')}">Esperando ambulancia</strong>.
+        </div>
     </div>
 
-    <div class="banner-success" th:if="${hospitalWaitingMessage != null}" style="background:#fffbeb;border-color:#fcd34d;color:#92400e;">
-        <strong>En espera de hospital (HU-09/HU-10):</strong>
-        <span th:text="${hospitalWaitingMessage}">Emergencia en WAITING_HOSPITAL.</span>
+    <div class="are-alert are-alert-success mb-3" th:if="${emergency.cycleClosed}" role="status">
+        <i data-lucide="check-circle-2" class="are-nav-icon mt-1" aria-hidden="true"></i>
+        <div>
+            <strong>Ciclo prehospitalario cerrado (RN-EME-001, RN-RUT-005):</strong>
+            la emergencia arribó al hospital reservado
+            (<span class="are-mono fw-semibold" th:text="${emergency.reservedOrOccupiedHospitalId}">HOSP-01</span>)
+            y su ciclo simulado concluyó sin etapas intrahospitalarias posteriores.
+        </div>
     </div>
 
-    <div class="banner-success" th:if="${hospitalExhaustedMessage != null}" style="background:#fef2f2;border-color:#fca5a5;color:#991b1b;">
-        <strong>Agotamiento de reserva hospitalaria (CA-SIM-03):</strong>
-        <span th:text="${hospitalExhaustedMessage}">Reintentos hospitalarios agotados.</span>
+    <!-- Header & State-Permitted Actions -->
+    <section class="are-card mb-4" aria-labelledby="detail-header-title">
+        <div class="are-card-body d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <div>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <span class="are-badge are-badge-navy are-mono" th:text="${emergency.id}">EMG-00001</span>
+                    <span th:replace="~{fragments/components :: statusBadge(${@areUi.emergencyStateLabel(emergency.stateCode)}, ${@areUi.badgeTone('EMERGENCY', emergency.stateCode)})}"></span>
+                    <span th:replace="~{fragments/components :: statusBadge(${emergency.simulatedPriorityLabel}, ${@areUi.badgeTone('PRIORITY', emergency.simulatedPriorityCode)})}"></span>
+                </div>
+                <h2 id="detail-header-title" class="h4 fw-bold mb-1" style="color: var(--are-navy);">
+                    Detalle de emergencia <span class="are-mono" th:text="${emergency.id}">EMG-00001</span>
+                </h2>
+                <p class="text-secondary small mb-0" th:text="${emergency.stateOperationalDescription}">
+                    Descripción operativa del estado actual.
+                </p>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+                <a th:if="${emergency.stateCode == 'REGISTERED' or emergency.stateCode == 'WAITING_AMBULANCE'}"
+                   th:href="@{/dispatch/emergencies/{id}(id=${emergency.id})}"
+                   class="btn btn-are-primary d-inline-flex align-items-center gap-2">
+                    <i data-lucide="radio" class="are-nav-icon" aria-hidden="true"></i>
+                    <span>Evaluar y asignar ambulancia</span>
+                </a>
+
+                <form th:if="${emergency.stateCode == 'ASSIGNED'}"
+                      th:action="@{/dispatch/emergencies/{id}/arrive(id=${emergency.id})}"
+                      method="post"
+                      class="d-inline">
+                    <button type="submit" class="btn btn-are-primary d-inline-flex align-items-center gap-2">
+                        <i data-lucide="map-pin" class="are-nav-icon" aria-hidden="true"></i>
+                        <span>Confirmar llegada al incidente y reservar hospital</span>
+                    </button>
+                </form>
+
+                <form th:if="${emergency.stateCode == 'IN_TRANSPORT'}"
+                      th:action="@{/dispatch/emergencies/{id}/deliver(id=${emergency.id})}"
+                      method="post"
+                      class="d-inline">
+                    <button type="submit" class="btn btn-success d-inline-flex align-items-center gap-2">
+                        <i data-lucide="check-square" class="are-nav-icon" aria-hidden="true"></i>
+                        <span>Confirmar entrega en hospital y liberar ambulancia</span>
+                    </button>
+                </form>
+
+                <a th:replace="~{fragments/components :: actionLink(@{/emergencies}, 'Volver al listado', 'outline', 'arrow-left')}"></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Structured Detail Cards -->
+    <div class="row g-4">
+        <!-- 1. Registration & Operational State -->
+        <div class="col-12 col-lg-6">
+            <section class="are-card h-100" aria-labelledby="section-op-state">
+                <div class="are-card-header">
+                    <h3 id="section-op-state" class="are-card-title">1. Datos de registro y estado operativo</h3>
+                </div>
+                <div class="are-card-body">
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-5 text-dark">Identificador</dt>
+                        <dd class="col-sm-7 are-mono fw-semibold" th:text="${emergency.id}">EMG-00001</dd>
+
+                        <dt class="col-sm-5 text-dark">Estado actual</dt>
+                        <dd class="col-sm-7">
+                            <span th:replace="~{fragments/components :: statusBadge(${@areUi.emergencyStateLabel(emergency.stateCode)}, ${@areUi.badgeTone('EMERGENCY', emergency.stateCode)})}"></span>
+                        </dd>
+
+                        <dt class="col-sm-5 text-dark">Categoría del incidente</dt>
+                        <dd class="col-sm-7">
+                            <span class="are-mono fw-semibold" th:text="${emergency.incidentCategoryCode}">INC-A</span> —
+                            <span th:text="${emergency.incidentCategoryLabel}">Descripción categoría</span>
+                        </dd>
+
+                        <dt class="col-sm-5 text-dark">Nodo en el grafo</dt>
+                        <dd class="col-sm-7 are-mono" th:text="${emergency.nodeId}">N01</dd>
+
+                        <dt class="col-sm-5 text-dark mb-0">Descripción ficticia</dt>
+                        <dd class="col-sm-7 text-secondary mb-0"
+                            th:text="${#strings.isEmpty(emergency.description) ? 'Sin descripción ficticia (vacía)' : emergency.description}">
+                            Descripción
+                        </dd>
+                    </dl>
+                </div>
+            </section>
+        </div>
+
+        <!-- 2. Deterministic Triage Classification -->
+        <div class="col-12 col-lg-6">
+            <section class="are-card h-100" aria-labelledby="section-triage">
+                <div class="are-card-header">
+                    <h3 id="section-triage" class="are-card-title">2. Clasificación y triaje</h3>
+                </div>
+                <div class="are-card-body">
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-5 text-dark">Prioridad informativa</dt>
+                        <dd class="col-sm-7">
+                            <span th:replace="~{fragments/components :: statusBadge(${emergency.simulatedPriorityLabel}, ${@areUi.badgeTone('PRIORITY', emergency.simulatedPriorityCode)})}"></span>
+                            <div class="text-muted mt-1">Carácter exclusivamente informativo (RN-EME-008)</div>
+                        </dd>
+
+                        <dt class="col-sm-5 text-dark">Equipamiento requerido</dt>
+                        <dd class="col-sm-7">
+                            <span th:replace="~{fragments/components :: statusBadge(${@areUi.equipmentLabel(emergency.requiredEquipmentCode)}, ${@areUi.badgeTone('EQUIPMENT', emergency.requiredEquipmentCode)})}"></span>
+                        </dd>
+
+                        <dt class="col-sm-5 text-dark mb-0">Versión de reglas aplicada</dt>
+                        <dd class="col-sm-7 are-mono mb-0" th:text="${emergency.appliedRuleVersionId}">RUL-V01</dd>
+                    </dl>
+                </div>
+            </section>
+        </div>
+
+        <!-- 3. Associated Resources & Logical Timeline -->
+        <div class="col-12">
+            <section class="are-card" aria-labelledby="section-resources-timeline">
+                <div class="are-card-header">
+                    <h3 id="section-resources-timeline" class="are-card-title">3. Recursos asociados e historial de tiempos lógicos</h3>
+                </div>
+                <div class="are-card-body">
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 rounded border bg-light">
+                                <div class="text-muted small fw-semibold">Ambulancia asignada</div>
+                                <div class="fs-6 fw-bold are-mono mt-1"
+                                     th:text="${emergency.assignedAmbulanceId != null ? emergency.assignedAmbulanceId : 'Ninguna ambulancia vinculada'}">
+                                    Ninguna ambulancia vinculada
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 rounded border bg-light">
+                                <div class="text-muted small fw-semibold">Hospital reservado / ocupado</div>
+                                <div class="fs-6 fw-bold are-mono mt-1"
+                                     th:text="${emergency.reservedOrOccupiedHospitalId != null ? emergency.reservedOrOccupiedHospitalId : 'Ningún hospital asociado'}">
+                                    Ningún hospital asociado
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="are-table-wrap">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                            <tr>
+                                <th scope="col">Hito del ciclo prehospitalario</th>
+                                <th scope="col" class="text-end">Tiempo lógico</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td>Instante lógico de registro</td>
+                                <td class="text-end are-mono" th:text="'t = ' + ${emergency.registeredAtTicks}">t = 0</td>
+                            </tr>
+                            <tr>
+                                <td>Ingreso a cola de ambulancia</td>
+                                <td class="text-end are-mono" th:text="${emergency.queueEnteredAtTicks != null ? 't = ' + emergency.queueEnteredAtTicks : '—'}">—</td>
+                            </tr>
+                            <tr>
+                                <td>Asignación de ambulancia</td>
+                                <td class="text-end are-mono" th:text="${emergency.assignedAtTicks != null ? 't = ' + emergency.assignedAtTicks : '—'}">—</td>
+                            </tr>
+                            <tr>
+                                <td>Llegada al nodo del incidente</td>
+                                <td class="text-end are-mono" th:text="${emergency.atIncidentAtTicks != null ? 't = ' + emergency.atIncidentAtTicks : '—'}">—</td>
+                            </tr>
+                            <tr>
+                                <td>Ingreso a cola hospitalaria</td>
+                                <td class="text-end are-mono" th:text="${emergency.hospitalQueueEnteredAtTicks != null ? 't = ' + emergency.hospitalQueueEnteredAtTicks : '—'}">—</td>
+                            </tr>
+                            <tr>
+                                <td>Inicio de traslado a hospital</td>
+                                <td class="text-end are-mono" th:text="${emergency.inTransportAtTicks != null ? 't = ' + emergency.inTransportAtTicks : '—'}">—</td>
+                            </tr>
+                            <tr>
+                                <td>Entrega completada en hospital</td>
+                                <td class="text-end are-mono" th:text="${emergency.completedAtTicks != null ? 't = ' + emergency.completedAtTicks : '—'}">—</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
     </div>
+</th:block>
 
-    <div class="banner-success" th:if="${deliverySuccessMessage != null}">
-        <strong>Entrega hospitalaria confirmada (HU-11):</strong>
-        <span th:text="${deliverySuccessMessage}">Entrega completada.</span>
-    </div>
-
-    <div class="banner-success" th:if="${deliveryDuplicateMessage != null}" style="background:#fffbeb;border-color:#fcd34d;color:#92400e;">
-        <strong>Entrega hospitalaria duplicada o estado inválido (HU-11):</strong>
-        <span th:text="${deliveryDuplicateMessage}">Entrega duplicada.</span>
-    </div>
-
-    <div style="margin: 0.75rem 0;" th:if="${emergency.stateCode == 'ASSIGNED'}">
-        <form th:action="@{/dispatch/emergencies/{id}/arrive(id=${emergency.id})}" method="post" style="margin:0;">
-            <button type="submit" style="background:#1e3a8a;color:#fff;border:none;border-radius:6px;padding:0.55rem 1rem;font-weight:600;cursor:pointer;">
-                Confirmar llegada al incidente (AT_INCIDENT) y reservar hospital (HU-09)
-            </button>
-        </form>
-    </div>
-
-    <div style="margin: 0.75rem 0;" th:if="${emergency.stateCode == 'IN_TRANSPORT'}">
-        <form th:action="@{/dispatch/emergencies/{id}/deliver(id=${emergency.id})}" method="post" style="margin:0;">
-            <button type="submit" style="background:#065f46;color:#fff;border:none;border-radius:6px;padding:0.55rem 1rem;font-weight:600;cursor:pointer;">
-                Confirmar entrega en hospital (COMPLETED) y liberar ambulancia (HU-11)
-            </button>
-        </form>
-    </div>
-
-    <div class="banner-success" th:if="${justRegistered}">
-        <strong>Emergencia registrada y clasificada correctamente (HU-01):</strong>
-        se persistió la solicitud <code th:text="${emergency.id}">EMG-00001</code> en estado inicial
-        <code th:text="${emergency.stateCode}">REGISTERED</code>.
-    </div>
-
-    <div class="banner-warn" th:if="${emergency.retainsAmbulanceAtIncidentWaitingHospital}">
-        <strong>Espera de destino hospitalario (WAITING_HOSPITAL — RN-RUT-007):</strong>
-        la emergencia espera plaza hospitalaria conservando su ambulancia asignada
-        (<code th:text="${emergency.assignedAmbulanceId}">AMB-01</code>) retenida y ocupada en estado
-        <code>AT_INCIDENT</code>, diferenciándose de <code>WAITING_AMBULANCE</code>.
-    </div>
-
-    <div class="banner-success" th:if="${emergency.cycleClosed}">
-        <strong>Ciclo prehospitalario cerrado (COMPLETED — RN-EME-001, RN-RUT-005):</strong>
-        la emergencia arribó al hospital reservado (<code th:text="${emergency.reservedOrOccupiedHospitalId}">HOSP-01</code>)
-        y su ciclo simulado concluyó sin etapas intrahospitalarias posteriores.
-    </div>
-
-    <h1>Ficha de emergencia <span th:text="${emergency.id}">EMG-00001</span></h1>
-
-    <h2>1. Datos de registro y estado operativo (DEC-019)</h2>
-    <dl>
-        <dt>Identificador de emergencia</dt>
-        <dd><code th:text="${emergency.id}">EMG-00001</code></dd>
-
-        <dt>Estado operativo actual</dt>
-        <dd>
-            <code th:text="${emergency.stateCode}">REGISTERED</code> —
-            <strong th:text="${emergency.stateLabel}">Registrada</strong>
-            (<span th:text="${emergency.stateOperationalDescription}">Descripción del estado</span>)
-        </dd>
-
-        <dt>Categoría del incidente</dt>
-        <dd>
-            <code th:text="${emergency.incidentCategoryCode}">INC-A</code> —
-            <span th:text="${emergency.incidentCategoryLabel}">Descripción categoría</span>
-        </dd>
-
-        <dt>Nodo de ubicación en el grafo</dt>
-        <dd><code th:text="${emergency.nodeId}">N01</code></dd>
-
-        <dt>Descripción ficticia</dt>
-        <dd th:text="${#strings.isEmpty(emergency.description) ? 'Sin descripción ficticia (vacía)' : emergency.description}">
-            Descripción
-        </dd>
-    </dl>
-
-    <h2>2. Clasificación simulada determinista (DEC-016, RN-EME-007 a RN-EME-011)</h2>
-    <dl>
-        <dt>Prioridad simulada informativa</dt>
-        <dd>
-            <strong th:text="${emergency.simulatedPriorityLabel}">Alta</strong>
-            (<code th:text="${emergency.simulatedPriorityCode}">HIGH</code> — carácter exclusivamente informativo, RN-EME-008)
-        </dd>
-
-        <dt>Equipamiento requerido</dt>
-        <dd>
-            <code th:text="${emergency.requiredEquipmentCode}">SPECIALIZED</code> —
-            <span th:text="${emergency.requiredEquipmentLabel}">Especializado</span>
-        </dd>
-
-        <dt>Versión de reglas aplicada (inmutable)</dt>
-        <dd><code th:text="${emergency.appliedRuleVersionId}">RUL-V01</code></dd>
-    </dl>
-
-    <h2>3. Recursos asociados y marcas de tiempo lógico (HU-02)</h2>
-    <dl>
-        <dt>Ambulancia asignada</dt>
-        <dd th:text="${emergency.assignedAmbulanceId != null ? emergency.assignedAmbulanceId : 'Ninguna ambulancia vinculada'}">
-            Ninguna ambulancia vinculada
-        </dd>
-
-        <dt>Hospital reservado / ocupado</dt>
-        <dd th:text="${emergency.reservedOrOccupiedHospitalId != null ? emergency.reservedOrOccupiedHospitalId : 'Ningún hospital asociado'}">
-            Ningún hospital asociado
-        </dd>
-
-        <dt>Instante lógico de registro</dt>
-        <dd><code>t = <span th:text="${emergency.registeredAtTicks}">0</span></code></dd>
-
-        <dt>Ingreso a cola de ambulancia</dt>
-        <dd th:text="${emergency.queueEnteredAtTicks != null ? 't = ' + emergency.queueEnteredAtTicks : '—'}">—</dd>
-
-        <dt>Asignación de ambulancia</dt>
-        <dd th:text="${emergency.assignedAtTicks != null ? 't = ' + emergency.assignedAtTicks : '—'}">—</dd>
-
-        <dt>Llegada al nodo del incidente</dt>
-        <dd th:text="${emergency.atIncidentAtTicks != null ? 't = ' + emergency.atIncidentAtTicks : '—'}">—</dd>
-
-        <dt>Ingreso a cola hospitalaria</dt>
-        <dd th:text="${emergency.hospitalQueueEnteredAtTicks != null ? 't = ' + emergency.hospitalQueueEnteredAtTicks : '—'}">—</dd>
-
-        <dt>Inicio de traslado a hospital</dt>
-        <dd th:text="${emergency.inTransportAtTicks != null ? 't = ' + emergency.inTransportAtTicks : '—'}">—</dd>
-
-        <dt>Entrega completada en hospital</dt>
-        <dd th:text="${emergency.completedAtTicks != null ? 't = ' + emergency.completedAtTicks : '—'}">—</dd>
-    </dl>
-
-    <footer>
-        ARE — Arequipa RescUE. Seguimiento trazable de estados del ciclo prehospitalario simulado (DEC-001, DEC-019).
-    </footer>
-</main>
 </body>
 </html>

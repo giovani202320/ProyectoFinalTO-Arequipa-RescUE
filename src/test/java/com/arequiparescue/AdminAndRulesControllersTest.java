@@ -27,11 +27,13 @@ import com.arequiparescue.routing.domain.RoadGraph;
 import com.arequiparescue.routing.domain.port.RoadGraphRepository;
 import com.arequiparescue.routing.presentation.RoadGraphTopologyController;
 import com.arequiparescue.shared.domain.LogicalTime;
+import com.arequiparescue.shared.presentation.AreUiFormatter;
 import com.arequiparescue.simulation.domain.port.ActiveScenarioChecker;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -54,6 +56,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         HospitalCatalogController.class,
         RoadGraphTopologyController.class
 })
+@Import(AreUiFormatter.class)
 @DisplayName("Controladores MVC — Catálogos HU-03 y Versionado/Solo lectura HU-04")
 class AdminAndRulesControllersTest {
 
@@ -116,8 +119,11 @@ class AdminAndRulesControllersTest {
                 .andExpect(content().string(containsString("Despachador (ACT-02)")))
                 .andExpect(content().string(containsString("RUL-V01")))
                 .andExpect(content().string(containsString("INC-A")))
+                .andExpect(content().string(containsString("Activa")))
+                .andExpect(content().string(containsString("Especializada")))
+                .andExpect(content().string(containsString("/css/are-design-system.css")))
                 .andExpect(content().string(not(containsString("<form"))))
-                .andExpect(content().string(not(containsString("<button"))))
+                .andExpect(content().string(not(containsString("type=\"submit\""))))
                 .andExpect(content().string(not(containsString("Publicar y activar"))));
     }
 
