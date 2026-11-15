@@ -38,3 +38,7 @@ Thumbs.db
 .env
 *.env
 mysql-data/
+
+### Tooling / IDE ###
+.structurizr/
+.metals/
