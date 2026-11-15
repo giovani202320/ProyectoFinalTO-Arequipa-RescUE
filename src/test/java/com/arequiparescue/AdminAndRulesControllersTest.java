@@ -172,7 +172,11 @@ class AdminAndRulesControllersTest {
 
         mockMvc.perform(get("/admin/ambulances"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("AMB-01")));
+                .andExpect(content().string(containsString("AMB-01")))
+                .andExpect(content().string(containsString("Especializada")))
+                .andExpect(content().string(containsString("Disponible")))
+                .andExpect(content().string(containsString("/css/are-design-system.css")))
+                .andExpect(content().string(containsString("aria-current=\"page\"")));
 
         when(ambulanceCatalogService.registerAmbulance(any())).thenReturn(amb);
 
@@ -181,7 +185,8 @@ class AdminAndRulesControllersTest {
                         .param("equipmentType", "SPECIALIZED")
                         .param("nodeId", "N01"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("AMB-01")));
+                .andExpect(content().string(containsString("AMB-01")))
+                .andExpect(content().string(containsString("Especializada")));
 
         when(ambulanceCatalogService.registerAmbulance(any()))
                 .thenThrow(new AmbulanceCatalogValidationException("global", "Escenario activo bloquea registro"));
@@ -210,7 +215,10 @@ class AdminAndRulesControllersTest {
         mockMvc.perform(get("/admin/hospitals"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("HOSP-01")))
-                .andExpect(content().string(containsString("Hospital Base")));
+                .andExpect(content().string(containsString("Hospital Base")))
+                .andExpect(content().string(containsString("Habilitado")))
+                .andExpect(content().string(containsString("/css/are-design-system.css")))
+                .andExpect(content().string(containsString("aria-current=\"page\"")));
 
         when(hospitalCatalogService.registerHospital(any())).thenReturn(hospital);
 

@@ -1,311 +1,190 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo de hospitales — ARE (Arequipa RescUE)</title>
-    <style>
-        :root {
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --border: #cbd5e1;
-            --primary: #1e3a8a;
-            --primary-hover: #1d4ed8;
-            --text: #0f172a;
-            --muted: #475569;
-            --badge-bg: #dbeafe;
-            --badge-fg: #1e40af;
-            --error-bg: #fef2f2;
-            --error-border: #fca5a5;
-            --error-fg: #991b1b;
-            --ok-bg: #f0fdf4;
-            --ok-border: #86efac;
-            --ok-fg: #166534;
-            --warn-bg: #fffbeb;
-            --warn-border: #fcd34d;
-            --warn-fg: #92400e;
-        }
-        * {
-            box-sizing: border-box;
-        }
-        body {
-            margin: 0;
-            padding: 2.5rem 1.25rem;
-            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-        }
-        main {
-            max-width: 1020px;
-            margin: 0 auto;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 2rem;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
-        }
-        nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.25rem;
-            font-size: 0.92rem;
-        }
-        nav a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            background: var(--badge-bg);
-            color: var(--badge-fg);
-            font-weight: 600;
-            font-size: 0.85rem;
-            margin-bottom: 0.75rem;
-        }
-        h1 {
-            margin: 0 0 0.5rem 0;
-            color: var(--primary);
-            font-size: 1.65rem;
-        }
-        h2 {
-            margin: 1.5rem 0 0.5rem 0;
-            color: var(--primary);
-            font-size: 1.15rem;
-        }
-        p.lead {
-            margin: 0 0 1.25rem 0;
-            color: var(--muted);
-        }
-        .alert-error {
-            background: var(--error-bg);
-            border: 1px solid var(--error-border);
-            color: var(--error-fg);
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-        .alert-ok {
-            background: var(--ok-bg);
-            border: 1px solid var(--ok-border);
-            color: var(--ok-fg);
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-        .alert-warn {
-            background: var(--warn-bg);
-            border: 1px solid var(--warn-border);
-            color: var(--warn-fg);
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-            gap: 0.75rem;
-            align-items: end;
-            padding: 1rem;
-            background: #f8fafc;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-        }
-        label {
-            display: block;
-            font-weight: 600;
-            font-size: 0.85rem;
-            margin-bottom: 0.25rem;
-        }
-        input[type="text"], input[type="number"], select {
-            width: 100%;
-            padding: 0.45rem 0.6rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font: inherit;
-        }
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 0.45rem;
-            font-weight: 600;
-            font-size: 0.88rem;
-            margin-bottom: 0.35rem;
-        }
-        .btn-primary {
-            background: var(--primary);
-            color: #ffffff;
-            border: none;
-            padding: 0.55rem 1rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .btn-primary:hover {
-            background: var(--primary-hover);
-        }
-        .btn-secondary {
-            background: #334155;
-            color: #ffffff;
-            border: none;
-            padding: 0.35rem 0.75rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.85rem;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 0.75rem;
-            font-size: 0.9rem;
-        }
-        th, td {
-            padding: 0.6rem 0.65rem;
-            border-bottom: 1px solid var(--border);
-            text-align: left;
-        }
-        th {
-            background: #f8fafc;
-            font-weight: 600;
-        }
-        .inline-form {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.35rem;
-            align-items: center;
-        }
-        .inline-form input[type="text"] {
-            width: 140px;
-            padding: 0.3rem 0.45rem;
-            font-size: 0.85rem;
-        }
-        .inline-form input[type="number"] {
-            width: 68px;
-            padding: 0.3rem 0.45rem;
-            font-size: 0.85rem;
-        }
-        .inline-form select {
-            width: auto;
-            padding: 0.3rem 0.45rem;
-            font-size: 0.85rem;
-        }
-    </style>
-</head>
+<head th:replace="~{fragments/layout :: head('Hospitales')}"></head>
 <body>
-<main>
-    <nav>
-        <div>
-            <a th:href="@{/}">Inicio</a> |
-            <a th:href="@{/admin/ambulances}">Ambulancias</a> |
-            <a th:href="@{/admin/topology}">Topología N01–N10</a> |
-            <a th:href="@{/admin/triage-rules}">Reglas (Admin)</a>
+
+<div th:replace="~{fragments/layout :: appShell('Hospitales', 'Administración de capacidad total, reservas y ocupación (HU-03)', 'hospitals', ~{::hospitalsContent})}"></div>
+
+<th:block th:fragment="hospitalsContent">
+    <!-- Header -->
+    <section class="are-card mb-4" aria-labelledby="hospitals-page-title">
+        <div class="are-card-body d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <div>
+                <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
+                    <span th:replace="~{fragments/components :: statusBadge('Administrador (ACT-03) — HU-03', 'navy')}"></span>
+                    <span class="are-badge are-badge-neutral are-mono"
+                          th:text="'Total establecimientos: ' + ${#lists.size(hospitals)}">Total establecimientos: 0</span>
+                </div>
+                <h2 id="hospitals-page-title" class="h4 fw-bold mb-1" style="color: var(--are-navy);">
+                    Administración del catálogo de hospitales
+                </h2>
+                <p class="text-secondary small mb-0">
+                    Administre hospitales sin especialidades clínicas (DEC-018, RN-HOS-004) respetando el invariante
+                    <span class="are-mono fw-semibold">C = R + O + D</span> (Capacidad total = Reservas + Ocupación + Disponibilidad).
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+                <a th:replace="~{fragments/components :: actionLink(@{/admin/ambulances}, 'Ambulancias', 'outline', 'ambulance')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/admin/topology}, 'Topología N01–N10', 'outline', 'map')}"></a>
+            </div>
         </div>
-        <div>
-            <a th:href="@{/emergencies}">Emergencias</a>
-        </div>
-    </nav>
-
-    <span class="badge">ACT-03 Administrador — HU-03</span>
-    <h1>Administración del catálogo de hospitales</h1>
-    <p class="lead">
-        Administre hospitales sin especialidades clínicas (DEC-018, RN-HOS-004) con habilitación y capacidad numérica simulada: <code>C &gt;= 0</code>, <code>R &gt;= 0</code>, <code>O &gt;= 0</code>, <code>R + O &lt;= C</code> y <code>D = C - R - O</code>.
-    </p>
-
-    <div th:if="${scenarioActive}" class="alert-warn">
-        <strong>Escenario experimental activo:</strong> se prohíbe modificar el catálogo o la capacidad total <code>C</code> de los hospitales mientras un escenario está en curso (RN-HOS-015, CA-HOS-12, HU-03 CA-2).
-    </div>
-
-    <div th:if="${successMessage != null}" class="alert-ok" th:text="${successMessage}">
-        Hospital guardado correctamente.
-    </div>
-
-    <section>
-        <h2>Registrar nuevo hospital</h2>
-        <form th:action="@{/admin/hospitals}" th:object="${hospitalForm}" method="post" class="form-grid">
-            <div th:if="${#fields.hasErrors('*')}" class="alert-error" style="grid-column: 1 / -1;">
-                <div th:each="err : ${#fields.allErrors()}" th:text="${err}">Error de validación</div>
-            </div>
-            <div>
-                <label for="hospId">Identificador (opcional, ej. HOSP-01)</label>
-                <input id="hospId" type="text" th:field="*{id}" placeholder="Automático si queda vacío">
-            </div>
-            <div>
-                <label for="hospName">Nombre del hospital</label>
-                <input id="hospName" type="text" th:field="*{name}" placeholder="Hospital Base Simulado">
-            </div>
-            <div>
-                <label for="hospNode">Nodo de ubicación</label>
-                <select id="hospNode" th:field="*{nodeId}">
-                    <option value="">Seleccione nodo...</option>
-                    <option th:each="node : ${nodes}" th:value="${node.id.value}" th:text="${node.id.value + ' — ' + node.displayName}">N01</option>
-                </select>
-            </div>
-            <div>
-                <label for="hospCapacity">Capacidad total (C)</label>
-                <input id="hospCapacity" type="number" min="0" th:field="*{totalCapacity}">
-            </div>
-            <div>
-                <label class="checkbox-label">
-                    <input type="checkbox" th:field="*{enabled}">
-                    Habilitado
-                </label>
-                <button type="submit" class="btn-primary">Registrar hospital</button>
-            </div>
-        </form>
     </section>
 
-    <section>
-        <h2>Hospitales registrados</h2>
-        <p th:if="${#lists.isEmpty(hospitals)}" style="color: var(--muted);">No hay hospitales registrados en el catálogo.</p>
-        <table th:if="${!#lists.isEmpty(hospitals)}">
-            <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Nodo</th>
-                <th>Estado</th>
-                <th>C</th>
-                <th>R</th>
-                <th>O</th>
-                <th>D</th>
-                <th>Actualizar configuración</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="hosp : ${hospitals}">
-                <td><strong th:text="${hosp.id}">HOSP-01</strong></td>
-                <td th:text="${hosp.name}">Hospital General</td>
-                <td th:text="${hosp.nodeId}">N01</td>
-                <td th:text="${hosp.enabled ? 'Habilitado' : 'Deshabilitado'}">Habilitado</td>
-                <td th:text="${hosp.totalCapacity}">10</td>
-                <td th:text="${hosp.reservedSlots}">0</td>
-                <td th:text="${hosp.occupiedSlots}">0</td>
-                <td><strong th:text="${hosp.availableSlots}">10</strong></td>
-                <td>
-                    <form th:action="@{'/admin/hospitals/' + ${hosp.id}}" method="post" class="inline-form">
-                        <input type="text" name="name" th:value="${hosp.name}" aria-label="Nombre">
-                        <select name="nodeId" aria-label="Nodo">
-                            <option th:each="node : ${nodes}" th:value="${node.id.value}" th:selected="${hosp.nodeId == node.id.value}" th:text="${node.id.value}">N01</option>
+    <!-- Scenario Lock Warning -->
+    <div th:if="${scenarioActive}" class="are-alert are-alert-warning mb-3" role="status">
+        <i data-lucide="alert-triangle" class="are-nav-icon mt-1" aria-hidden="true"></i>
+        <div>
+            <strong>Escenario experimental activo:</strong>
+            se prohíbe modificar el catálogo o la capacidad total <span class="are-mono">C</span> de los hospitales mientras un escenario está en curso (RN-HOS-015, CA-HOS-12, HU-03 CA-2).
+        </div>
+    </div>
+
+    <!-- Register New Hospital Form -->
+    <section class="are-card mb-4" aria-labelledby="register-hospital-heading">
+        <div class="are-card-header">
+            <h3 id="register-hospital-heading" class="are-card-title">Registrar nuevo hospital</h3>
+        </div>
+        <div class="are-card-body">
+            <form th:action="@{/admin/hospitals}" th:object="${hospitalForm}" method="post">
+                <div th:if="${#fields.hasErrors('*')}" class="are-alert are-alert-danger mb-3" role="alert">
+                    <i data-lucide="alert-circle" class="are-nav-icon mt-1" aria-hidden="true"></i>
+                    <div>
+                        <strong>Revise los datos ingresados:</strong>
+                        <div th:each="err : ${#fields.allErrors()}" th:text="${err}">Error de validación</div>
+                    </div>
+                </div>
+
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-md-2">
+                        <label for="hospId" class="form-label fw-semibold">Identificador (opcional)</label>
+                        <input id="hospId" type="text" th:field="*{id}" class="form-control" placeholder="Ej. HOSP-01">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label for="hospName" class="form-label fw-semibold">Nombre del hospital</label>
+                        <input id="hospName" type="text" th:field="*{name}" class="form-control" placeholder="Hospital Base Simulado">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label for="hospNode" class="form-label fw-semibold">Nodo de ubicación</label>
+                        <select id="hospNode" th:field="*{nodeId}" class="form-select">
+                            <option value="">Seleccione nodo...</option>
+                            <option th:each="node : ${nodes}" th:value="${node.id.value}" th:text="${node.id.value + ' — ' + node.displayName}">N01</option>
                         </select>
-                        <input type="number" name="totalCapacity" min="0" th:value="${hosp.totalCapacity}" aria-label="Capacidad total C">
-                        <label class="checkbox-label" style="margin: 0;">
-                            <input type="checkbox" name="enabled" th:checked="${hosp.enabled}">
-                            Hab.
-                        </label>
-                        <button type="submit" class="btn-secondary">Actualizar</button>
-                    </form>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label for="hospCapacity" class="form-label fw-semibold">Capacidad total (C)</label>
+                        <input id="hospCapacity" type="number" min="0" th:field="*{totalCapacity}" class="form-control">
+                    </div>
+                    <div class="col-6 col-md-2 d-flex flex-column gap-2">
+                        <div class="form-check">
+                            <input id="hospEnabled" class="form-check-input" type="checkbox" th:field="*{enabled}">
+                            <label class="form-check-label fw-semibold" for="hospEnabled">Habilitado</label>
+                        </div>
+                        <button type="submit" class="btn btn-are-primary w-100">Registrar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </section>
-</main>
+
+    <!-- Registered Hospitals List -->
+    <section class="are-card" aria-labelledby="hospitals-list-heading">
+        <div class="are-card-header">
+            <h3 id="hospitals-list-heading" class="are-card-title">Hospitales registrados</h3>
+            <div class="d-none d-md-flex align-items-center gap-2 small text-muted">
+                <span class="are-badge are-badge-primary">Ocupación (O)</span>
+                <span class="are-badge are-badge-warning">Reservas (R)</span>
+                <span class="are-badge are-badge-success">Disponibilidad (D)</span>
+            </div>
+        </div>
+        <div class="are-card-body">
+            <div th:if="${#lists.isEmpty(hospitals)}" class="text-center py-4">
+                <span class="are-module-icon mx-auto mb-2" aria-hidden="true">
+                    <i data-lucide="hospital"></i>
+                </span>
+                <p class="fw-semibold mb-1" style="color: var(--are-navy);">No hay hospitales registrados en el catálogo</p>
+                <p class="text-secondary small mb-0">Utilice el formulario superior para registrar el primer establecimiento.</p>
+            </div>
+
+            <div th:if="${!#lists.isEmpty(hospitals)}" class="are-table-wrap">
+                <table class="table table-hover align-middle">
+                    <thead>
+                    <tr>
+                        <th scope="col">ID</th>
+                        <th scope="col">Nombre</th>
+                        <th scope="col">Nodo</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Capacidad (C)</th>
+                        <th scope="col">Reservas (R)</th>
+                        <th scope="col">Ocupación (O)</th>
+                        <th scope="col">Disponibilidad (D)</th>
+                        <th scope="col" style="min-width: 140px;">Uso de capacidad</th>
+                        <th scope="col">Actualizar configuración</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="hosp : ${hospitals}">
+                        <td class="are-mono fw-bold" th:text="${hosp.id}">HOSP-01</td>
+                        <td class="fw-semibold" th:text="${hosp.name}">Hospital General</td>
+                        <td class="are-mono" th:text="${hosp.nodeId}">N01</td>
+                        <td>
+                            <span th:replace="~{fragments/components :: statusBadge(${hosp.enabled ? 'Habilitado' : 'Deshabilitado'}, ${hosp.enabled ? 'success' : 'neutral'})}"></span>
+                        </td>
+                        <td class="are-mono fw-bold" th:text="${hosp.totalCapacity}">10</td>
+                        <td>
+                            <span class="are-badge are-badge-warning are-mono" th:text="${hosp.reservedSlots}">0</span>
+                        </td>
+                        <td>
+                            <span class="are-badge are-badge-primary are-mono" th:text="${hosp.occupiedSlots}">0</span>
+                        </td>
+                        <td>
+                            <span class="are-badge are-mono"
+                                  th:classappend="${hosp.availableSlots > 0 ? 'are-badge-success' : 'are-badge-danger'}"
+                                  th:text="${hosp.availableSlots}">10</span>
+                        </td>
+                        <td>
+                            <div th:if="${hosp.totalCapacity > 0}"
+                                 class="progress-stacked"
+                                 style="height: 10px;"
+                                 th:attr="aria-label=${'Ocupación ' + hosp.occupiedSlots + ', reservas ' + hosp.reservedSlots + ', disponibilidad ' + hosp.availableSlots + ' de ' + hosp.totalCapacity}">
+                                <div class="progress" role="progressbar"
+                                     th:style="'width: ' + (${hosp.occupiedSlots} * 100.0 / ${hosp.totalCapacity}) + '%'"
+                                     th:attr="aria-valuenow=${hosp.occupiedSlots}, aria-valuemin=0, aria-valuemax=${hosp.totalCapacity}">
+                                    <div class="progress-bar bg-primary"></div>
+                                </div>
+                                <div class="progress" role="progressbar"
+                                     th:style="'width: ' + (${hosp.reservedSlots} * 100.0 / ${hosp.totalCapacity}) + '%'"
+                                     th:attr="aria-valuenow=${hosp.reservedSlots}, aria-valuemin=0, aria-valuemax=${hosp.totalCapacity}">
+                                    <div class="progress-bar bg-warning"></div>
+                                </div>
+                                <div class="progress" role="progressbar"
+                                     th:style="'width: ' + (${hosp.availableSlots} * 100.0 / ${hosp.totalCapacity}) + '%'"
+                                     th:attr="aria-valuenow=${hosp.availableSlots}, aria-valuemin=0, aria-valuemax=${hosp.totalCapacity}">
+                                    <div class="progress-bar bg-success"></div>
+                                </div>
+                            </div>
+                            <span th:if="${hosp.totalCapacity == 0}" class="text-muted small">Sin capacidad (C=0)</span>
+                        </td>
+                        <td>
+                            <form th:action="@{'/admin/hospitals/' + ${hosp.id}}" method="post" class="d-flex flex-wrap gap-2 align-items-center">
+                                <input type="text" name="name" th:value="${hosp.name}" class="form-control form-control-sm" style="width: 145px;" aria-label="Nombre">
+                                <select name="nodeId" class="form-select form-select-sm w-auto" aria-label="Nodo">
+                                    <option th:each="node : ${nodes}" th:value="${node.id.value}" th:selected="${hosp.nodeId == node.id.value}" th:text="${node.id.value}">N01</option>
+                                </select>
+                                <input type="number" name="totalCapacity" min="0" th:value="${hosp.totalCapacity}" class="form-control form-control-sm" style="width: 72px;" aria-label="Capacidad total C">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" name="enabled" th:checked="${hosp.enabled}" aria-label="Habilitado">
+                                    <span class="small">Hab.</span>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-are-outline">Actualizar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</th:block>
+
 </body>
 </html>
