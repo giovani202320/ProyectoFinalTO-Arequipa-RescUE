@@ -152,10 +152,28 @@
         <span th:text="${hospitalExhaustedMessage}">Reintentos hospitalarios agotados.</span>
     </div>
 
+    <div class="banner-success" th:if="${deliverySuccessMessage != null}">
+        <strong>Entrega hospitalaria confirmada (HU-11):</strong>
+        <span th:text="${deliverySuccessMessage}">Entrega completada.</span>
+    </div>
+
+    <div class="banner-success" th:if="${deliveryDuplicateMessage != null}" style="background:#fffbeb;border-color:#fcd34d;color:#92400e;">
+        <strong>Entrega hospitalaria duplicada o estado inválido (HU-11):</strong>
+        <span th:text="${deliveryDuplicateMessage}">Entrega duplicada.</span>
+    </div>
+
     <div style="margin: 0.75rem 0;" th:if="${emergency.stateCode == 'ASSIGNED'}">
         <form th:action="@{/dispatch/emergencies/{id}/arrive(id=${emergency.id})}" method="post" style="margin:0;">
             <button type="submit" style="background:#1e3a8a;color:#fff;border:none;border-radius:6px;padding:0.55rem 1rem;font-weight:600;cursor:pointer;">
                 Confirmar llegada al incidente (AT_INCIDENT) y reservar hospital (HU-09)
+            </button>
+        </form>
+    </div>
+
+    <div style="margin: 0.75rem 0;" th:if="${emergency.stateCode == 'IN_TRANSPORT'}">
+        <form th:action="@{/dispatch/emergencies/{id}/deliver(id=${emergency.id})}" method="post" style="margin:0;">
+            <button type="submit" style="background:#065f46;color:#fff;border:none;border-radius:6px;padding:0.55rem 1rem;font-weight:600;cursor:pointer;">
+                Confirmar entrega en hospital (COMPLETED) y liberar ambulancia (HU-11)
             </button>
         </form>
     </div>

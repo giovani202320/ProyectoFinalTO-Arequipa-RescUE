@@ -157,6 +157,16 @@
 
     <div class="alert-error" th:if="${errorMessage != null}" th:text="${errorMessage}">Error</div>
 
+    <div class="alert-success" th:if="${dischargeSuccessMessage != null}">
+        <strong>Alta hospitalaria simulada confirmada (HU-12):</strong>
+        <span th:text="${dischargeSuccessMessage}">Alta ejecutada</span>
+    </div>
+
+    <div class="alert-warn" th:if="${dischargeDuplicateMessage != null}">
+        <strong>Alta simulada rechazada o duplicada (HU-12):</strong>
+        <span th:text="${dischargeDuplicateMessage}">Duplicada</span>
+    </div>
+
     <div class="alert-success" th:if="${evaluationResult != null}">
         <strong>Resultado de evaluación FIFO:</strong>
         <span th:text="${evaluationResult.summaryMessage}">Resumen</span>
@@ -261,7 +271,105 @@
         </tbody>
     </table>
 
-    <h2>4. Avisos recientes de agotamiento de reintentos hospitalarios (CA-SIM-03)</h2>
+    <h2>4. Emergencias en traslado IN_TRANSPORT (confirmar entrega hospitalaria — HU-11)</h2>
+    <p class="muted" th:if="${#lists.isEmpty(inTransportEmergencies)}">
+        No hay emergencias en estado <code>IN_TRANSPORT</code> pendientes de entrega hospitalaria.
+    </p>
+    <table th:if="${!#lists.isEmpty(inTransportEmergencies)}">
+        <thead>
+        <tr>
+            <th>Emergencia</th>
+            <th>Prioridad</th>
+            <th>Ambulancia (TRANSPORTING)</th>
+            <th>Hospital reservado</th>
+            <th>Acción</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="emg : ${inTransportEmergencies}">
+            <td class="mono">
+                <a th:href="@{/emergencies/{id}(id=${emg.id})}" th:text="${emg.id}">EMG-00001</a>
+            </td>
+            <td th:text="${emg.simulatedPriorityLabel}">ALTA</td>
+            <td class="mono" th:text="${emg.assignedAmbulanceId}">AMB-01</td>
+            <td class="mono" th:text="${emg.reservedOrOccupiedHospitalId}">HOSP-01</td>
+            <td>
+                <form th:action="@{/dispatch/emergencies/{id}/deliver(id=${emg.id})}" method="post" style="margin:0;">
+                    <button type="submit" class="btn-primary">Confirmar entrega (COMPLETED) y liberar ambulancia</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>5. Reservas y ocupaciones hospitalarias (RESERVED / OCCUPIED / DISCHARGED — HU-11 / HU-12)</h2>
+    <p class="muted" th:if="${#lists.isEmpty(hospitalReservations)}">
+        No existen reservas u ocupaciones hospitalarias registradas.
+    </p>
+    <table th:if="${!#lists.isEmpty(hospitalReservations)}">
+        <thead>
+        <tr>
+            <th>Reserva</th>
+            <th>Emergencia</th>
+            <th>Hospital</th>
+            <th>Estado</th>
+            <th>t reserva</th>
+            <th>t ocupación</th>
+            <th>t alta</th>
+            <th>Acción (HU-12)</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="res : ${hospitalReservations}">
+            <td class="mono" th:text="${res.id}">RES-1</td>
+            <td class="mono">
+                <a th:href="@{/emergencies/{id}(id=${res.emergencyId})}" th:text="${res.emergencyId}">EMG-00001</a>
+            </td>
+            <td class="mono" th:text="${res.hospitalId}">HOSP-01</td>
+            <td><span class="pill" th:text="${res.status}">OCCUPIED</span></td>
+            <td class="mono" th:text="${res.reservedAtTicks}">3</td>
+            <td class="mono" th:text="${res.occupiedAtTicks != null ? res.occupiedAtTicks : '-'}">-</td>
+            <td class="mono" th:text="${res.dischargedAtTicks != null ? res.dischargedAtTicks : '-'}">-</td>
+            <td>
+                <form th:if="${res.status == 'OCCUPIED'}"
+                      th:action="@{/dispatch/hospital-reservations/{reservationId}/discharge(reservationId=${res.id})}"
+                      method="post" style="margin:0;">
+                    <button type="submit" class="btn-secondary">Ejecutar alta simulada (HU-12)</button>
+                </form>
+                <span class="muted" th:if="${res.status != 'OCCUPIED'}">—</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>6. Emergencias cerradas COMPLETED (HU-11)</h2>
+    <p class="muted" th:if="${#lists.isEmpty(completedEmergencies)}">
+        No hay emergencias en estado <code>COMPLETED</code>.
+    </p>
+    <table th:if="${!#lists.isEmpty(completedEmergencies)}">
+        <thead>
+        <tr>
+            <th>Emergencia</th>
+            <th>Prioridad</th>
+            <th>Ambulancia histórica</th>
+            <th>Hospital de entrega</th>
+            <th>t cierre</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="emg : ${completedEmergencies}">
+            <td class="mono">
+                <a th:href="@{/emergencies/{id}(id=${emg.id})}" th:text="${emg.id}">EMG-00001</a>
+            </td>
+            <td th:text="${emg.simulatedPriorityLabel}">ALTA</td>
+            <td class="mono" th:text="${emg.assignedAmbulanceId}">AMB-01</td>
+            <td class="mono" th:text="${emg.reservedOrOccupiedHospitalId}">HOSP-01</td>
+            <td class="mono" th:text="${emg.completedAtTicks}">6</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>7. Avisos recientes de agotamiento de reintentos hospitalarios (CA-SIM-03)</h2>
     <p class="muted" th:if="${#lists.isEmpty(exhaustedNotices)}">
         No se registran agotamientos recientes de reintentos de reserva hospitalaria.
     </p>

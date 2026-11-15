@@ -530,6 +530,43 @@ public final class Emergency {
         );
     }
 
+    /**
+     * Ejecuta T-EME-08 (IN_TRANSPORT -> COMPLETED) al confirmarse la entrega simulada en el hospital
+     * reservado, conservando las referencias históricas de ambulancia y hospital (HU-11, RN-EME-001, RN-HOS-012).
+     */
+    public Emergency completeHospitalDelivery(LogicalTime at) {
+        Objects.requireNonNull(at, "El instante lógico de entrega hospitalaria no puede ser nulo.");
+        if (this.state != EmergencyState.IN_TRANSPORT) {
+            throw new IllegalStateException(
+                    "Solo una emergencia en estado IN_TRANSPORT puede completar su entrega hospitalaria. Estado actual: "
+                            + this.state);
+        }
+        if (this.assignedAmbulanceId == null || this.reservedOrOccupiedHospitalId == null) {
+            throw new IllegalStateException(
+                    "La emergencia " + this.id + " requiere ambulancia asignada y hospital reservado para completar entrega.");
+        }
+        return new Emergency(
+                this.id,
+                this.category,
+                this.locationNode,
+                this.description,
+                this.simulatedPriority,
+                this.requiredEquipment,
+                this.appliedRuleVersionId,
+                EmergencyState.COMPLETED,
+                this.assignedAmbulanceId,
+                this.reservedOrOccupiedHospitalId,
+                this.registeredAt,
+                this.queueEnteredAt,
+                this.assignedAt,
+                this.atIncidentAt,
+                this.hospitalQueueEnteredAt,
+                this.inTransportAt,
+                at,
+                "HOSPITAL_DELIVERY_COMPLETED"
+        );
+    }
+
     public boolean isCycleClosed() {
         return this.state == EmergencyState.COMPLETED;
     }

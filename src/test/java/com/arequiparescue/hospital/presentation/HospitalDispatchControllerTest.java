@@ -1,5 +1,6 @@
 package com.arequiparescue.hospital.presentation;
 
+import com.arequiparescue.dispatch.application.WaitingQueueEvaluationResult;
 import com.arequiparescue.emergency.domain.Emergency;
 import com.arequiparescue.emergency.domain.EmergencyId;
 import com.arequiparescue.emergency.domain.EquipmentType;
@@ -7,10 +8,15 @@ import com.arequiparescue.emergency.domain.IncidentCategory;
 import com.arequiparescue.emergency.domain.SimulatedPriority;
 import com.arequiparescue.emergency.domain.TriageClassification;
 import com.arequiparescue.emergency.domain.TriageRuleVersionId;
+import com.arequiparescue.hospital.application.HospitalDeliveryAndDischargeApplicationService;
+import com.arequiparescue.hospital.application.HospitalDeliveryResult;
+import com.arequiparescue.hospital.application.HospitalDischargeResult;
 import com.arequiparescue.hospital.application.HospitalDispatchApplicationService;
 import com.arequiparescue.hospital.application.HospitalReservationResult;
 import com.arequiparescue.hospital.application.WaitingHospitalQueueEvaluationResult;
 import com.arequiparescue.hospital.domain.Hospital;
+import com.arequiparescue.hospital.domain.HospitalDeliveryOutcome;
+import com.arequiparescue.hospital.domain.HospitalDischargeOutcome;
 import com.arequiparescue.hospital.domain.HospitalDispatchOutcome;
 import com.arequiparescue.hospital.domain.HospitalId;
 import com.arequiparescue.routing.domain.NodeId;
@@ -34,7 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(HospitalDispatchController.class)
-@DisplayName("HospitalDispatchController — Vistas MVC de llegada al incidente y cola WAITING_HOSPITAL (HU-09, HU-10)")
+@DisplayName("HospitalDispatchController — Vistas MVC de llegada, cola, entrega y alta hospitalaria (HU-09 a HU-12)")
 class HospitalDispatchControllerTest {
 
     @Autowired
@@ -42,6 +48,9 @@ class HospitalDispatchControllerTest {
 
     @MockitoBean
     private HospitalDispatchApplicationService hospitalDispatchApplicationService;
+
+    @MockitoBean
+    private HospitalDeliveryAndDischargeApplicationService deliveryAndDischargeApplicationService;
 
     private static Emergency sampleWaitingEmergency() {
         TriageClassification triage = new TriageClassification(
@@ -53,18 +62,23 @@ class HospitalDispatchControllerTest {
     }
 
     @Test
-    @DisplayName("GET /dispatch/hospital-queue muestra disponibilidad C/R/O/D, emergencias ASSIGNED y cola WAITING_HOSPITAL")
+    @DisplayName("GET /dispatch/hospital-queue muestra disponibilidad C/R/O/D, colas, traslados y reservas")
     void shouldRenderHospitalQueueView() throws Exception {
         Hospital h1 = Hospital.registerInCatalog(HospitalId.of("HOSP-01"), "Hospital Goyeneche", NodeId.of("N04"), true, 2);
         when(hospitalDispatchApplicationService.listHospitalsOrderById()).thenReturn(List.of(h1));
         when(hospitalDispatchApplicationService.listAssignedEmergencies()).thenReturn(List.of());
         when(hospitalDispatchApplicationService.listWaitingHospitalQueue()).thenReturn(List.of(sampleWaitingEmergency()));
         when(hospitalDispatchApplicationService.listRecentHospitalExhaustedNotices()).thenReturn(List.of());
+        when(deliveryAndDischargeApplicationService.listInTransportEmergencies()).thenReturn(List.of());
+        when(deliveryAndDischargeApplicationService.listCompletedEmergencies()).thenReturn(List.of());
+        when(deliveryAndDischargeApplicationService.listHospitalReservations()).thenReturn(List.of());
 
         mockMvc.perform(get("/dispatch/hospital-queue"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("dispatch/hospital-queue"))
-                .andExpect(model().attributeExists("hospitals", "assignedEmergencies", "waitingHospitalQueue", "exhaustedNotices"));
+                .andExpect(model().attributeExists(
+                        "hospitals", "assignedEmergencies", "waitingHospitalQueue",
+                        "inTransportEmergencies", "completedEmergencies", "hospitalReservations", "exhaustedNotices"));
     }
 
     @Test
@@ -77,6 +91,9 @@ class HospitalDispatchControllerTest {
         when(hospitalDispatchApplicationService.listAssignedEmergencies()).thenReturn(List.of());
         when(hospitalDispatchApplicationService.listWaitingHospitalQueue()).thenReturn(List.of());
         when(hospitalDispatchApplicationService.listRecentHospitalExhaustedNotices()).thenReturn(List.of());
+        when(deliveryAndDischargeApplicationService.listInTransportEmergencies()).thenReturn(List.of());
+        when(deliveryAndDischargeApplicationService.listCompletedEmergencies()).thenReturn(List.of());
+        when(deliveryAndDischargeApplicationService.listHospitalReservations()).thenReturn(List.of());
 
         mockMvc.perform(post("/dispatch/hospital-queue/evaluate"))
                 .andExpect(status().isOk())
@@ -97,5 +114,37 @@ class HospitalDispatchControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/emergencies/EMG-00001"))
                 .andExpect(flash().attributeExists("hospitalDispatchMessage"));
+    }
+
+    @Test
+    @DisplayName("POST /dispatch/emergencies/{id}/deliver confirma entrega HU-11 y redirige con flash")
+    void shouldConfirmHospitalDeliveryAndRedirectOnSuccess() throws Exception {
+        Emergency completed = sampleWaitingEmergency()
+                .reserveHospitalAndStartTransport("HOSP-01", LogicalTime.of(5L))
+                .completeHospitalDelivery(LogicalTime.of(6L));
+        WaitingQueueEvaluationResult queueEval = new WaitingQueueEvaluationResult(0, 0, 0, List.of(), "Sin cola");
+        HospitalDeliveryResult result = new HospitalDeliveryResult(
+                "HOSP-DEL-1", HospitalDeliveryOutcome.COMPLETED, completed, null, null, null, queueEval, "Entregado");
+        when(deliveryAndDischargeApplicationService.confirmHospitalDelivery("EMG-00001")).thenReturn(result);
+
+        mockMvc.perform(post("/dispatch/emergencies/EMG-00001/deliver"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/emergencies/EMG-00001"))
+                .andExpect(flash().attributeExists("deliverySuccessMessage"));
+    }
+
+    @Test
+    @DisplayName("POST /dispatch/hospital-reservations/{reservationId}/discharge ejecuta alta simulada HU-12 y redirige")
+    void shouldExecuteSimulatedDischargeAndRedirect() throws Exception {
+        WaitingHospitalQueueEvaluationResult hospEval =
+                new WaitingHospitalQueueEvaluationResult(0, 0, 0, List.of(), "Sin espera");
+        HospitalDischargeResult result = new HospitalDischargeResult(
+                "HOSP-DIS-1", HospitalDischargeOutcome.DISCHARGED, null, null, hospEval, "Alta ejecutada");
+        when(deliveryAndDischargeApplicationService.executeSimulatedDischarge("RES-1")).thenReturn(result);
+
+        mockMvc.perform(post("/dispatch/hospital-reservations/RES-1/discharge"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dispatch/hospital-queue"))
+                .andExpect(flash().attributeExists("dischargeSuccessMessage"));
     }
 }

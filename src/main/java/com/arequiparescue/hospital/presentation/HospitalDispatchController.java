@@ -3,9 +3,14 @@ package com.arequiparescue.hospital.presentation;
 import com.arequiparescue.dispatch.domain.port.DispatchTraceabilityRepository;
 import com.arequiparescue.emergency.presentation.EmergencyView;
 import com.arequiparescue.hospital.application.HospitalCatalogValidationException;
+import com.arequiparescue.hospital.application.HospitalDeliveryAndDischargeApplicationService;
+import com.arequiparescue.hospital.application.HospitalDeliveryResult;
+import com.arequiparescue.hospital.application.HospitalDischargeResult;
 import com.arequiparescue.hospital.application.HospitalDispatchApplicationService;
 import com.arequiparescue.hospital.application.HospitalReservationResult;
 import com.arequiparescue.hospital.application.WaitingHospitalQueueEvaluationResult;
+import com.arequiparescue.hospital.domain.HospitalDeliveryOutcome;
+import com.arequiparescue.hospital.domain.HospitalDischargeOutcome;
 import com.arequiparescue.hospital.domain.HospitalDispatchOutcome;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Controller;
@@ -21,17 +26,22 @@ import java.util.Objects;
 
 /**
  * Controlador Spring MVC para la confirmación de llegada al incidente ({@code ASSIGNED -> AT_INCIDENT}),
- * la selección y reserva hospitalaria concurrente (HU-09) y la gestión FIFO de la cola
- * {@code WAITING_HOSPITAL} (HU-10) por el Despachador ({@code ACT-02}).
+ * reserva hospitalaria concurrente (HU-09), gestión FIFO de {@code WAITING_HOSPITAL} (HU-10),
+ * entrega hospitalaria simulada (HU-11) y alta hospitalaria simulada (HU-12) por {@code ACT-02}/{@code ACT-03}.
  */
 @Controller
 @RequestMapping("/dispatch")
 public class HospitalDispatchController {
 
     private final HospitalDispatchApplicationService hospitalDispatchApplicationService;
+    private final HospitalDeliveryAndDischargeApplicationService deliveryAndDischargeApplicationService;
 
-    public HospitalDispatchController(HospitalDispatchApplicationService hospitalDispatchApplicationService) {
+    public HospitalDispatchController(
+            HospitalDispatchApplicationService hospitalDispatchApplicationService,
+            HospitalDeliveryAndDischargeApplicationService deliveryAndDischargeApplicationService
+    ) {
         this.hospitalDispatchApplicationService = Objects.requireNonNull(hospitalDispatchApplicationService);
+        this.deliveryAndDischargeApplicationService = Objects.requireNonNull(deliveryAndDischargeApplicationService);
     }
 
     @GetMapping("/hospital-queue")
@@ -77,6 +87,60 @@ public class HospitalDispatchController {
         return "dispatch/hospital-queue";
     }
 
+    @PostMapping("/emergencies/{id}/deliver")
+    public String confirmHospitalDelivery(
+            @PathVariable("id") String id,
+            Model model,
+            HttpServletResponse response,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            HospitalDeliveryResult result = deliveryAndDischargeApplicationService.confirmHospitalDelivery(id);
+            String targetId = result.emergency().id().value();
+            if (result.outcome() == HospitalDeliveryOutcome.COMPLETED) {
+                String queueNote = result.ambulanceQueueEvaluation() != null
+                        ? " | Reevaluación WAITING_AMBULANCE: " + result.ambulanceQueueEvaluation().summaryMessage()
+                        : "";
+                redirectAttributes.addFlashAttribute("deliverySuccessMessage", result.message() + queueNote);
+            } else {
+                redirectAttributes.addFlashAttribute("deliveryDuplicateMessage", result.message());
+            }
+            return "redirect:/emergencies/" + targetId;
+        } catch (HospitalCatalogValidationException ex) {
+            model.addAttribute("errorMessage", ex.getMessage());
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            populateQueueModel(model);
+            return "dispatch/hospital-queue";
+        }
+    }
+
+    @PostMapping("/hospital-reservations/{reservationId}/discharge")
+    public String executeSimulatedDischarge(
+            @PathVariable("reservationId") String reservationId,
+            Model model,
+            HttpServletResponse response,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            HospitalDischargeResult result =
+                    deliveryAndDischargeApplicationService.executeSimulatedDischarge(reservationId);
+            if (result.outcome() == HospitalDischargeOutcome.DISCHARGED) {
+                String queueNote = result.hospitalQueueEvaluation() != null
+                        ? " | Reevaluación WAITING_HOSPITAL: " + result.hospitalQueueEvaluation().summaryMessage()
+                        : "";
+                redirectAttributes.addFlashAttribute("dischargeSuccessMessage", result.message() + queueNote);
+            } else {
+                redirectAttributes.addFlashAttribute("dischargeDuplicateMessage", result.message());
+            }
+            return "redirect:/dispatch/hospital-queue";
+        } catch (HospitalCatalogValidationException ex) {
+            model.addAttribute("errorMessage", ex.getMessage());
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            populateQueueModel(model);
+            return "dispatch/hospital-queue";
+        }
+    }
+
     private void populateQueueModel(Model model) {
         List<HospitalView> hospitals = hospitalDispatchApplicationService.listHospitalsOrderById().stream()
                 .map(HospitalView::fromDomain)
@@ -87,12 +151,24 @@ public class HospitalDispatchController {
         List<EmergencyView> waitingHospitalQueue = hospitalDispatchApplicationService.listWaitingHospitalQueue().stream()
                 .map(EmergencyView::fromDomain)
                 .toList();
+        List<EmergencyView> inTransportEmergencies = deliveryAndDischargeApplicationService.listInTransportEmergencies().stream()
+                .map(EmergencyView::fromDomain)
+                .toList();
+        List<EmergencyView> completedEmergencies = deliveryAndDischargeApplicationService.listCompletedEmergencies().stream()
+                .map(EmergencyView::fromDomain)
+                .toList();
+        List<HospitalReservationView> hospitalReservations = deliveryAndDischargeApplicationService.listHospitalReservations().stream()
+                .map(HospitalReservationView::fromDomain)
+                .toList();
         List<DispatchTraceabilityRepository.ExhaustedDispatchNotice> exhaustedNotices =
                 hospitalDispatchApplicationService.listRecentHospitalExhaustedNotices();
 
         model.addAttribute("hospitals", hospitals);
         model.addAttribute("assignedEmergencies", assignedEmergencies);
         model.addAttribute("waitingHospitalQueue", waitingHospitalQueue);
+        model.addAttribute("inTransportEmergencies", inTransportEmergencies);
+        model.addAttribute("completedEmergencies", completedEmergencies);
+        model.addAttribute("hospitalReservations", hospitalReservations);
         model.addAttribute("exhaustedNotices", exhaustedNotices);
     }
 }

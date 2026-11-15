@@ -205,4 +205,50 @@ public final class Hospital {
                 this.occupiedSlots
         );
     }
+
+    /**
+     * HU-11 (RN-HOS-012, CA-HOS-10): Convierte una plaza reservada en ocupada
+     * ({@code R = R - 1}, {@code O = O + 1}, {@code D} sin cambios) sin consumir una segunda plaza
+     * e independientemente de que {@code D = 0} o el hospital haya sido deshabilitado tras la reserva.
+     */
+    public Hospital convertReservationToOccupation() {
+        if (this.reservedSlots < 1) {
+            throw new IllegalStateException(
+                    "El hospital " + this.id + " no tiene plazas reservadas (R = 0) para convertir en ocupación.");
+        }
+        int nextReserved = this.reservedSlots - 1;
+        int nextOccupied = Math.addExact(this.occupiedSlots, 1);
+        validateCapacityInvariants(this.totalCapacity, nextReserved, nextOccupied);
+        return new Hospital(
+                this.id,
+                this.name,
+                this.locationNode,
+                this.enabled,
+                this.totalCapacity,
+                nextReserved,
+                nextOccupied
+        );
+    }
+
+    /**
+     * HU-12 (RN-HOS-013, CA-HOS-11): Libera una plaza ocupada mediante alta simulada
+     * ({@code O = O - 1}, {@code D = D + 1}) impidiendo valores negativos.
+     */
+    public Hospital dischargeOccupiedSlot() {
+        if (this.occupiedSlots < 1) {
+            throw new IllegalStateException(
+                    "El hospital " + this.id + " no tiene plazas ocupadas (O = 0) para liberar por alta simulada.");
+        }
+        int nextOccupied = this.occupiedSlots - 1;
+        validateCapacityInvariants(this.totalCapacity, this.reservedSlots, nextOccupied);
+        return new Hospital(
+                this.id,
+                this.name,
+                this.locationNode,
+                this.enabled,
+                this.totalCapacity,
+                this.reservedSlots,
+                nextOccupied
+        );
+    }
 }

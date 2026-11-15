@@ -152,6 +152,27 @@ public final class Ambulance {
         );
     }
 
+    /**
+     * Ejecuta la transición T-AMB-04 (TRANSPORTING -> AVAILABLE) al confirmar la entrega simulada
+     * en el hospital reservado, actualizando {@code currentNode} al nodo del hospital y limpiando
+     * el vínculo activo con la emergencia (HU-11, RN-RUT-008, CA-HOS-13, INV-SM-03, INV-SM-07).
+     */
+    public Ambulance completeDeliveryAtHospital(NodeId hospitalNode) {
+        Objects.requireNonNull(hospitalNode, "El nodo del hospital de entrega es obligatorio.");
+        if (this.state != AmbulanceState.TRANSPORTING || this.assignedEmergencyId == null) {
+            throw new IllegalStateException(
+                    "Solo una ambulancia en estado TRANSPORTING puede completar entrega y quedar AVAILABLE. Estado actual: "
+                            + this.state);
+        }
+        return new Ambulance(
+                this.id,
+                this.equipmentType,
+                hospitalNode,
+                AmbulanceState.AVAILABLE,
+                null
+        );
+    }
+
     public AmbulanceId id() {
         return id;
     }
