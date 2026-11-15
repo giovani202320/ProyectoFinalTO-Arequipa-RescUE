@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Alert banner -->
+<div th:fragment="alertBanner(tone, message)"
+     th:if="${message != null and !#strings.isEmpty(message)}"
+     class="are-alert mb-3"
+     th:classappend="${tone == 'success' ? 'are-alert-success' : (tone == 'warning' ? 'are-alert-warning' : 'are-alert-danger')}"
+     th:attr="role=${tone == 'danger' ? 'alert' : 'status'}">
+    <i th:attr="data-lucide=${tone == 'success' ? 'check-circle-2' : (tone == 'warning' ? 'alert-triangle' : 'alert-circle')}"
+       class="are-nav-icon mt-1" aria-hidden="true"></i>
+    <div th:text="${message}">Mensaje informativo</div>
+</div>
+
+<!-- Standard flash & model alerts -->
+<div th:fragment="flashAlerts">
+    <div th:replace="~{fragments/components :: alertBanner('success', ${successMessage})}"></div>
+    <div th:replace="~{fragments/components :: alertBanner('warning', ${warnMessage})}"></div>
+    <div th:replace="~{fragments/components :: alertBanner('danger', ${errorMessage})}"></div>
+</div>
+
+<!-- Semantic status badge -->
+<span th:fragment="statusBadge(label, tone)"
+      class="are-badge"
+      th:classappend="'are-badge-' + ${tone}"
+      th:text="${label}">Estado</span>
+
+<!-- Action link button -->
+<a th:fragment="actionLink(href, label, variant, icon)"
+   th:href="${href}"
+   class="btn d-inline-flex align-items-center gap-2"
+   th:classappend="${variant == 'primary' ? 'btn-are-primary' : 'btn-are-outline'}">
+    <i th:if="${icon != null}" th:attr="data-lucide=${icon}" class="are-nav-icon" aria-hidden="true"></i>
+    <span th:text="${label}">Acción</span>
+</a>
+
+<!-- Informational card -->
+<section th:fragment="infoCard(title, subtitle, icon, bodyContent)" class="are-card h-100">
+    <div class="are-card-header">
+        <div class="d-flex align-items-center gap-2">
+            <span th:if="${icon != null}" class="are-module-icon" aria-hidden="true">
+                <i th:attr="data-lucide=${icon}"></i>
+            </span>
+            <div>
+                <h2 class="are-card-title" th:text="${title}">Título</h2>
+                <p th:if="${subtitle != null}" class="text-muted small mb-0" th:text="${subtitle}">Subtítulo</p>
+            </div>
+        </div>
+    </div>
+    <div class="are-card-body" th:insert="${bodyContent}"></div>
+</section>
+
+<!-- Responsive table wrapper -->
+<div th:fragment="tableWrapper(tableContent)" class="are-table-wrap">
+    <div th:insert="${tableContent}"></div>
+</div>
+
+<!-- Accessible form field wrapper -->
+<div th:fragment="formField(fieldId, label, hint, controlContent)" class="mb-3">
+    <label th:for="${fieldId}" class="form-label fw-semibold" th:text="${label}">Campo</label>
+    <div th:insert="${controlContent}"></div>
+    <div th:if="${hint != null}" class="form-text" th:text="${hint}">Ayuda</div>
+</div>
+
+</body>
+</html>

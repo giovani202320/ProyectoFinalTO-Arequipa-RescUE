@@ -94,6 +94,6 @@ class ArequipaRescueApplicationSmokeTest {
         assertThat(response.getBody())
                 .contains("ARE — Arequipa RescUE")
                 .contains("Simulador académico")
-                .contains("Incremento 01");
+                .contains("Centro de operaciones");
     }
 }

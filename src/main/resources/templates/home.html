@@ -1,130 +1,231 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${status.systemTitle}">ARE — Arequipa RescUE</title>
-    <style>
-        :root {
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --border: #cbd5e1;
-            --primary: #1e3a8a;
-            --text: #0f172a;
-            --muted: #475569;
-            --badge-bg: #dbeafe;
-            --badge-fg: #1e40af;
-        }
-        * {
-            box-sizing: border-box;
-        }
-        body {
-            margin: 0;
-            padding: 2.5rem 1.25rem;
-            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-        }
-        main {
-            max-width: 760px;
-            margin: 0 auto;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 2rem;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
-        }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            background: var(--badge-bg);
-            color: var(--badge-fg);
-            font-weight: 600;
-            font-size: 0.875rem;
-            margin-bottom: 0.75rem;
-        }
-        h1 {
-            margin: 0 0 0.75rem 0;
-            color: var(--primary);
-            font-size: 1.85rem;
-        }
-        p.lead {
-            margin: 0 0 1.5rem 0;
-            color: var(--muted);
-            font-size: 1.05rem;
-        }
-        dl {
-            display: grid;
-            grid-template-columns: 220px 1fr;
-            gap: 0.65rem 1rem;
-            margin: 0;
-            padding-top: 1.25rem;
-            border-top: 1px solid var(--border);
-        }
-        dt {
-            font-weight: 600;
-            color: var(--text);
-        }
-        dd {
-            margin: 0;
-            color: var(--muted);
-        }
-        footer {
-            margin-top: 1.5rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border);
-            font-size: 0.85rem;
-            color: var(--muted);
-        }
-    </style>
-</head>
+<head th:replace="~{fragments/layout :: head(${status.systemTitle})}"></head>
 <body>
-<main>
-    <span class="badge" th:text="${status.implementationStage}">Estado de implementación: Incremento 01</span>
-    <h1 th:text="${status.systemTitle}">ARE — Arequipa RescUE</h1>
-    <p class="lead" th:text="${status.academicDescription}">
-        Simulador académico de atención de emergencias médicas, despacho concurrente de ambulancias,
-        cálculo de rutas mediante Dijkstra sobre una red vial simplificada de Arequipa y gestión
-        simulada de capacidad hospitalaria.
-    </p>
 
-    <dl>
-        <dt>Estado de implementación</dt>
-        <dd th:text="${status.implementationStage}">Incremento 01</dd>
+<div th:replace="~{fragments/layout :: appShell(${status.systemTitle}, 'Panel operativo de coordinación y simulación académica', 'home', ~{::homeContent})}"></div>
 
-        <dt>Estilo arquitectónico</dt>
-        <dd th:text="${status.architectureSummary}">Monolito modular con principios de arquitectura hexagonal y presentación Spring MVC + Thymeleaf</dd>
+<th:block th:fragment="homeContent">
+    <!-- Hero / System Overview -->
+    <section class="are-hero mb-4" aria-labelledby="are-hero-title">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <div>
+                <div class="mb-2">
+                    <span th:replace="~{fragments/components :: statusBadge('Centro de operaciones', 'primary')}"></span>
+                </div>
+                <h2 id="are-hero-title" class="h4 fw-bold text-dark mb-2" th:text="${status.systemTitle}">
+                    ARE — Arequipa RescUE
+                </h2>
+                <p class="text-secondary mb-0" th:text="${status.academicDescription}">
+                    Simulador académico de atención de emergencias médicas, despacho concurrente de ambulancias,
+                    cálculo de rutas mediante Dijkstra sobre una red vial simplificada de Arequipa y gestión
+                    simulada de capacidad hospitalaria.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+                <a th:replace="~{fragments/components :: actionLink(@{/emergencies/new}, 'Registrar emergencia', 'primary', 'plus-circle')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/emergencies}, 'Consultar emergencias', 'outline', 'list')}"></a>
+            </div>
+        </div>
+    </section>
 
-        <dt>Base técnica activa</dt>
-        <dd>Java 21 LTS, Spring Boot 3.4.5, MySQL 8.4 LTS (Flyway), grafo inicial N01–N10 y reloj lógico monotónico (t &gt;= 0)</dd>
+    <!-- Operational Modules Grid -->
+    <section aria-labelledby="are-modules-heading" class="mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h2 id="are-modules-heading" class="h5 fw-bold mb-0" style="color: var(--are-navy);">
+                Módulos operativos
+            </h2>
+            <span class="text-muted small">Accesos directos a rutas activas del sistema</span>
+        </div>
 
-        <dt>Operaciones disponibles (Incremento 02 — Entrega 1)</dt>
-        <dd>
-            <a th:href="@{/emergencies/new}">Registrar emergencia simulada (HU-01)</a> |
-            <a th:href="@{/emergencies}">Consultar emergencias y estados (HU-02)</a>
-        </dd>
+        <div class="row g-3">
+            <div class="col-12 col-md-6 col-xl-4">
+                <article class="are-card are-card-interactive h-100 d-flex flex-column">
+                    <div class="are-card-body flex-grow-1">
+                        <div class="d-flex align-items-start gap-3 mb-3">
+                            <span class="are-module-icon" aria-hidden="true">
+                                <i data-lucide="siren"></i>
+                            </span>
+                            <div>
+                                <h3 class="are-card-title">Emergencias</h3>
+                                <p class="text-muted small mb-0">Registro, triage y ciclo prehospitalario (HU-01, HU-02)</p>
+                            </div>
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Registre nuevas solicitudes simuladas y consulte su estado operativo y trazabilidad.
+                        </p>
+                    </div>
+                    <div class="px-3 pb-3 d-flex flex-wrap gap-2">
+                        <a th:href="@{/emergencies/new}" class="btn btn-sm btn-are-primary">Registrar</a>
+                        <a th:href="@{/emergencies}" class="btn btn-sm btn-are-outline">Ver listado</a>
+                    </div>
+                </article>
+            </div>
 
-        <dt>Operaciones disponibles (Incremento 02 — Entrega 2)</dt>
-        <dd>
-            <a th:href="@{/admin/ambulances}">Administrar ambulancias (HU-03)</a> |
-            <a th:href="@{/admin/hospitals}">Administrar hospitales (HU-03)</a> |
-            <a th:href="@{/admin/topology}">Consultar topología N01–N10 (HU-03)</a> |
-            <a th:href="@{/admin/triage-rules}">Versiones de reglas — Admin (HU-04)</a> |
-            <a th:href="@{/triage-rules}">Reglas vigentes — Solo lectura (HU-04)</a>
-        </dd>
+            <div class="col-12 col-md-6 col-xl-4">
+                <article class="are-card are-card-interactive h-100 d-flex flex-column">
+                    <div class="are-card-body flex-grow-1">
+                        <div class="d-flex align-items-start gap-3 mb-3">
+                            <span class="are-module-icon" aria-hidden="true">
+                                <i data-lucide="radio"></i>
+                            </span>
+                            <div>
+                                <h3 class="are-card-title">Despacho y colas</h3>
+                                <p class="text-muted small mb-0">Asignación FIFO y recepción hospitalaria (HU-08, HU-10)</p>
+                            </div>
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Supervise emergencias en espera de ambulancia o de cupo hospitalario bajo control concurrente.
+                        </p>
+                    </div>
+                    <div class="px-3 pb-3 d-flex flex-wrap gap-2">
+                        <a th:href="@{/dispatch/waiting-queue}" class="btn btn-sm btn-are-primary">Cola ambulancias</a>
+                        <a th:href="@{/dispatch/hospital-queue}" class="btn btn-sm btn-are-outline">Cola hospitalaria</a>
+                    </div>
+                </article>
+            </div>
 
-        <dt>Operaciones disponibles (Incremento 05 y 06)</dt>
-        <dd>
-            <a th:href="@{/simulation}">Control de escenarios y reloj lógico (HU-13)</a> |
-            <a th:href="@{/reporting}">Métricas experimentales y registro trazable (HU-14)</a>
-        </dd>
-    </dl>
+            <div class="col-12 col-md-6 col-xl-4">
+                <article class="are-card are-card-interactive h-100 d-flex flex-column">
+                    <div class="are-card-body flex-grow-1">
+                        <div class="d-flex align-items-start gap-3 mb-3">
+                            <span class="are-module-icon" aria-hidden="true">
+                                <i data-lucide="ambulance"></i>
+                            </span>
+                            <div>
+                                <h3 class="are-card-title">Ambulancias</h3>
+                                <p class="text-muted small mb-0">Flota básica y especializada (HU-03)</p>
+                            </div>
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Administre unidades disponibles, su nodo inicial en la red N01–N10 y su nivel de equipamiento.
+                        </p>
+                    </div>
+                    <div class="px-3 pb-3">
+                        <a th:href="@{/admin/ambulances}" class="btn btn-sm btn-are-outline">Administrar flota</a>
+                    </div>
+                </article>
+            </div>
 
-    <footer>
-        Proyecto académico de ingeniería de software. Exclusivamente para simulación y experimentación académica (DEC-001).
-    </footer>
-</main>
+            <div class="col-12 col-md-6 col-xl-4">
+                <article class="are-card are-card-interactive h-100 d-flex flex-column">
+                    <div class="are-card-body flex-grow-1">
+                        <div class="d-flex align-items-start gap-3 mb-3">
+                            <span class="are-module-icon" aria-hidden="true">
+                                <i data-lucide="hospital"></i>
+                            </span>
+                            <div>
+                                <h3 class="are-card-title">Hospitales</h3>
+                                <p class="text-muted small mb-0">Capacidad total, reservas y ocupación (HU-03, HU-12)</p>
+                            </div>
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Gestione establecimientos habilitados y su capacidad operativa para traslado y entrega.
+                        </p>
+                    </div>
+                    <div class="px-3 pb-3">
+                        <a th:href="@{/admin/hospitals}" class="btn btn-sm btn-are-outline">Administrar hospitales</a>
+                    </div>
+                </article>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <article class="are-card are-card-interactive h-100 d-flex flex-column">
+                    <div class="are-card-body flex-grow-1">
+                        <div class="d-flex align-items-start gap-3 mb-3">
+                            <span class="are-module-icon" aria-hidden="true">
+                                <i data-lucide="clock"></i>
+                            </span>
+                            <div>
+                                <h3 class="are-card-title">Simulación</h3>
+                                <p class="text-muted small mb-0">Escenarios y reloj lógico monotónico (HU-13)</p>
+                            </div>
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Controle escenarios experimentales, programe eventos discretos y avance el tiempo lógico t.
+                        </p>
+                    </div>
+                    <div class="px-3 pb-3">
+                        <a th:href="@{/simulation}" class="btn btn-sm btn-are-primary">Control de simulación</a>
+                    </div>
+                </article>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <article class="are-card are-card-interactive h-100 d-flex flex-column">
+                    <div class="are-card-body flex-grow-1">
+                        <div class="d-flex align-items-start gap-3 mb-3">
+                            <span class="are-module-icon" aria-hidden="true">
+                                <i data-lucide="bar-chart-3"></i>
+                            </span>
+                            <div>
+                                <h3 class="are-card-title">Reportes y métricas</h3>
+                                <p class="text-muted small mb-0">Indicadores experimentales y trazabilidad (HU-14)</p>
+                            </div>
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Consulte tiempos promedio, utilización de flota, contención concurrente y registro experimental.
+                        </p>
+                    </div>
+                    <div class="px-3 pb-3">
+                        <a th:href="@{/reporting}" class="btn btn-sm btn-are-outline">Ver reportes</a>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- Configuration, Topology & Architecture Summary -->
+    <div class="row g-3">
+        <div class="col-12 col-lg-5">
+            <section class="are-card h-100" aria-labelledby="are-config-heading">
+                <div class="are-card-header">
+                    <h2 id="are-config-heading" class="are-card-title">Configuración y red vial</h2>
+                </div>
+                <div class="are-card-body d-flex flex-column gap-2">
+                    <a th:href="@{/admin/topology}" class="btn btn-sm btn-are-outline text-start d-flex align-items-center gap-2">
+                        <i data-lucide="map" class="are-nav-icon" aria-hidden="true"></i>
+                        <span>Consultar topología N01–N10 (HU-03)</span>
+                    </a>
+                    <a th:href="@{/admin/triage-rules}" class="btn btn-sm btn-are-outline text-start d-flex align-items-center gap-2">
+                        <i data-lucide="sliders-horizontal" class="are-nav-icon" aria-hidden="true"></i>
+                        <span>Versiones de reglas de triage — Admin (HU-04)</span>
+                    </a>
+                    <a th:href="@{/triage-rules}" class="btn btn-sm btn-are-outline text-start d-flex align-items-center gap-2">
+                        <i data-lucide="file-text" class="are-nav-icon" aria-hidden="true"></i>
+                        <span>Reglas vigentes — Solo lectura (HU-04)</span>
+                    </a>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12 col-lg-7">
+            <section class="are-card h-100" aria-labelledby="are-tech-heading">
+                <div class="are-card-header">
+                    <h2 id="are-tech-heading" class="are-card-title">Arquitectura y base técnica</h2>
+                </div>
+                <div class="are-card-body">
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-4 text-dark">Estilo arquitectónico</dt>
+                        <dd class="col-sm-8 text-secondary" th:text="${status.architectureSummary}">
+                            Monolito modular con principios de arquitectura hexagonal y presentación Spring MVC + Thymeleaf
+                        </dd>
+
+                        <dt class="col-sm-4 text-dark">Base técnica activa</dt>
+                        <dd class="col-sm-8 text-secondary">
+                            Java 21 LTS, Spring Boot 3.4.5, MySQL 8.4 LTS (Flyway), grafo inicial N01–N10 y reloj lógico monotónico (t &gt;= 0)
+                        </dd>
+
+                        <dt class="col-sm-4 text-dark mb-0">Sistema visual</dt>
+                        <dd class="col-sm-8 text-secondary mb-0">
+                            Bootstrap 5.3.3 local, CSS de identidad ARE y Lucide Icons 0.469.0 sin dependencias externas en ejecución
+                        </dd>
+                    </dl>
+                </div>
+            </section>
+        </div>
+    </div>
+</th:block>
+
 </body>
 </html>

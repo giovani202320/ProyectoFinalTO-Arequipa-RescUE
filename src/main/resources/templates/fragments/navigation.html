@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<body>
+<nav th:fragment="sidebarNav(activeSection)" aria-label="Navegación principal del simulador">
+    <div class="are-brand">
+        <p class="are-brand-title">ARE — Arequipa RescUE</p>
+        <p class="are-brand-subtitle">Coordinación de emergencias médicas</p>
+    </div>
+
+    <div class="are-nav-group-label">Operación principal</div>
+    <ul class="are-nav-list">
+        <li>
+            <a class="are-nav-link" th:classappend="${activeSection == 'home'} ? ' active'"
+               th:attr="aria-current=${activeSection == 'home'} ? 'page' : null"
+               th:href="@{/}">
+                <i data-lucide="layout-dashboard" class="are-nav-icon" aria-hidden="true"></i>
+                <span>Inicio</span>
+            </a>
+        </li>
+        <li>
+            <a class="are-nav-link" th:classappend="${activeSection == 'emergencies'} ? ' active'"
+               th:attr="aria-current=${activeSection == 'emergencies'} ? 'page' : null"
+               th:href="@{/emergencies}">
+                <i data-lucide="siren" class="are-nav-icon" aria-hidden="true"></i>
+                <span>Emergencias</span>
+            </a>
+        </li>
+        <li>
+            <a class="are-nav-link" th:classappend="${activeSection == 'ambulances'} ? ' active'"
+               th:attr="aria-current=${activeSection == 'ambulances'} ? 'page' : null"
+               th:href="@{/admin/ambulances}">
+                <i data-lucide="ambulance" class="are-nav-icon" aria-hidden="true"></i>
+                <span>Ambulancias</span>
+            </a>
+        </li>
+        <li>
+            <a class="are-nav-link" th:classappend="${activeSection == 'hospitals'} ? ' active'"
+               th:attr="aria-current=${activeSection == 'hospitals'} ? 'page' : null"
+               th:href="@{/admin/hospitals}">
+                <i data-lucide="hospital" class="are-nav-icon" aria-hidden="true"></i>
+                <span>Hospitales</span>
+            </a>
+        </li>
+        <li>
+            <a class="are-nav-link" th:classappend="${activeSection == 'dispatch'} ? ' active'"
+               th:attr="aria-current=${activeSection == 'dispatch'} ? 'page' : null"
+               th:href="@{/dispatch/waiting-queue}">
+                <i data-lucide="radio" class="are-nav-icon" aria-hidden="true"></i>
+                <span>Despacho</span>
+            </a>
+        </li>
+        <li>
+            <a class="are-nav-link" th:classappend="${activeSection == 'hospital-queue'} ? ' active'"
+               th:attr="aria-current=${activeSection == 'hospital-queue'} ? 'page' : null"
+               th:href="@{/dispatch/hospital-queue}">
+                <i data-lucide="bed-double" class="are-nav-icon" aria-hidden="true"></i>
+                <span>Cola hospitalaria</span>
+            </a>
+        </li>
+        <li>
+            <a class="are-nav-link" th:classappend="${activeSection == 'simulation'} ? ' active'"
+               th:attr="aria-current=${activeSection == 'simulation'} ? 'page' : null"
+               th:href="@{/simulation}">
+                <i data-lucide="clock" class="are-nav-icon" aria-hidden="true"></i>
+                <span>Simulación</span>
+            </a>
+        </li>
+        <li>
+            <a class="are-nav-link" th:classappend="${activeSection == 'reporting'} ? ' active'"
+               th:attr="aria-current=${activeSection == 'reporting'} ? 'page' : null"
+               th:href="@{/reporting}">
+                <i data-lucide="bar-chart-3" class="are-nav-icon" aria-hidden="true"></i>
+                <span>Reportes</span>
+            </a>
+        </li>
+    </ul>
+
+    <div class="are-nav-group-label">Red vial y reglas</div>
+    <ul class="are-nav-list">
+        <li>
+            <a class="are-nav-link" th:classappend="${activeSection == 'topology'} ? ' active'"
+               th:attr="aria-current=${activeSection == 'topology'} ? 'page' : null"
+               th:href="@{/admin/topology}">
+                <i data-lucide="map" class="are-nav-icon" aria-hidden="true"></i>
+                <span>Topología N01–N10</span>
+            </a>
+        </li>
+        <li>
+            <a class="are-nav-link" th:classappend="${activeSection == 'triage-rules-admin'} ? ' active'"
+               th:attr="aria-current=${activeSection == 'triage-rules-admin'} ? 'page' : null"
+               th:href="@{/admin/triage-rules}">
+                <i data-lucide="sliders-horizontal" class="are-nav-icon" aria-hidden="true"></i>
+                <span>Reglas de triage (Admin)</span>
+            </a>
+        </li>
+        <li>
+            <a class="are-nav-link" th:classappend="${activeSection == 'triage-rules-readonly'} ? ' active'"
+               th:attr="aria-current=${activeSection == 'triage-rules-readonly'} ? 'page' : null"
+               th:href="@{/triage-rules}">
+                <i data-lucide="file-text" class="are-nav-icon" aria-hidden="true"></i>
+                <span>Reglas vigentes</span>
+            </a>
+        </li>
+    </ul>
+
+    <div class="are-sidebar-footer">
+        Uso académico exclusivo (DEC-001).<br>
+        No apto para despacho clínico real.
+    </div>
+</nav>
+</body>
+</html>
