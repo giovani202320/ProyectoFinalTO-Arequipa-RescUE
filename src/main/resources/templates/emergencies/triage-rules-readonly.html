@@ -1,9 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Reglas de triage vigentes')}"></head>
-<body>
-
-<div th:replace="~{fragments/layout :: appShell('Reglas de triage vigentes', 'Consulta en modo de solo lectura (HU-04 — DEC-009)', 'triage-rules-readonly', ~{::triageReadonlyContent})}"></div>
+<body th:replace="~{fragments/layout :: appShell('Reglas de triage vigentes', 'Consulta en modo de solo lectura (HU-04 — DEC-009)', 'triage-rules-readonly', ~{::triageReadonlyContent})}">
 
 <th:block th:fragment="triageReadonlyContent">
     <!-- Header & Role Switcher (Read-Only) -->

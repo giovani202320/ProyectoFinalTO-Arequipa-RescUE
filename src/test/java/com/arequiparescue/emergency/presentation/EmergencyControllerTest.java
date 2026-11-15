@@ -17,6 +17,7 @@ import com.arequiparescue.routing.domain.GraphNode;
 import com.arequiparescue.routing.domain.NodeId;
 import com.arequiparescue.shared.domain.LogicalTime;
 import com.arequiparescue.shared.presentation.AreUiFormatter;
+import com.arequiparescue.shared.presentation.HtmlStructureAssertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -67,13 +69,19 @@ class EmergencyControllerTest {
     @Test
     @DisplayName("GET /emergencies/new renderiza el formulario Thymeleaf con los 3 campos aprobados (HU-01)")
     void shouldRenderRegistrationForm() throws Exception {
-        mockMvc.perform(get("/emergencies/new"))
+        String html = mockMvc.perform(get("/emergencies/new"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("emergencies/form"))
                 .andExpect(content().string(containsString("Registro y clasificación simulada de emergencia")))
                 .andExpect(content().string(containsString("INC-A")))
                 .andExpect(content().string(containsString("N01 — Cercado Centro")))
-                .andExpect(content().string(containsString("RUL-V01")));
+                .andExpect(content().string(containsString("RUL-V01")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        HtmlStructureAssertions.assertSingleAppShellStructure(html, "emergency-form-title");
+        assertThat(HtmlStructureAssertions.countOccurrences(html, "<form ")).isEqualTo(1);
     }
 
     @Test
@@ -174,7 +182,7 @@ class EmergencyControllerTest {
         when(emergencyApplicationService.getEmergencyById("EMG-99999"))
                 .thenThrow(new EmergencyNotFoundException("EMG-99999"));
 
-        mockMvc.perform(get("/emergencies"))
+        String listHtml = mockMvc.perform(get("/emergencies"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("emergencies/list"))
                 .andExpect(content().string(containsString("EMG-00001")))
@@ -183,13 +191,22 @@ class EmergencyControllerTest {
                 .andExpect(content().string(containsString("Básica")))
                 .andExpect(content().string(containsString("Registrada")))
                 .andExpect(content().string(containsString("/css/are-design-system.css")))
-                .andExpect(content().string(containsString("aria-current=\"page\"")));
+                .andExpect(content().string(containsString("aria-current=\"page\"")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(listHtml, "emergencies-page-title");
 
-        mockMvc.perform(get("/emergencies/EMG-00001"))
+        String detailHtml = mockMvc.perform(get("/emergencies/EMG-00001"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("emergencies/detail"))
                 .andExpect(content().string(containsString("EMG-00001")))
-                .andExpect(content().string(containsString("Sin descripción ficticia (vacía)")));
+                .andExpect(content().string(containsString("Sin descripción ficticia (vacía)")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(detailHtml, "detail-header-title");
+        assertThat(HtmlStructureAssertions.countOccurrences(detailHtml, "Detalle de emergencia")).isEqualTo(1);
 
         mockMvc.perform(get("/emergencies/EMG-99999"))
                 .andExpect(status().isNotFound())

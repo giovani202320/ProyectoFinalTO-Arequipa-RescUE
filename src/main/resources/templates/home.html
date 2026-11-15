@@ -1,9 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head(${status.systemTitle})}"></head>
-<body>
-
-<div th:replace="~{fragments/layout :: appShell(${status.systemTitle}, 'Panel operativo de coordinación y simulación académica', 'home', ~{::homeContent})}"></div>
+<body th:replace="~{fragments/layout :: appShell(${status.systemTitle}, 'Panel operativo de coordinación y simulación académica', 'home', ~{::homeContent})}">
 
 <th:block th:fragment="homeContent">
     <!-- Hero / System Overview -->

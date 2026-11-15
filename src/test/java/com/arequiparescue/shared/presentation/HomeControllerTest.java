@@ -22,7 +22,7 @@ class HomeControllerTest {
     @Test
     @DisplayName("GET / responde HTTP 200 y renderiza la vista Thymeleaf con identidad de ARE y Centro de operaciones")
     void shouldRenderHomePage() throws Exception {
-        mockMvc.perform(get("/"))
+        String html = mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("home"))
                 .andExpect(content().string(containsString("ARE — Arequipa RescUE")))
@@ -32,6 +32,11 @@ class HomeControllerTest {
                 .andExpect(content().string(containsString("/css/are-design-system.css")))
                 .andExpect(content().string(containsString("/vendor/lucide/0.469.0/lucide.min.js")))
                 .andExpect(content().string(containsString("aria-current=\"page\"")))
-                .andExpect(content().string(containsString("Módulos operativos")));
+                .andExpect(content().string(containsString("Módulos operativos")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        HtmlStructureAssertions.assertSingleAppShellStructure(html, "are-hero-title");
     }
 }

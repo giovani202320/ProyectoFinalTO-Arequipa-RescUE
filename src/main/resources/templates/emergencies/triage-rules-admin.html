@@ -1,9 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Reglas de triage — Administración')}"></head>
-<body>
-
-<div th:replace="~{fragments/layout :: appShell('Reglas de triage (Admin)', 'Gestión de versiones inmutables del catálogo (ACT-03 — HU-04)', 'triage-rules-admin', ~{::triageAdminContent})}"></div>
+<body th:replace="~{fragments/layout :: appShell('Reglas de triage (Admin)', 'Gestión de versiones inmutables del catálogo (ACT-03 — HU-04)', 'triage-rules-admin', ~{::triageAdminContent})}">
 
 <th:block th:fragment="triageAdminContent">
     <!-- Header -->

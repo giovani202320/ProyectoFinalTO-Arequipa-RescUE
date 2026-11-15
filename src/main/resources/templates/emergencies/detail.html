@@ -1,9 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Ficha ' + ${emergency.id})}"></head>
-<body>
-
-<div th:replace="~{fragments/layout :: appShell('Ficha de emergencia ' + ${emergency.id}, 'Seguimiento trazable del ciclo prehospitalario simulado (HU-01 / HU-02)', 'emergencies', ~{::emergencyDetailContent})}"></div>
+<body th:replace="~{fragments/layout :: appShell('Ficha de emergencia ' + ${emergency.id}, 'Seguimiento trazable del ciclo prehospitalario simulado (HU-01 / HU-02)', 'emergencies', ~{::emergencyDetailContent})}">
 
 <th:block th:fragment="emergencyDetailContent">
     <!-- Operational Banners (Success / Warning / Danger) -->

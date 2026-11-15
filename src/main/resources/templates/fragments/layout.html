@@ -7,9 +7,9 @@
     <link rel="stylesheet" th:href="@{/vendor/bootstrap/5.3.3/css/bootstrap.min.css}">
     <link rel="stylesheet" th:href="@{/css/are-design-system.css}">
 </head>
-<body>
+<body th:fragment="appShell(pageTitle, pageSubtitle, activeSection, content)">
 
-<div th:fragment="appShell(pageTitle, pageSubtitle, activeSection, content)" class="are-shell">
+<div class="are-shell">
     <a class="are-skip-link" href="#main-content">Saltar al contenido principal</a>
 
     <!-- Persistent desktop sidebar -->

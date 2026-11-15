@@ -1,9 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Registrar emergencia')}"></head>
-<body>
-
-<div th:replace="~{fragments/layout :: appShell('Registrar emergencia', 'Registro y clasificación simulada determinista (HU-01)', 'emergencies', ~{::emergencyFormContent})}"></div>
+<body th:replace="~{fragments/layout :: appShell('Registrar emergencia', 'Registro y clasificación simulada determinista (HU-01)', 'emergencies', ~{::emergencyFormContent})}">
 
 <th:block th:fragment="emergencyFormContent">
     <!-- Header & Active Context -->

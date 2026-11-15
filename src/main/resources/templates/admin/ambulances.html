@@ -1,9 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Ambulancias')}"></head>
-<body>
-
-<div th:replace="~{fragments/layout :: appShell('Ambulancias', 'Administración del catálogo de flota básica y especializada (HU-03)', 'ambulances', ~{::ambulancesContent})}"></div>
+<body th:replace="~{fragments/layout :: appShell('Ambulancias', 'Administración del catálogo de flota básica y especializada (HU-03)', 'ambulances', ~{::ambulancesContent})}">
 
 <th:block th:fragment="ambulancesContent">
     <!-- Header -->

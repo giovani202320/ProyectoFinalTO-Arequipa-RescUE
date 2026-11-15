@@ -28,6 +28,7 @@ import com.arequiparescue.routing.domain.port.RoadGraphRepository;
 import com.arequiparescue.routing.presentation.RoadGraphTopologyController;
 import com.arequiparescue.shared.domain.LogicalTime;
 import com.arequiparescue.shared.presentation.AreUiFormatter;
+import com.arequiparescue.shared.presentation.HtmlStructureAssertions;
 import com.arequiparescue.simulation.domain.port.ActiveScenarioChecker;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
@@ -114,7 +116,7 @@ class AdminAndRulesControllersTest {
         when(triageRuleCatalogService.listAllVersions()).thenReturn(List.of(v1));
         when(triageRuleCatalogService.isAnyScenarioActive()).thenReturn(false);
 
-        mockMvc.perform(get("/triage-rules").param("actor", "ACT-02"))
+        String readOnlyHtml = mockMvc.perform(get("/triage-rules").param("actor", "ACT-02"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Despachador (ACT-02)")))
                 .andExpect(content().string(containsString("RUL-V01")))
@@ -124,7 +126,11 @@ class AdminAndRulesControllersTest {
                 .andExpect(content().string(containsString("/css/are-design-system.css")))
                 .andExpect(content().string(not(containsString("<form"))))
                 .andExpect(content().string(not(containsString("type=\"submit\""))))
-                .andExpect(content().string(not(containsString("Publicar y activar"))));
+                .andExpect(content().string(not(containsString("Publicar y activar"))))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(readOnlyHtml, "triage-readonly-title");
     }
 
     @Test
@@ -136,9 +142,14 @@ class AdminAndRulesControllersTest {
         when(triageRuleCatalogService.listAllVersions()).thenReturn(List.of(v1));
         when(triageRuleCatalogService.isAnyScenarioActive()).thenReturn(false);
 
-        mockMvc.perform(get("/admin/triage-rules"))
+        String adminRulesHtml = mockMvc.perform(get("/admin/triage-rules"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("RUL-V01")));
+                .andExpect(content().string(containsString("RUL-V01")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(adminRulesHtml, "triage-admin-title");
+        assertThat(HtmlStructureAssertions.countOccurrences(adminRulesHtml, "<form ")).isEqualTo(1);
 
         when(triageRuleCatalogService.publishAndActivateNewVersion(any())).thenReturn(v2);
 
@@ -170,13 +181,18 @@ class AdminAndRulesControllersTest {
         when(ambulanceCatalogService.listAmbulances()).thenReturn(List.of(amb));
         when(activeScenarioChecker.isAnyScenarioActive()).thenReturn(false);
 
-        mockMvc.perform(get("/admin/ambulances"))
+        String ambulancesHtml = mockMvc.perform(get("/admin/ambulances"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("AMB-01")))
                 .andExpect(content().string(containsString("Especializada")))
                 .andExpect(content().string(containsString("Disponible")))
                 .andExpect(content().string(containsString("/css/are-design-system.css")))
-                .andExpect(content().string(containsString("aria-current=\"page\"")));
+                .andExpect(content().string(containsString("aria-current=\"page\"")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(ambulancesHtml, "ambulances-page-title");
+        assertThat(HtmlStructureAssertions.countOccurrences(ambulancesHtml, "<form ")).isEqualTo(2);
 
         when(ambulanceCatalogService.registerAmbulance(any())).thenReturn(amb);
 
@@ -212,13 +228,18 @@ class AdminAndRulesControllersTest {
         when(hospitalCatalogService.listHospitals()).thenReturn(List.of(hospital));
         when(activeScenarioChecker.isAnyScenarioActive()).thenReturn(false);
 
-        mockMvc.perform(get("/admin/hospitals"))
+        String hospitalsHtml = mockMvc.perform(get("/admin/hospitals"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("HOSP-01")))
                 .andExpect(content().string(containsString("Hospital Base")))
                 .andExpect(content().string(containsString("Habilitado")))
                 .andExpect(content().string(containsString("/css/are-design-system.css")))
-                .andExpect(content().string(containsString("aria-current=\"page\"")));
+                .andExpect(content().string(containsString("aria-current=\"page\"")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(hospitalsHtml, "hospitals-page-title");
+        assertThat(HtmlStructureAssertions.countOccurrences(hospitalsHtml, "<form ")).isEqualTo(2);
 
         when(hospitalCatalogService.registerHospital(any())).thenReturn(hospital);
 
