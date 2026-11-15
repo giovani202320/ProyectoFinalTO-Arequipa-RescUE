@@ -25,6 +25,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -77,6 +78,9 @@ class ArequipaRescueApplicationSmokeTest {
 
     @MockitoBean
     private SpringDataExperimentOperationResultRepository experimentOperationResultRepository;
+
+    @MockitoBean
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private TestRestTemplate restTemplate;

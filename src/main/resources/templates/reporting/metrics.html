@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Métricas y Registro Experimental (HU-14) — ARE (Arequipa RescUE)</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #cbd5e1;
+            --primary: #1e3a8a;
+            --primary-hover: #1d4ed8;
+            --text: #0f172a;
+            --muted: #475569;
+            --badge-bg: #dbeafe;
+            --badge-fg: #1e40af;
+            --warn-bg: #fffbeb;
+            --warn-border: #fcd34d;
+            --warn-fg: #92400e;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 2.5rem 1.25rem;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        main {
+            max-width: 1160px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        }
+        nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            font-size: 0.92rem;
+        }
+        nav a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            background: var(--badge-bg);
+            color: var(--badge-fg);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        h1 { margin: 0 0 0.5rem 0; color: var(--primary); font-size: 1.65rem; }
+        h2 { margin: 1.5rem 0 0.5rem 0; color: var(--primary); font-size: 1.15rem; }
+        h3 { margin: 0 0 0.35rem 0; color: var(--primary); font-size: 1rem; }
+        .lead, .muted { color: var(--muted); font-size: 0.92rem; }
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.85rem;
+            align-items: end;
+            padding: 1rem;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 1.25rem;
+        }
+        .filter-bar label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
+        .filter-bar select {
+            padding: 0.45rem 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #ffffff;
+            min-width: 210px;
+        }
+        button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            background: var(--primary);
+            color: #ffffff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:hover { background: var(--primary-hover); }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        .card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.15rem;
+            background: #f8fafc;
+        }
+        .metric-value {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text);
+            margin: 0.35rem 0;
+        }
+        .in-progress-box {
+            margin-top: 0.6rem;
+            padding: 0.55rem 0.7rem;
+            border-radius: 6px;
+            background: var(--warn-bg);
+            border: 1px solid var(--warn-border);
+            color: var(--warn-fg);
+            font-size: 0.85rem;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; font-size: 0.88rem; }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 0.48rem 0.6rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #f1f5f9; font-weight: 600; }
+        .pill {
+            display: inline-block;
+            padding: 0.12rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: var(--badge-bg);
+            color: var(--badge-fg);
+        }
+    </style>
+</head>
+<body>
+<main>
+    <nav>
+        <div>
+            <a th:href="@{/}">Inicio</a> |
+            <a th:href="@{/simulation}">Simulación (HU-13)</a> |
+            <a th:href="@{/emergencies}">Emergencias</a> |
+            <a th:href="@{/dispatch/waiting-queue}">Cola Ambulancias</a> |
+            <a th:href="@{/dispatch/hospital-queue}">Cola Hospitales</a>
+        </div>
+        <span>
+            Referencia lógica:
+            <strong th:text="${report.referenceScenarioId() != null ? report.referenceScenarioId() + ' (' + report.referenceScenarioStatus() + ')' : 'Sin escenario'}">SCN-01</strong>
+            — <strong th:text="'t=' + ${report.currentLogicalTicks()}">t=0</strong>
+        </span>
+    </nav>
+
+    <span class="badge">Incremento 06 — HU-14 (ACT-03)</span>
+    <h1>Catálogo de 7 Métricas Experimentales y Registro Trazable</h1>
+    <p class="lead">
+        Panel de solo lectura conforme a <code>RN-MET-003</code> y <code>RN-MET-004</code>. Separa mediciones cerradas
+        de emergencias aún en curso (para evidenciar <em>starvation</em> sin distorsionar promedios ni dividir por cero).
+    </p>
+
+    <form class="filter-bar" method="get" th:action="@{/reporting}">
+        <div>
+            <label for="scenarioId">Escenario de referencia temporal (t actual)</label>
+            <select id="scenarioId" name="scenarioId">
+                <option value="">Automático (ACTIVE o último)</option>
+                <option th:each="sc : ${scenarios}"
+                        th:value="${sc.id()}"
+                        th:selected="${sc.id() == selectedScenarioId}"
+                        th:text="${sc.id() + ' — ' + sc.name() + ' (' + sc.status() + ', t=' + sc.currentLogicalTicks() + ')'}">
+                </option>
+            </select>
+        </div>
+        <div>
+            <label for="state">Filtrar registro trazable por estado</label>
+            <select id="state" name="state">
+                <option value="" th:selected="${selectedState == ''}">Todos los estados</option>
+                <option th:each="st : ${states}"
+                        th:value="${st.name()}"
+                        th:selected="${st.name() == selectedState}"
+                        th:text="${st.name()}">
+                </option>
+            </select>
+        </div>
+        <button type="submit">Actualizar reporte</button>
+    </form>
+
+    <div th:if="false">
+    <div th:fragment="temporalCard(metric, description)" class="card">
+        <h3 th:text="${metric.code() + ' — ' + metric.name()}">MET-01</h3>
+        <p class="muted" th:text="${description}">Descripción</p>
+        <div class="metric-value">
+            <span th:if="${metric.closedAverageTicks() != null}"
+                  th:text="${#numbers.formatDecimal(metric.closedAverageTicks(), 1, 2) + ' ' + metric.unit()}">0.00</span>
+            <span th:if="${metric.closedAverageTicks() == null}">Sin mediciones cerradas</span>
+        </div>
+        <div class="muted" th:text="'Casos cerrados incluidos en promedio: ' + ${metric.closedCount()}">Casos cerrados: 0</div>
+        <div class="in-progress-box" th:if="${metric.inProgressCount() > 0}">
+            <div>
+                <strong th:text="${metric.inProgressStatusLabel()}">EN_ESPERA</strong>:
+                <span th:text="${metric.inProgressCount()} + ' emergencia(s) en curso (excluidas del promedio)'"></span>
+            </div>
+            <ul>
+                <li th:each="item : ${metric.inProgressItems()}"
+                    th:text="${item.emergencyId() + ': inicio t=' + item.startedAtTicks() + ', acumulado=' + item.accumulatedTicks() + ' u.'}">
+                </li>
+            </ul>
+        </div>
+    </div>
+    </div>
+
+    <h2>Métricas temporales (1, 2, 3 y 7)</h2>
+    <div class="metrics-grid">
+        <div th:replace="~{::temporalCard(${report.waitingForAmbulance()}, 'Desde registro / ingreso a WAITING_AMBULANCE hasta ASSIGNED.')}"></div>
+        <div th:replace="~{::temporalCard(${report.responseToIncident()}, 'Desde REGISTERED hasta llegada al nodo del incidente (AT_INCIDENT).')}"></div>
+        <div th:replace="~{::temporalCard(${report.pickupToHospital()}, 'Desde AT_INCIDENT hasta entrega simulada en hospital (COMPLETED).')}"></div>
+        <div th:replace="~{::temporalCard(${report.waitingForHospital()}, 'Desde WAITING_HOSPITAL (o 0 si reservó en primer ciclo) hasta IN_TRANSPORT.')}"></div>
+    </div>
+
+    <h2>Métricas de volumen, utilización y concurrencia (4, 5 y 6)</h2>
+    <div class="metrics-grid">
+        <section class="card">
+            <h3>MET-04 — Número de emergencias completadas</h3>
+            <p class="muted">Conteo entero de emergencias en estado COMPLETED y desglose separado de activas.</p>
+            <div class="metric-value" th:text="${report.completedEmergencies().completedCount()} + ' completadas'">0 completadas</div>
+            <div class="muted" th:text="'Activas / en curso: ' + ${report.completedEmergencies().activeCount()}">Activas: 0</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Estado en curso</th>
+                        <th>Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="entry : ${report.completedEmergencies().activeCountsByState()}">
+                        <td th:text="${entry.key}">WAITING_AMBULANCE</td>
+                        <td th:text="${entry.value}">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h3>MET-05 — Utilización de ambulancias</h3>
+            <p class="muted">Tiempo lógico ocupado sobre tiempo lógico transcurrido del escenario (sin división por cero si Δt=0).</p>
+            <div class="metric-value"
+                 th:text="${#numbers.formatDecimal(report.ambulanceUtilization().averageUtilizationRatio() * 100, 1, 2) + '% (' + report.ambulanceUtilization().totalOccupiedTicks() + ' u. ocupadas)'}">
+                0.00%
+            </div>
+            <div class="muted" th:text="'Tiempo lógico transcurrido: Δt=' + ${report.ambulanceUtilization().scenarioElapsedTicks()}">Δt=0</div>
+            <p class="muted" th:if="${#lists.isEmpty(report.ambulanceUtilization().items())}">No hay ambulancias registradas.</p>
+            <table th:if="${!#lists.isEmpty(report.ambulanceUtilization().items())}">
+                <thead>
+                    <tr>
+                        <th>Unidad</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                        <th>Ocupado (u.)</th>
+                        <th>Proporción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="amb : ${report.ambulanceUtilization().items()}">
+                        <td th:text="${amb.ambulanceId()}">AMB-01</td>
+                        <td th:text="${amb.equipmentType()}">BASIC</td>
+                        <td th:text="${amb.currentState()}">AVAILABLE</td>
+                        <td th:text="${amb.occupiedTicks()}">0</td>
+                        <td th:text="${#numbers.formatDecimal(amb.utilizationRatio() * 100, 1, 2) + '%'}">0.00%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h3>MET-06 — Conflictos concurrentes y reintentos</h3>
+            <p class="muted">Conteo exacto sin duplicados entre asignación automática (DEC-017) y reserva hospitalaria (DEC-018).</p>
+            <div class="metric-value"
+                 th:text="${report.concurrencyConflicts().totalConflicts() + ' conflictos / ' + report.concurrencyConflicts().totalRetriesConsumed() + ' reintentos / ' + report.concurrencyConflicts().totalExhaustions() + ' agotamientos'}">
+                0 / 0 / 0
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Proceso</th>
+                        <th>Conflictos</th>
+                        <th>Reintentos</th>
+                        <th>Agotamientos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Asignación ambulancia (DEC-017)</td>
+                        <td th:text="${report.concurrencyConflicts().ambulanceDispatch().conflicts()}">0</td>
+                        <td th:text="${report.concurrencyConflicts().ambulanceDispatch().retriesConsumed()}">0</td>
+                        <td th:text="${report.concurrencyConflicts().ambulanceDispatch().exhaustions()}">0</td>
+                    </tr>
+                    <tr>
+                        <td>Reserva hospitalaria (DEC-018)</td>
+                        <td th:text="${report.concurrencyConflicts().hospitalReservation().conflicts()}">0</td>
+                        <td th:text="${report.concurrencyConflicts().hospitalReservation().retriesConsumed()}">0</td>
+                        <td th:text="${report.concurrencyConflicts().hospitalReservation().exhaustions()}">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <h2>Registro funcional experimental trazable (RN-MET-003)</h2>
+    <p class="muted" th:if="${#lists.isEmpty(report.experimentalRecords())}">
+        No existen emergencias registradas para los criterios consultados.
+    </p>
+    <table th:if="${!#lists.isEmpty(report.experimentalRecords())}">
+        <thead>
+            <tr>
+                <th>Emergencia</th>
+                <th>Estado / Reglas</th>
+                <th>Recursos (Amb / Hosp)</th>
+                <th>Marcas de tiempo lógico (t)</th>
+                <th>Operaciones y conflictos</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="rec : ${report.experimentalRecords()}">
+                <td>
+                    <strong th:text="${rec.emergencyId()}">EMG-00001</strong>
+                    <div class="muted" th:if="${rec.lastOutcomeReason() != null}" th:text="${rec.lastOutcomeReason()}"></div>
+                </td>
+                <td>
+                    <span class="pill" th:text="${rec.currentState()}">COMPLETED</span>
+                    <div class="muted" th:text="'Versión: ' + ${rec.ruleVersionId()}">RUL-V01</div>
+                </td>
+                <td>
+                    <div th:text="'Amb: ' + ${rec.assignedAmbulanceId() != null ? rec.assignedAmbulanceId() : '-'}">Amb: -</div>
+                    <div th:text="'Hosp: ' + ${rec.hospitalId() != null ? rec.hospitalId() : '-'}">Hosp: -</div>
+                </td>
+                <td>
+                    <div th:text="'REGISTERED=' + ${rec.registeredAtTicks()}">REGISTERED=0</div>
+                    <div th:if="${rec.queueEnteredAtTicks() != null}" th:text="'WAITING_AMBULANCE=' + ${rec.queueEnteredAtTicks()}"></div>
+                    <div th:if="${rec.assignedAtTicks() != null}" th:text="'ASSIGNED=' + ${rec.assignedAtTicks()}"></div>
+                    <div th:if="${rec.atIncidentAtTicks() != null}" th:text="'AT_INCIDENT=' + ${rec.atIncidentAtTicks()}"></div>
+                    <div th:if="${rec.hospitalQueueEnteredAtTicks() != null}" th:text="'WAITING_HOSPITAL=' + ${rec.hospitalQueueEnteredAtTicks()}"></div>
+                    <div th:if="${rec.inTransportAtTicks() != null}" th:text="'IN_TRANSPORT=' + ${rec.inTransportAtTicks()}"></div>
+                    <div th:if="${rec.completedAtTicks() != null}" th:text="'COMPLETED=' + ${rec.completedAtTicks()}"></div>
+                    <div th:if="${rec.dischargedAtTicks() != null}" th:text="'DISCHARGED=' + ${rec.dischargedAtTicks()}"></div>
+                </td>
+                <td>
+                    <div th:if="${#lists.isEmpty(rec.operationResults())}" class="muted">Sin operaciones registradas</div>
+                    <div th:each="op : ${rec.operationResults()}">
+                        <strong th:text="${op.operationType()}">AUTOMATIC_DISPATCH</strong>:
+                        <span th:text="${op.finalStatus() + ' (intentos=' + op.totalAttempts() + ', t=' + op.logicalTicks() + ')'}"></span>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

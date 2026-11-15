@@ -149,8 +149,8 @@ class SimulationScenarioMySqlIntegrationTest {
         hospitalReservationJpaRepository.deleteAll();
         attemptLogJpaRepository.deleteAll();
         operationResultJpaRepository.deleteAll();
-        emergencyJpaRepository.deleteAll();
         ambulanceJpaRepository.deleteAll();
+        emergencyJpaRepository.deleteAll();
         hospitalJpaRepository.deleteAll();
         sequenceJpaRepository.saveAndFlush(new EmergencySequenceJpaEntity("EMERGENCY", 1L));
         sequenceJpaRepository.saveAndFlush(new EmergencySequenceJpaEntity("AMBULANCE", 1L));
