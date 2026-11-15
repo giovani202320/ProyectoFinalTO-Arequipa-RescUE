@@ -11,6 +11,7 @@ import com.arequiparescue.hospital.infrastructure.persistence.SpringDataHospital
 import com.arequiparescue.hospital.infrastructure.persistence.SpringDataHospitalReservationRepository;
 import com.arequiparescue.routing.infrastructure.persistence.SpringDataGraphEdgeRepository;
 import com.arequiparescue.routing.infrastructure.persistence.SpringDataGraphNodeRepository;
+import com.arequiparescue.simulation.infrastructure.persistence.SpringDataSimulationEventRepository;
 import com.arequiparescue.simulation.infrastructure.persistence.SpringDataSimulationScenarioRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -58,6 +59,9 @@ class ArequipaRescueApplicationSmokeTest {
 
     @MockitoBean
     private SpringDataSimulationScenarioRepository simulationScenarioRepository;
+
+    @MockitoBean
+    private SpringDataSimulationEventRepository simulationEventRepository;
 
     @MockitoBean
     private SpringDataAmbulanceRepository ambulanceRepository;

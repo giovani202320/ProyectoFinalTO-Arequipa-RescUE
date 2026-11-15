@@ -55,4 +55,8 @@ public class SimulationScenarioJpaEntity {
     public long getCurrentLogicalTicks() {
         return currentLogicalTicks;
     }
+
+    public void setCurrentLogicalTicks(long currentLogicalTicks) {
+        this.currentLogicalTicks = currentLogicalTicks;
+    }
 }
