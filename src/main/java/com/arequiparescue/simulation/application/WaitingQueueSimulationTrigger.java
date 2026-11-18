@@ -4,7 +4,12 @@ import com.arequiparescue.dispatch.application.DispatchApplicationService;
 import com.arequiparescue.dispatch.application.WaitingQueueEvaluationResult;
 import com.arequiparescue.hospital.application.HospitalDeliveryAndDischargeApplicationService;
 import com.arequiparescue.hospital.application.HospitalDeliveryResult;
+import com.arequiparescue.hospital.application.HospitalDischargeResult;
 import com.arequiparescue.hospital.application.HospitalDispatchApplicationService;
+import com.arequiparescue.hospital.application.HospitalReservationResult;
+import com.arequiparescue.hospital.domain.HospitalDeliveryOutcome;
+import com.arequiparescue.hospital.domain.HospitalDischargeOutcome;
+import com.arequiparescue.hospital.domain.HospitalDispatchOutcome;
 import com.arequiparescue.simulation.domain.DiscreteEvent;
 import com.arequiparescue.simulation.domain.DiscreteEventType;
 import org.springframework.stereotype.Component;
@@ -54,15 +59,29 @@ public class WaitingQueueSimulationTrigger {
             if (event.subjectId().startsWith("EMG-")) {
                 HospitalDeliveryResult delivery =
                         deliveryAndDischargeApplicationService.confirmHospitalDelivery(event.subjectId());
-                return Optional.ofNullable(delivery.ambulanceQueueEvaluation());
+                if (delivery != null && delivery.outcome() == HospitalDeliveryOutcome.DUPLICATE_OR_INVALID_STATE) {
+                    throw new IllegalStateException(delivery.message());
+                }
+                return Optional.ofNullable(delivery != null ? delivery.ambulanceQueueEvaluation() : null);
             }
             if (event.subjectId().startsWith("RES-")) {
-                deliveryAndDischargeApplicationService.executeSimulatedDischarge(event.subjectId());
+                HospitalDischargeResult discharge =
+                        deliveryAndDischargeApplicationService.executeSimulatedDischarge(event.subjectId());
+                if (discharge != null && discharge.outcome() == HospitalDischargeOutcome.DUPLICATE_OR_INVALID_STATE) {
+                    throw new IllegalStateException(discharge.message());
+                }
                 return Optional.empty();
             }
+            throw new IllegalArgumentException(
+                    "Identificador de sujeto no reconocido para RESOURCE_RELEASE: '" + event.subjectId()
+                            + "'. Se esperaba prefijo AMB-, HOSP-, EMG- o RES-.");
         }
         if (event.type() == DiscreteEventType.AMBULANCE_ARRIVAL_AT_INCIDENT) {
-            hospitalDispatchApplicationService.confirmArrivalAndReserveHospital(event.subjectId());
+            HospitalReservationResult arrival =
+                    hospitalDispatchApplicationService.confirmArrivalAndReserveHospital(event.subjectId());
+            if (arrival != null && arrival.outcome() == HospitalDispatchOutcome.DUPLICATE_OR_INVALID_STATE) {
+                throw new IllegalStateException(arrival.message());
+            }
             return Optional.empty();
         }
         return Optional.empty();

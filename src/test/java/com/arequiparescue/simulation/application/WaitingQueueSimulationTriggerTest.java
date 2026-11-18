@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -100,5 +101,54 @@ class WaitingQueueSimulationTriggerTest {
         verifyNoInteractions(dispatchService);
         verifyNoInteractions(hospitalService);
         verifyNoInteractions(deliveryService);
+    }
+
+    @Test
+    @DisplayName("Propaga rechazo explícito cuando llegada, entrega o alta devuelven DUPLICATE_OR_INVALID_STATE o prefijo inválido")
+    void shouldRejectPreconditionFailuresAndUnknownResourceReleasePrefixes() {
+        DispatchApplicationService dispatchService = mock(DispatchApplicationService.class);
+        HospitalDispatchApplicationService hospitalService = mock(HospitalDispatchApplicationService.class);
+        HospitalDeliveryAndDischargeApplicationService deliveryService =
+                mock(HospitalDeliveryAndDischargeApplicationService.class);
+        WaitingQueueSimulationTrigger trigger = new WaitingQueueSimulationTrigger(
+                dispatchService, hospitalService, deliveryService);
+
+        when(hospitalService.confirmArrivalAndReserveHospital("EMG-00025")).thenReturn(new HospitalReservationResult(
+                "OP-A", HospitalDispatchOutcome.DUPLICATE_OR_INVALID_STATE, null, null, null, 0, 0,
+                "DUPLICATE_OR_INVALID_STATE", "La emergencia EMG-00025 está en estado REGISTERED."));
+        when(deliveryService.confirmHospitalDelivery("EMG-00027")).thenReturn(new HospitalDeliveryResult(
+                "OP-D", HospitalDeliveryOutcome.DUPLICATE_OR_INVALID_STATE, null, null, null, null, null,
+                "La emergencia EMG-00027 no está en IN_TRANSPORT."));
+        when(deliveryService.executeSimulatedDischarge("RES-99")).thenReturn(new HospitalDischargeResult(
+                "OP-R", HospitalDischargeOutcome.DUPLICATE_OR_INVALID_STATE, null, null, null,
+                "La reserva RES-99 no está en OCCUPIED."));
+        when(dispatchService.evaluateWaitingAmbulanceQueue()).thenReturn(
+                new WaitingQueueEvaluationResult(0, 0, 3, List.of(), "Sin asignaciones"));
+
+        assertThatThrownBy(() -> trigger.handleEvent(new DiscreteEvent(
+                "EV-A", LogicalTime.of(1L), DiscreteEventType.AMBULANCE_ARRIVAL_AT_INCIDENT, 1L, "EMG-00025", "Llegada")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("REGISTERED");
+
+        assertThatThrownBy(() -> trigger.handleEvent(new DiscreteEvent(
+                "EV-D", LogicalTime.of(2L), DiscreteEventType.RESOURCE_RELEASE, 2L, "EMG-00027", "Entrega")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("IN_TRANSPORT");
+
+        assertThatThrownBy(() -> trigger.handleEvent(new DiscreteEvent(
+                "EV-R", LogicalTime.of(3L), DiscreteEventType.RESOURCE_RELEASE, 3L, "RES-99", "Alta")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("OCCUPIED");
+
+        assertThatThrownBy(() -> trigger.handleEvent(new DiscreteEvent(
+                "EV-U", LogicalTime.of(4L), DiscreteEventType.RESOURCE_RELEASE, 4L, "12345", "Prefijo inválido")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("12345");
+
+        Optional<WaitingQueueEvaluationResult> zeroAssigned = trigger.handleEvent(new DiscreteEvent(
+                "EV-Q", LogicalTime.of(5L), DiscreteEventType.WAITING_QUEUE_EVALUATION, 5L, "SYS-QUEUE", "Cola"));
+        assertThat(zeroAssigned).isPresent();
+        assertThat(zeroAssigned.orElseThrow().assignedCount()).isZero();
+        assertThat(zeroAssigned.orElseThrow().remainingWaitingCount()).isEqualTo(3);
     }
 }

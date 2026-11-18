@@ -67,4 +67,47 @@ class SimulationScenarioTest {
         failed.markFailed(LogicalTime.of(4), "Fallo controlado");
         assertEquals(DiscreteEventStatus.FAILED, failed.status());
     }
+
+    @Test
+    void allowsOutOfOrderFutureSchedulingWhileClockIsAtZeroAndAllowsCurrentTick() {
+        SimulationScenario scenario = SimulationScenario.startNew("SCN-04", "Desordenado");
+
+        scenario.validateCanScheduleAt(LogicalTime.of(4));
+        scenario.validateCanScheduleAt(LogicalTime.of(2));
+        scenario.validateCanScheduleAt(LogicalTime.of(3));
+        assertEquals(LogicalTime.ZERO, scenario.currentTime());
+
+        scenario.advanceClockTo(LogicalTime.of(4));
+        scenario.validateCanScheduleAt(LogicalTime.of(4));
+
+        IllegalArgumentException pastError = assertThrows(
+                IllegalArgumentException.class,
+                () -> scenario.validateCanScheduleAt(LogicalTime.of(1))
+        );
+        assertTrue(pastError.getMessage().contains("RN-RUT-009"));
+        assertTrue(pastError.getMessage().contains("t=1"));
+        assertTrue(pastError.getMessage().contains("t=4"));
+    }
+
+    @Test
+    void acceptsArbitraryNonBlankSubjectIdAndRejectsBlankSubjectId() {
+        DiscreteEvent numericSubject = new DiscreteEvent(
+                "EV-NUM",
+                LogicalTime.of(5),
+                DiscreteEventType.WAITING_QUEUE_EVALUATION,
+                1L,
+                "12345",
+                "Identificador numérico"
+        );
+        assertEquals("12345", numericSubject.subjectId());
+
+        assertThrows(IllegalArgumentException.class, () -> new DiscreteEvent(
+                "EV-BLANK",
+                LogicalTime.of(5),
+                DiscreteEventType.WAITING_QUEUE_EVALUATION,
+                2L,
+                "   ",
+                "Vacío"
+        ));
+    }
 }
