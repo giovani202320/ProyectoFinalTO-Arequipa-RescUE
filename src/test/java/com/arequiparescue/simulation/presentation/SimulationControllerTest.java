@@ -2,6 +2,8 @@ package com.arequiparescue.simulation.presentation;
 
 import com.arequiparescue.shared.domain.LogicalClock;
 import com.arequiparescue.shared.domain.LogicalTime;
+import com.arequiparescue.shared.presentation.AreUiFormatter;
+import com.arequiparescue.shared.presentation.HtmlStructureAssertions;
 import com.arequiparescue.simulation.application.SimulationScenarioApplicationService;
 import com.arequiparescue.simulation.application.SimulationStepOutcome;
 import com.arequiparescue.simulation.application.SimulationStepResult;
@@ -13,12 +15,14 @@ import com.arequiparescue.simulation.domain.SimulationScenario;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(SimulationController.class)
+@Import(AreUiFormatter.class)
 class SimulationControllerTest {
 
     @Autowired
@@ -55,12 +60,26 @@ class SimulationControllerTest {
         when(scenarioService.listScenarioEvents("SCN-01")).thenReturn(List.of(nextEvent));
         when(logicalClock.currentTicks()).thenReturn(3L);
 
-        mockMvc.perform(get("/simulation"))
+        String html = mockMvc.perform(get("/simulation"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Control de Escenarios y Avance Manual del Reloj Lógico")))
                 .andExpect(content().string(containsString("SCN-01")))
                 .andExpect(content().string(containsString("EV-01")))
-                .andExpect(content().string(containsString("t=3")));
+                .andExpect(content().string(containsString("t=3")))
+                .andExpect(content().string(containsString("Activo")))
+                .andExpect(content().string(containsString("Evaluación de colas de espera")))
+                .andExpect(content().string(containsString("Llegada de ambulancia al incidente")))
+                .andExpect(content().string(containsString("Liberación de recurso")))
+                .andExpect(content().string(containsString("Registro de emergencia")))
+                .andExpect(content().string(containsString("Mínimo permitido: t &gt;= 3")))
+                .andExpect(content().string(containsString("min=\"3\"")))
+                .andExpect(content().string(containsString("SYS-QUEUE")))
+                .andExpect(content().string(containsString("/css/are-design-system.css")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(html, "simulation-page-title");
+        assertThat(HtmlStructureAssertions.countOccurrences(html, "<form")).isEqualTo(4);
     }
 
     @Test
@@ -212,8 +231,10 @@ class SimulationControllerTest {
 
         mockMvc.perform(get("/simulation"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("status-pill-executed")))
-                .andExpect(content().string(containsString("status-pill-failed")))
+                .andExpect(content().string(containsString("are-badge-success")))
+                .andExpect(content().string(containsString("are-badge-danger")))
+                .andExpect(content().string(containsString("Ejecutado")))
+                .andExpect(content().string(containsString("Fallido")))
                 .andExpect(content().string(containsString("EV-OK")))
                 .andExpect(content().string(containsString("EV-BAD")));
     }

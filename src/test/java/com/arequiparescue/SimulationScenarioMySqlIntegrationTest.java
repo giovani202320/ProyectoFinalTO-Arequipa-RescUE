@@ -168,7 +168,7 @@ class SimulationScenarioMySqlIntegrationTest {
         scenarioService.scheduleEvent(new ScheduleSimulationEventCommand(
                 "SCN-DET", "EV-REG", 5L, DiscreteEventType.EMERGENCY_REGISTRATION, "EMG-0001", "Registro"));
         scenarioService.scheduleEvent(new ScheduleSimulationEventCommand(
-                "SCN-DET", "EV-REL", 5L, DiscreteEventType.RESOURCE_RELEASE, "SYS-REL", "Liberación"));
+                "SCN-DET", "EV-REL", 5L, DiscreteEventType.RESOURCE_RELEASE, "HOSP-01", "Liberación"));
         scenarioService.scheduleEvent(new ScheduleSimulationEventCommand(
                 "SCN-DET", "EV-ARR", 5L, DiscreteEventType.AMBULANCE_ARRIVAL_AT_INCIDENT, "EMG-9999", "Llegada"));
         scenarioService.scheduleEvent(new ScheduleSimulationEventCommand(
@@ -366,5 +366,48 @@ class SimulationScenarioMySqlIntegrationTest {
         assertEquals(2, history.size());
         assertEquals(DiscreteEventStatus.EXECUTED, history.get(0).status());
         assertEquals(DiscreteEventStatus.FAILED, history.get(1).status());
+    }
+
+    @Test
+    @DisplayName("HU-13: eventos con precondición incumplida persisten FAILED, no alteran la emergencia y no se reintentan")
+    void preconditionFailuresPersistFailedWithoutMutatingEmergencyOrRepeating() {
+        Emergency registered = emergencyService.registerEmergency(new RegisterEmergencyCommand(
+                "INC-B", "N02", "Paciente en espera"));
+        assertEquals(EmergencyState.REGISTERED, registered.state());
+
+        scenarioService.createScenario("SCN-PREC", "Precondiciones");
+        scenarioService.scheduleEvent(new ScheduleSimulationEventCommand(
+                "SCN-PREC", "EV-ARR-REG", 1L, DiscreteEventType.AMBULANCE_ARRIVAL_AT_INCIDENT,
+                registered.id().value(), "Llegada prematura"));
+        scenarioService.scheduleEvent(new ScheduleSimulationEventCommand(
+                "SCN-PREC", "EV-DEL-REG", 2L, DiscreteEventType.RESOURCE_RELEASE,
+                registered.id().value(), "Entrega prematura"));
+        scenarioService.scheduleEvent(new ScheduleSimulationEventCommand(
+                "SCN-PREC", "EV-PREFIX-BAD", 3L, DiscreteEventType.RESOURCE_RELEASE,
+                "12345", "Prefijo no reconocido"));
+
+        SimulationStepResult step1 = scenarioService.advanceNextStep("SCN-PREC");
+        assertEquals(SimulationStepOutcome.FAILED, step1.outcome());
+        assertEquals(DiscreteEventStatus.FAILED, step1.processedEvent().status());
+        assertEquals(EmergencyState.REGISTERED,
+                emergencyRepository.findById(registered.id()).orElseThrow().state());
+
+        SimulationStepResult step2 = scenarioService.advanceNextStep("SCN-PREC");
+        assertEquals(SimulationStepOutcome.FAILED, step2.outcome());
+        assertEquals(DiscreteEventStatus.FAILED, step2.processedEvent().status());
+        assertEquals(EmergencyState.REGISTERED,
+                emergencyRepository.findById(registered.id()).orElseThrow().state());
+
+        SimulationStepResult step3 = scenarioService.advanceNextStep("SCN-PREC");
+        assertEquals(SimulationStepOutcome.FAILED, step3.outcome());
+        assertEquals(DiscreteEventStatus.FAILED, step3.processedEvent().status());
+
+        // No quedan eventos pendientes: ningún evento FAILED se repite indefinidamente
+        SimulationStepResult step4 = scenarioService.advanceNextStep("SCN-PREC");
+        assertEquals(SimulationStepOutcome.NO_PENDING_EVENTS, step4.outcome());
+
+        List<ScheduledSimulationEvent> history = scenarioService.listScenarioEvents("SCN-PREC");
+        assertEquals(3, history.size());
+        assertTrue(history.stream().allMatch(ev -> ev.status() == DiscreteEventStatus.FAILED));
     }
 }

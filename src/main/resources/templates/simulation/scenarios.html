@@ -1,336 +1,293 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulación y Reloj Lógico (HU-13) — ARE (Arequipa RescUE)</title>
-    <style>
-        :root {
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --border: #cbd5e1;
-            --primary: #1e3a8a;
-            --primary-hover: #1d4ed8;
-            --text: #0f172a;
-            --muted: #475569;
-            --badge-bg: #dbeafe;
-            --badge-fg: #1e40af;
-            --error-bg: #fef2f2;
-            --error-border: #fca5a5;
-            --error-fg: #991b1b;
-            --success-bg: #ecfdf5;
-            --success-border: #6ee7b7;
-            --success-fg: #065f46;
-            --warn-bg: #fffbeb;
-            --warn-border: #fcd34d;
-            --warn-fg: #92400e;
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            padding: 2.5rem 1.25rem;
-            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-        }
-        main {
-            max-width: 1080px;
-            margin: 0 auto;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 2rem;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
-        }
-        nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.25rem;
-            font-size: 0.92rem;
-        }
-        nav a { color: var(--primary); text-decoration: none; font-weight: 600; }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            background: var(--badge-bg);
-            color: var(--badge-fg);
-            font-weight: 600;
-            font-size: 0.85rem;
-            margin-bottom: 0.75rem;
-        }
-        h1 { margin: 0 0 0.5rem 0; color: var(--primary); font-size: 1.65rem; }
-        h2 { margin: 1.5rem 0 0.5rem 0; color: var(--primary); font-size: 1.15rem; }
-        .lead { margin: 0 0 1rem 0; color: var(--muted); }
-        .alert-error, .alert-success, .alert-warn {
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-        .alert-error { background: var(--error-bg); border: 1px solid var(--error-border); color: var(--error-fg); }
-        .alert-success { background: var(--success-bg); border: 1px solid var(--success-border); color: var(--success-fg); }
-        .alert-warn { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-fg); }
-        .grid-two {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.25rem;
-        }
-        .card {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem 1.15rem;
-            background: #f8fafc;
-        }
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 0.75rem;
-            margin-bottom: 0.75rem;
-        }
-        label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
-        input, select {
-            width: 100%;
-            padding: 0.45rem 0.6rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 0.92rem;
-            background: #ffffff;
-        }
-        .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 0.75rem; }
-        button {
-            padding: 0.55rem 1rem;
-            border: none;
-            border-radius: 6px;
-            background: var(--primary);
-            color: #ffffff;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        button:hover { background: var(--primary-hover); }
-        button.secondary { background: #334155; }
-        button.secondary:hover { background: #1e293b; }
-        table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; font-size: 0.9rem; }
-        th, td {
-            border: 1px solid var(--border);
-            padding: 0.5rem 0.65rem;
-            text-align: left;
-            vertical-align: top;
-        }
-        th { background: #f1f5f9; font-weight: 600; }
-        .status-pill {
-            display: inline-block;
-            padding: 0.15rem 0.5rem;
-            border-radius: 999px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            background: var(--badge-bg);
-            color: var(--badge-fg);
-        }
-        .status-pill-executed {
-            background: var(--success-bg);
-            color: var(--success-fg);
-            border: 1px solid var(--success-border);
-        }
-        .status-pill-failed {
-            background: var(--error-bg);
-            color: var(--error-fg);
-            border: 1px solid var(--error-border);
-        }
-        .muted { color: var(--muted); font-size: 0.9rem; }
-    </style>
-</head>
-<body>
-<main>
-    <nav>
-        <div>
-            <a th:href="@{/}">Inicio</a> |
-            <a th:href="@{/reporting}">Métricas (HU-14)</a> |
-            <a th:href="@{/emergencies}">Emergencias</a> |
-            <a th:href="@{/dispatch/waiting-queue}">Cola Ambulancias</a> |
-            <a th:href="@{/dispatch/hospital-queue}">Cola Hospitales</a>
+<head th:replace="~{fragments/layout :: head('Simulación y Reloj Lógico')}"></head>
+<body th:replace="~{fragments/layout :: appShell('Simulación y Reloj Lógico', 'Control de escenarios experimentales y avance manual paso a paso (HU-13)', 'simulation', ~{::simulationContent})}">
+
+<th:block th:fragment="simulationContent">
+    <!-- Header -->
+    <section class="are-card mb-4" aria-labelledby="simulation-page-title">
+        <div class="are-card-body d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <div>
+                <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
+                    <span th:replace="~{fragments/components :: statusBadge('Administrador (ACT-03) — HU-13', 'navy')}"></span>
+                    <span class="are-badge are-badge-neutral are-mono"
+                          th:text="'Reloj lógico global en memoria: t=' + ${globalClockTicks}">Reloj lógico global en memoria: t=0</span>
+                </div>
+                <h2 id="simulation-page-title" class="h4 fw-bold mb-1" style="color: var(--are-navy);">
+                    Control de Escenarios y Avance Manual del Reloj Lógico
+                </h2>
+                <p class="text-secondary small mb-0">
+                    Motor de simulación por eventos discretos con avance manual paso a paso, tiempo lógico monotónico
+                    (<code>t &gt;= 0</code>) y desempate determinista por precedencia de tipo, secuencia de creación e identificador estable.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+                <a th:replace="~{fragments/components :: actionLink(@{/reporting}, 'Métricas (HU-14)', 'outline', 'bar-chart-3')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/emergencies}, 'Emergencias', 'outline', 'siren')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/dispatch/waiting-queue}, 'Cola de ambulancias', 'outline', 'clock')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/dispatch/hospital-queue}, 'Cola hospitalaria', 'outline', 'hospital')}"></a>
+            </div>
         </div>
-        <span>Reloj lógico global en memoria: <strong th:text="'t=' + ${globalClockTicks}">t=0</strong></span>
-    </nav>
+    </section>
 
-    <span class="badge">Incremento 05 — HU-13 (ACT-03)</span>
-    <h1>Control de Escenarios y Avance Manual del Reloj Lógico</h1>
-    <p class="lead">
-        Motor de simulación por eventos discretos con avance manual paso a paso, tiempo lógico monotónico
-        (t &gt;= 0) y desempate determinista por precedencia de tipo, secuencia de creación e identificador estable.
-    </p>
+    <!-- Scenario Creation & Registered Scenarios -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-lg-5">
+            <section class="are-card h-100" aria-labelledby="create-scenario-heading">
+                <div class="are-card-header">
+                    <h3 id="create-scenario-heading" class="are-card-title">Iniciar escenario experimental</h3>
+                </div>
+                <div class="are-card-body">
+                    <form method="post" th:action="@{/simulation/scenarios}">
+                        <div class="mb-3">
+                            <label for="scenarioId" class="form-label fw-semibold">ID de escenario</label>
+                            <input id="scenarioId" name="scenarioId" type="text" class="form-control"
+                                   placeholder="SCN-01" maxlength="32" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="name" class="form-label fw-semibold">Nombre</label>
+                            <input id="name" name="name" type="text" class="form-control"
+                                   placeholder="Escenario experimental 01" maxlength="120" required>
+                        </div>
+                        <button type="submit" class="btn btn-are-primary d-inline-flex align-items-center gap-2">
+                            <i data-lucide="play" class="are-nav-icon" aria-hidden="true"></i>
+                            <span>Iniciar escenario</span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </div>
 
-    <div class="alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
-    <div class="alert-warn" th:if="${warnMessage}" th:text="${warnMessage}"></div>
-    <div class="alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
-
-    <div class="grid-two">
-        <section class="card">
-            <h2>Iniciar escenario experimental</h2>
-            <form method="post" th:action="@{/simulation/scenarios}">
-                <div class="form-row">
-                    <div>
-                        <label for="scenarioId">ID de escenario</label>
-                        <input id="scenarioId" name="scenarioId" type="text" placeholder="SCN-01" maxlength="32" required>
-                    </div>
-                    <div>
-                        <label for="name">Nombre</label>
-                        <input id="name" name="name" type="text" placeholder="Escenario experimental 01" maxlength="120" required>
+        <div class="col-12 col-lg-7">
+            <section class="are-card h-100" aria-labelledby="registered-scenarios-heading">
+                <div class="are-card-header d-flex align-items-center justify-content-between">
+                    <h3 id="registered-scenarios-heading" class="are-card-title">Escenarios registrados</h3>
+                    <span class="are-badge are-badge-neutral are-mono"
+                          th:text="${#lists.size(scenarios)} + ' escenario(s)'">0 escenario(s)</span>
+                </div>
+                <div class="are-card-body">
+                    <p class="text-secondary mb-0" th:if="${#lists.isEmpty(scenarios)}">No hay escenarios registrados todavía.</p>
+                    <div th:if="${!#lists.isEmpty(scenarios)}" class="are-table-wrap">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Estado</th>
+                                <th>t actual</th>
+                                <th>Acción</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="sc : ${scenarios}">
+                                <td class="are-mono fw-bold" th:text="${sc.id()}">SCN-01</td>
+                                <td th:text="${sc.name()}">Escenario 01</td>
+                                <td>
+                                    <span class="are-badge"
+                                          th:classappend="'are-badge-' + ${@areUi.badgeTone('SCENARIO', sc.status().name())}"
+                                          th:text="${@areUi.scenarioStatusLabel(sc.status().name())}">Activo</span>
+                                </td>
+                                <td class="are-mono" th:text="${sc.currentTime().ticks()}">0</td>
+                                <td>
+                                    <a th:href="@{/simulation(scenarioId=${sc.id()})}"
+                                       class="btn btn-sm btn-are-outline d-inline-flex align-items-center gap-1">
+                                        <i data-lucide="eye" class="are-badge-icon" aria-hidden="true"></i>
+                                        <span>Seleccionar</span>
+                                    </a>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <button type="submit">Iniciar escenario (ACTIVE)</button>
-            </form>
-        </section>
-
-        <section class="card">
-            <h2>Escenarios registrados</h2>
-            <p class="muted" th:if="${#lists.isEmpty(scenarios)}">No hay escenarios registrados todavía.</p>
-            <table th:if="${!#lists.isEmpty(scenarios)}">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nombre</th>
-                        <th>Estado</th>
-                        <th>t actual</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="sc : ${scenarios}">
-                        <td th:text="${sc.id()}">SCN-01</td>
-                        <td th:text="${sc.name()}">Escenario 01</td>
-                        <td><span class="status-pill" th:text="${sc.status()}">ACTIVE</span></td>
-                        <td th:text="${sc.currentTime().ticks()}">0</td>
-                        <td><a th:href="@{/simulation(scenarioId=${sc.id()})}">Seleccionar</a></td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
+            </section>
+        </div>
     </div>
 
-    <section class="card" th:if="${selectedScenario != null}">
-        <h2>
-            Escenario seleccionado:
-            <span th:text="${selectedScenario.id()}">SCN-01</span>
-            (<span th:text="${selectedScenario.status()}">ACTIVE</span>) —
-            Reloj lógico: <strong th:text="'t=' + ${selectedScenario.currentTime().ticks()}">t=0</strong>
-        </h2>
-
-        <p class="muted" th:if="${selectedScenario.isActive() and nextPendingEvent != null}">
-            Siguiente evento determinista a ejecutar:
-            <strong th:text="${nextPendingEvent.event().eventId()}">EV-01</strong>
-            en <strong th:text="'t=' + ${nextPendingEvent.event().scheduledAt().ticks()}">t=1</strong>
-            (<span th:text="${nextPendingEvent.event().type()}">WAITING_QUEUE_EVALUATION</span>,
-            sujeto <span th:text="${nextPendingEvent.event().subjectId()}">SYS</span>,
-            secuencia #<span th:text="${nextPendingEvent.event().sequenceNumber()}">1</span>).
-        </p>
-        <p class="muted" th:if="${selectedScenario.isActive() and nextPendingEvent == null}">
-            No existen eventos discretos pendientes en este escenario.
-        </p>
-        <p class="muted" th:if="${!selectedScenario.isActive()}">
-            Escenario finalizado (COMPLETED): no admite nuevos eventos ni avance manual del reloj lógico.
-        </p>
-
-        <div class="actions" th:if="${selectedScenario.isActive()}">
-            <form method="post" th:action="@{/simulation/scenarios/{id}/advance(id=${selectedScenario.id()})}">
-                <button type="submit">Avanzar al siguiente evento pendiente</button>
-            </form>
-            <form method="post" th:action="@{/simulation/scenarios/{id}/complete(id=${selectedScenario.id()})}">
-                <button type="submit" class="secondary">Finalizar escenario (COMPLETED)</button>
-            </form>
+    <!-- Selected Scenario Panel -->
+    <section class="are-card" th:if="${selectedScenario != null}" aria-labelledby="selected-scenario-heading">
+        <div class="are-card-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+            <div>
+                <h3 id="selected-scenario-heading" class="are-card-title d-flex flex-wrap align-items-center gap-2">
+                    <span>Escenario seleccionado: <span class="are-mono" th:text="${selectedScenario.id()}">SCN-01</span></span>
+                    <span class="are-badge"
+                          th:classappend="'are-badge-' + ${@areUi.badgeTone('SCENARIO', selectedScenario.status().name())}"
+                          th:text="${@areUi.scenarioStatusLabel(selectedScenario.status().name())}">Activo</span>
+                </h3>
+                <div class="text-secondary small mt-1" th:text="${selectedScenario.name()}">Nombre del escenario</div>
+            </div>
+            <span class="are-badge are-badge-navy are-mono">
+                Reloj lógico: <strong class="ms-1" th:text="'t=' + ${selectedScenario.currentTime().ticks()}">t=0</strong>
+            </span>
         </div>
 
-        <div th:if="${selectedScenario.isActive()}">
-            <h2>Programar evento discreto en el escenario</h2>
-            <form method="post" th:action="@{/simulation/scenarios/{id}/events(id=${selectedScenario.id()})}">
-                <div class="form-row">
-                    <div>
-                        <label for="eventId">ID del evento</label>
-                        <input id="eventId" name="eventId" type="text" placeholder="EV-01" maxlength="64" required>
-                    </div>
-                    <div>
-                        <label for="scheduledAtTicks">Tiempo lógico t</label>
-                        <input id="scheduledAtTicks" name="scheduledAtTicks" type="number" min="0" value="0" required>
-                    </div>
-                    <div>
-                        <label for="eventType">Tipo de evento</label>
-                        <select id="eventType" name="eventType" required>
-                            <option th:each="t : ${eventTypes}" th:value="${t.name()}" th:text="${t.name() + ' (prio ' + t.precedenceRank() + ')'}"></option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="subjectId">ID de sujeto (EMG-/AMB-/HOSP-/RES-)</label>
-                        <input id="subjectId" name="subjectId" type="text" placeholder="SYS-QUEUE" maxlength="64" required>
-                    </div>
-                    <div>
-                        <label for="description">Descripción</label>
-                        <input id="description" name="description" type="text" placeholder="Evaluación manual de cola" maxlength="500">
-                    </div>
+        <div class="are-card-body">
+            <!-- Next deterministic event or closed notice -->
+            <div class="are-alert are-alert-info mb-3"
+                 th:if="${selectedScenario.isActive() and nextPendingEvent != null}" role="status">
+                <i data-lucide="step-forward" class="are-nav-icon mt-1" aria-hidden="true"></i>
+                <div>
+                    Siguiente evento determinista a ejecutar:
+                    <strong class="are-mono" th:text="${nextPendingEvent.event().eventId()}">EV-01</strong>
+                    en <strong class="are-mono" th:text="'t=' + ${nextPendingEvent.event().scheduledAt().ticks()}">t=1</strong>
+                    (<span th:text="${@areUi.eventTypeLabel(nextPendingEvent.event().type().name())}">Evaluación</span>,
+                    sujeto <span class="are-mono" th:text="${nextPendingEvent.event().subjectId()}">SYS</span>,
+                    secuencia #<span class="are-mono" th:text="${nextPendingEvent.event().sequenceNumber()}">1</span>).
                 </div>
-                <button type="submit">Programar evento discreto</button>
-            </form>
+            </div>
+
+            <p class="text-secondary mb-3" th:if="${selectedScenario.isActive() and nextPendingEvent == null}">
+                No existen eventos discretos pendientes en este escenario.
+            </p>
+
+            <div class="are-alert are-alert-warning mb-3" th:if="${!selectedScenario.isActive()}" role="status">
+                <i data-lucide="lock" class="are-nav-icon mt-1" aria-hidden="true"></i>
+                <div>Escenario finalizado (COMPLETED): no admite nuevos eventos ni avance manual del reloj lógico.</div>
+            </div>
+
+            <!-- Step / Complete Controls -->
+            <div class="d-flex flex-wrap gap-2 mb-4" th:if="${selectedScenario.isActive()}">
+                <form method="post" th:action="@{/simulation/scenarios/{id}/advance(id=${selectedScenario.id()})}">
+                    <button type="submit" class="btn btn-are-primary d-inline-flex align-items-center gap-2">
+                        <i data-lucide="step-forward" class="are-nav-icon" aria-hidden="true"></i>
+                        <span>Avanzar al siguiente evento pendiente</span>
+                    </button>
+                </form>
+                <form method="post" th:action="@{/simulation/scenarios/{id}/complete(id=${selectedScenario.id()})}">
+                    <button type="submit" class="btn btn-are-outline d-inline-flex align-items-center gap-2">
+                        <i data-lucide="check-square" class="are-nav-icon" aria-hidden="true"></i>
+                        <span>Finalizar escenario</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Schedule Discrete Event Form -->
+            <div class="border rounded p-3 mb-4 bg-light-subtle" th:if="${selectedScenario.isActive()}">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <h4 class="h6 fw-bold mb-0" style="color: var(--are-navy);">Programar evento discreto en el escenario</h4>
+                    <span class="are-badge are-badge-neutral are-mono"
+                          th:text="'Reloj actual: t=' + ${selectedScenario.currentTime().ticks()} + ' · Mínimo permitido: t >= ' + ${selectedScenario.currentTime().ticks()}">
+                        Reloj actual: t=0 · Mínimo permitido: t &gt;= 0
+                    </span>
+                </div>
+                <form method="post" th:action="@{/simulation/scenarios/{id}/events(id=${selectedScenario.id()})}">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4 col-lg-2">
+                            <label for="eventId" class="form-label fw-semibold">ID del evento</label>
+                            <input id="eventId" name="eventId" type="text" class="form-control"
+                                   placeholder="EV-01" maxlength="64" required>
+                        </div>
+                        <div class="col-12 col-md-4 col-lg-3">
+                            <label for="scheduledAtTicks" class="form-label fw-semibold">Tiempo lógico t</label>
+                            <input id="scheduledAtTicks" name="scheduledAtTicks" type="number" class="form-control"
+                                   th:min="${selectedScenario.currentTime().ticks()}"
+                                   th:value="${selectedScenario.currentTime().ticks()}"
+                                   min="0" value="0" required>
+                            <div class="form-text">
+                                Debe ser &ge; reloj actual. Programar no avanza el reloj; solo «Avanzar al siguiente evento» lo adelanta.
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4 col-lg-3">
+                            <label for="eventType" class="form-label fw-semibold">Tipo de evento</label>
+                            <select id="eventType" name="eventType" class="form-select" required>
+                                <option th:each="t : ${eventTypes}"
+                                        th:value="${t.name()}"
+                                        th:text="${@areUi.eventTypeLabel(t.name()) + ' (prio ' + t.precedenceRank() + ')'}"></option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-2">
+                            <label for="subjectId" class="form-label fw-semibold">ID de sujeto</label>
+                            <input id="subjectId" name="subjectId" type="text" class="form-control"
+                                   placeholder="SYS-QUEUE" maxlength="64" required>
+                            <div class="form-text">
+                                <code>EMG-*</code>, <code>AMB-*</code>, <code>HOSP-*</code>, <code>RES-*</code> o <code>SYS-QUEUE</code>.
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-2">
+                            <label for="description" class="form-label fw-semibold">Descripción</label>
+                            <input id="description" name="description" type="text" class="form-control"
+                                   placeholder="Evaluación manual de cola" maxlength="500">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-are-primary d-inline-flex align-items-center gap-2">
+                            <i data-lucide="calendar-plus" class="are-nav-icon" aria-hidden="true"></i>
+                            <span>Programar evento discreto</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Pending Events Table -->
+            <div class="mb-4">
+                <h4 class="h6 fw-bold mb-2" style="color: var(--are-navy);"
+                    th:text="${selectedScenario.isActive() ? 'Eventos pendientes (orden determinista)' : 'Eventos pendientes al cierre (solo trazabilidad, no ejecutables)'}">
+                    Eventos pendientes (orden determinista)
+                </h4>
+                <p class="text-secondary mb-0" th:if="${#lists.isEmpty(pendingEvents)}">Sin eventos pendientes.</p>
+                <div th:if="${!#lists.isEmpty(pendingEvents)}" class="are-table-wrap">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>t programado</th>
+                            <th>Tipo (Precedencia)</th>
+                            <th>Secuencia</th>
+                            <th>Sujeto</th>
+                            <th>Descripción</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="ev : ${pendingEvents}">
+                            <td class="are-mono fw-bold" th:text="${ev.event().eventId()}">EV-01</td>
+                            <td class="are-mono" th:text="${ev.event().scheduledAt().ticks()}">0</td>
+                            <td th:text="${@areUi.eventTypeLabel(ev.event().type().name()) + ' (' + ev.event().type().precedenceRank() + ')'}">Evaluación (3)</td>
+                            <td class="are-mono" th:text="${ev.event().sequenceNumber()}">1</td>
+                            <td class="are-mono" th:text="${ev.event().subjectId()}">SYS</td>
+                            <td th:text="${ev.event().description()}">Descripción</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- History Events Table -->
+            <div>
+                <h4 class="h6 fw-bold mb-2" style="color: var(--are-navy);">Historial de eventos ejecutados / fallidos</h4>
+                <p class="text-secondary mb-0" th:if="${#lists.isEmpty(historyEvents)}">Aún no se han ejecutado eventos en este escenario.</p>
+                <div th:if="${!#lists.isEmpty(historyEvents)}" class="are-table-wrap">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Estado</th>
+                            <th>t prog. / t ejec.</th>
+                            <th>Tipo</th>
+                            <th>Sujeto</th>
+                            <th>Resultado / Trazabilidad</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="ev : ${historyEvents}">
+                            <td class="are-mono fw-bold" th:text="${ev.event().eventId()}">EV-01</td>
+                            <td>
+                                <span class="are-badge"
+                                      th:classappend="'are-badge-' + ${@areUi.badgeTone('EVENT', ev.status().name())}"
+                                      th:text="${@areUi.eventStatusLabel(ev.status().name())}">Ejecutado</span>
+                            </td>
+                            <td class="are-mono"
+                                th:text="${ev.event().scheduledAt().ticks() + ' / ' + (ev.executedAt().isPresent() ? ev.executedAt().get().ticks() : '-')}">0 / 0</td>
+                            <td th:text="${@areUi.eventTypeLabel(ev.event().type().name())}">Evaluación</td>
+                            <td class="are-mono" th:text="${ev.event().subjectId()}">SYS</td>
+                            <td th:text="${ev.executionNote()}">Nota</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-
-        <h2 th:text="${selectedScenario.isActive() ? 'Eventos pendientes (orden determinista)' : 'Eventos pendientes al cierre (solo trazabilidad, no ejecutables)'}">
-            Eventos pendientes (orden determinista)
-        </h2>
-        <p class="muted" th:if="${#lists.isEmpty(pendingEvents)}">Sin eventos pendientes.</p>
-        <table th:if="${!#lists.isEmpty(pendingEvents)}">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>t programado</th>
-                    <th>Tipo (Precedencia)</th>
-                    <th>Secuencia</th>
-                    <th>Sujeto</th>
-                    <th>Descripción</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="ev : ${pendingEvents}">
-                    <td th:text="${ev.event().eventId()}">EV-01</td>
-                    <td th:text="${ev.event().scheduledAt().ticks()}">0</td>
-                    <td th:text="${ev.event().type() + ' (' + ev.event().type().precedenceRank() + ')'}">WAITING_QUEUE_EVALUATION (3)</td>
-                    <td th:text="${ev.event().sequenceNumber()}">1</td>
-                    <td th:text="${ev.event().subjectId()}">SYS</td>
-                    <td th:text="${ev.event().description()}">Descripción</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h2>Historial de eventos ejecutados / fallidos</h2>
-        <p class="muted" th:if="${#lists.isEmpty(historyEvents)}">Aún no se han ejecutado eventos en este escenario.</p>
-        <table th:if="${!#lists.isEmpty(historyEvents)}">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Estado</th>
-                    <th>t prog. / t ejec.</th>
-                    <th>Tipo</th>
-                    <th>Sujeto</th>
-                    <th>Resultado / Trazabilidad</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="ev : ${historyEvents}">
-                    <td th:text="${ev.event().eventId()}">EV-01</td>
-                    <td>
-                        <span class="status-pill"
-                              th:classappend="${ev.status().name() == 'EXECUTED' ? ' status-pill-executed' : (ev.status().name() == 'FAILED' ? ' status-pill-failed' : '')}"
-                              th:text="${ev.status()}">EXECUTED</span>
-                    </td>
-                    <td th:text="${ev.event().scheduledAt().ticks() + ' / ' + (ev.executedAt().isPresent() ? ev.executedAt().get().ticks() : '-')}">0 / 0</td>
-                    <td th:text="${ev.event().type()}">WAITING_QUEUE_EVALUATION</td>
-                    <td th:text="${ev.event().subjectId()}">SYS</td>
-                    <td th:text="${ev.executionNote()}">Nota</td>
-                </tr>
-            </tbody>
-        </table>
     </section>
-</main>
+</th:block>
+
 </body>
 </html>

@@ -269,11 +269,18 @@ class AdminAndRulesControllersTest {
     void shouldShowTopologyWithIsolatedN10() throws Exception {
         when(roadGraphRepository.loadGraph()).thenReturn(sampleGraphWithIsolatedN10());
 
-        mockMvc.perform(get("/admin/topology"))
+        String html = mockMvc.perform(get("/admin/topology"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("N01")))
                 .andExpect(content().string(containsString("N10")))
                 .andExpect(content().string(containsString("EDG-01")))
-                .andExpect(content().string(containsString("Nodo aislado sin aristas activas")));
+                .andExpect(content().string(containsString("Conectado")))
+                .andExpect(content().string(containsString("Nodo aislado sin aristas activas")))
+                .andExpect(content().string(containsString("/css/are-design-system.css")))
+                .andExpect(content().string(containsString("aria-current=\"page\"")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(html, "topology-page-title");
     }
 }

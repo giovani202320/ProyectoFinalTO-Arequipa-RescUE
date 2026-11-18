@@ -48,9 +48,11 @@ public class AreUiFormatter {
 
     private static final Map<String, String> EVENT_TYPES = Map.of(
             "AMBULANCE_ARRIVAL_AT_INCIDENT", "Llegada de ambulancia al incidente",
+            "WAITING_QUEUE_EVALUATION", "Evaluación de colas de espera",
+            "RESOURCE_RELEASE", "Liberación de recurso",
+            "EMERGENCY_REGISTRATION", "Registro de emergencia",
             "HOSPITAL_DELIVERY", "Entrega hospitalaria",
-            "PATIENT_DISCHARGE", "Alta simulada de paciente",
-            "EMERGENCY_REGISTRATION", "Registro de emergencia"
+            "PATIENT_DISCHARGE", "Alta simulada de paciente"
     );
 
     private static final Map<String, String> RULE_VERSION_STATUSES = Map.of(
