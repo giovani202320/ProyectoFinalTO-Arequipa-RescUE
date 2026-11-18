@@ -1,359 +1,462 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Métricas y Registro Experimental (HU-14) — ARE (Arequipa RescUE)</title>
-    <style>
-        :root {
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --border: #cbd5e1;
-            --primary: #1e3a8a;
-            --primary-hover: #1d4ed8;
-            --text: #0f172a;
-            --muted: #475569;
-            --badge-bg: #dbeafe;
-            --badge-fg: #1e40af;
-            --warn-bg: #fffbeb;
-            --warn-border: #fcd34d;
-            --warn-fg: #92400e;
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            padding: 2.5rem 1.25rem;
-            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-        }
-        main {
-            max-width: 1160px;
-            margin: 0 auto;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 2rem;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
-        }
-        nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.25rem;
-            font-size: 0.92rem;
-        }
-        nav a { color: var(--primary); text-decoration: none; font-weight: 600; }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            background: var(--badge-bg);
-            color: var(--badge-fg);
-            font-weight: 600;
-            font-size: 0.85rem;
-            margin-bottom: 0.75rem;
-        }
-        h1 { margin: 0 0 0.5rem 0; color: var(--primary); font-size: 1.65rem; }
-        h2 { margin: 1.5rem 0 0.5rem 0; color: var(--primary); font-size: 1.15rem; }
-        h3 { margin: 0 0 0.35rem 0; color: var(--primary); font-size: 1rem; }
-        .lead, .muted { color: var(--muted); font-size: 0.92rem; }
-        .filter-bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.85rem;
-            align-items: end;
-            padding: 1rem;
-            background: #f8fafc;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 1.25rem;
-        }
-        .filter-bar label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
-        .filter-bar select {
-            padding: 0.45rem 0.6rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: #ffffff;
-            min-width: 210px;
-        }
-        button {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 6px;
-            background: var(--primary);
-            color: #ffffff;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        button:hover { background: var(--primary-hover); }
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.25rem;
-        }
-        .card {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem 1.15rem;
-            background: #f8fafc;
-        }
-        .metric-value {
-            font-size: 1.35rem;
-            font-weight: 700;
-            color: var(--text);
-            margin: 0.35rem 0;
-        }
-        .in-progress-box {
-            margin-top: 0.6rem;
-            padding: 0.55rem 0.7rem;
-            border-radius: 6px;
-            background: var(--warn-bg);
-            border: 1px solid var(--warn-border);
-            color: var(--warn-fg);
-            font-size: 0.85rem;
-        }
-        table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; font-size: 0.88rem; }
-        th, td {
-            border: 1px solid var(--border);
-            padding: 0.48rem 0.6rem;
-            text-align: left;
-            vertical-align: top;
-        }
-        th { background: #f1f5f9; font-weight: 600; }
-        .pill {
-            display: inline-block;
-            padding: 0.12rem 0.5rem;
-            border-radius: 999px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            background: var(--badge-bg);
-            color: var(--badge-fg);
-        }
-    </style>
-</head>
-<body>
-<main>
-    <nav>
-        <div>
-            <a th:href="@{/}">Inicio</a> |
-            <a th:href="@{/simulation}">Simulación (HU-13)</a> |
-            <a th:href="@{/emergencies}">Emergencias</a> |
-            <a th:href="@{/dispatch/waiting-queue}">Cola Ambulancias</a> |
-            <a th:href="@{/dispatch/hospital-queue}">Cola Hospitales</a>
-        </div>
-        <span>
-            Referencia lógica:
-            <strong th:text="${report.referenceScenarioId() != null ? report.referenceScenarioId() + ' (' + report.referenceScenarioStatus() + ')' : 'Sin escenario'}">SCN-01</strong>
-            — <strong th:text="'t=' + ${report.currentLogicalTicks()}">t=0</strong>
-        </span>
-    </nav>
+<head th:replace="~{fragments/layout :: head('Reportes y métricas')}"></head>
+<body th:replace="~{fragments/layout :: appShell('Reportes y métricas', 'Catálogo de 7 métricas experimentales y registro funcional trazable (HU-14)', 'reporting', ~{::reportingContent})}">
 
-    <span class="badge">Incremento 06 — HU-14 (ACT-03)</span>
-    <h1>Catálogo de 7 Métricas Experimentales y Registro Trazable</h1>
-    <p class="lead">
-        Panel de solo lectura conforme a <code>RN-MET-003</code> y <code>RN-MET-004</code>. Separa mediciones cerradas
-        de emergencias aún en curso (para evidenciar <em>starvation</em> sin distorsionar promedios ni dividir por cero).
-    </p>
-
-    <form class="filter-bar" method="get" th:action="@{/reporting}">
-        <div>
-            <label for="scenarioId">Escenario de referencia temporal (t actual)</label>
-            <select id="scenarioId" name="scenarioId">
-                <option value="">Automático (ACTIVE o último)</option>
-                <option th:each="sc : ${scenarios}"
-                        th:value="${sc.id()}"
-                        th:selected="${sc.id() == selectedScenarioId}"
-                        th:text="${sc.id() + ' — ' + sc.name() + ' (' + sc.status() + ', t=' + sc.currentLogicalTicks() + ')'}">
-                </option>
-            </select>
-        </div>
-        <div>
-            <label for="state">Filtrar registro trazable por estado</label>
-            <select id="state" name="state">
-                <option value="" th:selected="${selectedState == ''}">Todos los estados</option>
-                <option th:each="st : ${states}"
-                        th:value="${st.name()}"
-                        th:selected="${st.name() == selectedState}"
-                        th:text="${st.name()}">
-                </option>
-            </select>
-        </div>
-        <button type="submit">Actualizar reporte</button>
-    </form>
-
-    <div th:if="false">
-    <div th:fragment="temporalCard(metric, description)" class="card">
-        <h3 th:text="${metric.code() + ' — ' + metric.name()}">MET-01</h3>
-        <p class="muted" th:text="${description}">Descripción</p>
-        <div class="metric-value">
-            <span th:if="${metric.closedAverageTicks() != null}"
-                  th:text="${#numbers.formatDecimal(metric.closedAverageTicks(), 1, 2) + ' ' + metric.unit()}">0.00</span>
-            <span th:if="${metric.closedAverageTicks() == null}">Sin mediciones cerradas</span>
-        </div>
-        <div class="muted" th:text="'Casos cerrados incluidos en promedio: ' + ${metric.closedCount()}">Casos cerrados: 0</div>
-        <div class="in-progress-box" th:if="${metric.inProgressCount() > 0}">
+<th:block th:fragment="reportingContent">
+    <!-- Header -->
+    <section class="are-card mb-4" aria-labelledby="reporting-page-title">
+        <div class="are-card-body d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
             <div>
-                <strong th:text="${metric.inProgressStatusLabel()}">EN_ESPERA</strong>:
-                <span th:text="${metric.inProgressCount()} + ' emergencia(s) en curso (excluidas del promedio)'"></span>
+                <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
+                    <span th:replace="~{fragments/components :: statusBadge('Administrador (ACT-03) — HU-14', 'navy')}"></span>
+                    <span class="are-badge are-badge-neutral are-mono"
+                          th:text="${report.referenceScenarioId() != null ? 'Referencia temporal: ' + report.referenceScenarioId() + ' (' + @areUi.scenarioStatusLabel(report.referenceScenarioStatus()) + ', t=' + report.currentLogicalTicks() + ')' : 'Sin escenario de referencia (t=' + report.currentLogicalTicks() + ')'}">
+                        Referencia temporal: Sin escenario (t=0)
+                    </span>
+                </div>
+                <h2 id="reporting-page-title" class="h4 fw-bold mb-1" style="color: var(--are-navy);">
+                    Catálogo de 7 Métricas Experimentales y Registro Trazable
+                </h2>
+                <p class="text-secondary small mb-0">
+                    Panel de solo lectura conforme a <code>RN-MET-003</code> y <code>RN-MET-004</code>. Separa mediciones cerradas de emergencias aún en curso
+                    (para evidenciar <em>starvation</em> sin distorsionar promedios ni dividir por cero). El selector de escenario aporta la referencia temporal <code>t</code>
+                    para observaciones globales de emergencias, flota y concurrencia.
+                </p>
             </div>
-            <ul>
-                <li th:each="item : ${metric.inProgressItems()}"
-                    th:text="${item.emergencyId() + ': inicio t=' + item.startedAtTicks() + ', acumulado=' + item.accumulatedTicks() + ' u.'}">
-                </li>
-            </ul>
+            <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+                <a th:replace="~{fragments/components :: actionLink(@{/simulation}, 'Simulación (HU-13)', 'outline', 'clock')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/emergencies}, 'Emergencias', 'outline', 'siren')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/dispatch/waiting-queue}, 'Cola de ambulancias', 'outline', 'radio')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/dispatch/hospital-queue}, 'Cola hospitalaria', 'outline', 'hospital')}"></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Filter Form -->
+    <section class="are-card mb-4" aria-labelledby="reporting-filter-heading">
+        <div class="are-card-header">
+            <h3 id="reporting-filter-heading" class="are-card-title">Referencia temporal y filtro del registro</h3>
+        </div>
+        <div class="are-card-body">
+            <form method="get" th:action="@{/reporting}" class="row g-3 align-items-end">
+                <div class="col-12 col-md-5">
+                    <label for="scenarioId" class="form-label fw-semibold">Escenario de referencia temporal (t actual)</label>
+                    <select id="scenarioId" name="scenarioId" class="form-select">
+                        <option value="">Automático (Activo o último)</option>
+                        <option th:each="sc : ${scenarios}"
+                                th:value="${sc.id()}"
+                                th:selected="${sc.id() == selectedScenarioId}"
+                                th:text="${sc.id() + ' — ' + sc.name() + ' (' + @areUi.scenarioStatusLabel(sc.status()) + ', t=' + sc.currentLogicalTicks() + ')'}">
+                        </option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="state" class="form-label fw-semibold">Filtrar registro trazable por estado</label>
+                    <select id="state" name="state" class="form-select">
+                        <option value="" th:selected="${selectedState == ''}">Todos los estados</option>
+                        <option th:each="st : ${states}"
+                                th:value="${st.name()}"
+                                th:selected="${st.name() == selectedState}"
+                                th:text="${@areUi.emergencyStateLabel(st.name())}">
+                        </option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3 d-grid">
+                    <button type="submit" class="btn btn-are-primary d-inline-flex align-items-center justify-content-center gap-2">
+                        <i data-lucide="refresh-cw" class="are-nav-icon" aria-hidden="true"></i>
+                        <span>Actualizar reporte</span>
+                    </button>
+                </div>
+            </form>
+            <div class="are-alert are-alert-info mt-3 mb-0" role="status">
+                <i data-lucide="info" class="are-nav-icon mt-1" aria-hidden="true"></i>
+                <div class="small">
+                    <strong>Alcance de los filtros (RN-MET-004):</strong>
+                    las métricas <strong>MET-01, MET-02, MET-03, MET-04, MET-06 y MET-07</strong> son <strong>Datos globales</strong> del sistema.
+                    El selector de escenario fija únicamente la referencia temporal <code>t</code> (afecta a <strong>MET-05</strong> y tiempos acumulados en curso),
+                    y el filtro por estado se aplica exclusivamente a la tabla <strong>Registro funcional experimental trazable (RN-MET-003)</strong>.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reusable fragment for temporal metrics -->
+    <div th:if="false">
+        <div th:fragment="temporalCard(metric, description)" class="col-12 col-md-6">
+            <article class="are-card h-100">
+                <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                    <h3 class="are-card-title" th:text="${metric.code() + ' — ' + metric.name()}">MET-01</h3>
+                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                        <span class="are-badge are-badge-info">Datos globales</span>
+                        <span class="are-badge are-badge-neutral are-mono"
+                              th:text="${metric.closedCount()} + ' cerrado(s)'">0 cerrado(s)</span>
+                    </div>
+                </div>
+                <div class="are-card-body">
+                    <p class="text-secondary small mb-2" th:text="${description}">Descripción</p>
+                    <div class="fs-4 fw-bold mb-1" style="color: var(--are-navy);">
+                        <span th:if="${metric.closedAverageTicks() != null}"
+                              th:text="${#numbers.formatDecimal(metric.closedAverageTicks(), 1, 2) + ' ' + metric.unit()}">0.00 unidades de tiempo lógico</span>
+                        <span th:if="${metric.closedAverageTicks() == null}" class="text-secondary fs-6 fw-semibold">Sin mediciones cerradas</span>
+                    </div>
+                    <div class="text-secondary small mb-2"
+                         th:text="'Casos cerrados incluidos en promedio: ' + ${metric.closedCount()}">Casos cerrados incluidos en promedio: 0</div>
+
+                    <div class="are-alert are-alert-warning mt-3 mb-0" th:if="${metric.inProgressCount() > 0}" role="status">
+                        <i data-lucide="clock" class="are-nav-icon mt-1" aria-hidden="true"></i>
+                        <div>
+                            <div>
+                                <strong th:text="${@areUi.inProgressStatusLabel(metric.inProgressStatusLabel())}">En espera</strong>:
+                                <span th:text="${metric.inProgressCount()} + ' emergencia(s) en curso (excluidas del promedio)'"></span>
+                            </div>
+                            <ul class="mb-0 mt-1 ps-3 small">
+                                <li th:each="item : ${metric.inProgressItems()}"
+                                    th:text="${item.emergencyId() + ': inicio t=' + item.startedAtTicks() + ', acumulado=' + item.accumulatedTicks() + ' u.'}">
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </article>
         </div>
     </div>
-    </div>
 
-    <h2>Métricas temporales (1, 2, 3 y 7)</h2>
-    <div class="metrics-grid">
-        <div th:replace="~{::temporalCard(${report.waitingForAmbulance()}, 'Desde registro / ingreso a WAITING_AMBULANCE hasta ASSIGNED.')}"></div>
-        <div th:replace="~{::temporalCard(${report.responseToIncident()}, 'Desde REGISTERED hasta llegada al nodo del incidente (AT_INCIDENT).')}"></div>
-        <div th:replace="~{::temporalCard(${report.pickupToHospital()}, 'Desde AT_INCIDENT hasta entrega simulada en hospital (COMPLETED).')}"></div>
-        <div th:replace="~{::temporalCard(${report.waitingForHospital()}, 'Desde WAITING_HOSPITAL (o 0 si reservó en primer ciclo) hasta IN_TRANSPORT.')}"></div>
-    </div>
+    <!-- Temporal Metrics (1, 2, 3, 7) -->
+    <section class="mb-4" aria-labelledby="temporal-metrics-heading">
+        <h3 id="temporal-metrics-heading" class="h5 fw-bold mb-3" style="color: var(--are-navy);">
+            Métricas temporales (1, 2, 3 y 7)
+        </h3>
+        <div class="row g-3">
+            <div th:replace="~{::temporalCard(${report.waitingForAmbulance()}, 'Observación global: desde registro / ingreso a cola de espera hasta asignación.')}"></div>
+            <div th:replace="~{::temporalCard(${report.responseToIncident()}, 'Observación global: desde registro hasta llegada al nodo del incidente.')}"></div>
+            <div th:replace="~{::temporalCard(${report.pickupToHospital()}, 'Observación global: desde llegada al incidente hasta entrega simulada en hospital.')}"></div>
+            <div th:replace="~{::temporalCard(${report.waitingForHospital()}, 'Observación global: desde espera de hospital (o 0 si reservó en primer ciclo) hasta inicio de traslado.')}"></div>
+        </div>
+    </section>
 
-    <h2>Métricas de volumen, utilización y concurrencia (4, 5 y 6)</h2>
-    <div class="metrics-grid">
-        <section class="card">
-            <h3>MET-04 — Número de emergencias completadas</h3>
-            <p class="muted">Conteo entero de emergencias en estado COMPLETED y desglose separado de activas.</p>
-            <div class="metric-value" th:text="${report.completedEmergencies().completedCount()} + ' completadas'">0 completadas</div>
-            <div class="muted" th:text="'Activas / en curso: ' + ${report.completedEmergencies().activeCount()}">Activas: 0</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Estado en curso</th>
-                        <th>Cantidad</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="entry : ${report.completedEmergencies().activeCountsByState()}">
-                        <td th:text="${entry.key}">WAITING_AMBULANCE</td>
-                        <td th:text="${entry.value}">0</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-
-        <section class="card">
-            <h3>MET-05 — Utilización de ambulancias</h3>
-            <p class="muted">Tiempo lógico ocupado sobre tiempo lógico transcurrido del escenario (sin división por cero si Δt=0).</p>
-            <div class="metric-value"
-                 th:text="${#numbers.formatDecimal(report.ambulanceUtilization().averageUtilizationRatio() * 100, 1, 2) + '% (' + report.ambulanceUtilization().totalOccupiedTicks() + ' u. ocupadas)'}">
-                0.00%
-            </div>
-            <div class="muted" th:text="'Tiempo lógico transcurrido: Δt=' + ${report.ambulanceUtilization().scenarioElapsedTicks()}">Δt=0</div>
-            <p class="muted" th:if="${#lists.isEmpty(report.ambulanceUtilization().items())}">No hay ambulancias registradas.</p>
-            <table th:if="${!#lists.isEmpty(report.ambulanceUtilization().items())}">
-                <thead>
-                    <tr>
-                        <th>Unidad</th>
-                        <th>Tipo</th>
-                        <th>Estado</th>
-                        <th>Ocupado (u.)</th>
-                        <th>Proporción</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="amb : ${report.ambulanceUtilization().items()}">
-                        <td th:text="${amb.ambulanceId()}">AMB-01</td>
-                        <td th:text="${amb.equipmentType()}">BASIC</td>
-                        <td th:text="${amb.currentState()}">AVAILABLE</td>
-                        <td th:text="${amb.occupiedTicks()}">0</td>
-                        <td th:text="${#numbers.formatDecimal(amb.utilizationRatio() * 100, 1, 2) + '%'}">0.00%</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-
-        <section class="card">
-            <h3>MET-06 — Conflictos concurrentes y reintentos</h3>
-            <p class="muted">Conteo exacto sin duplicados entre asignación automática (DEC-017) y reserva hospitalaria (DEC-018).</p>
-            <div class="metric-value"
-                 th:text="${report.concurrencyConflicts().totalConflicts() + ' conflictos / ' + report.concurrencyConflicts().totalRetriesConsumed() + ' reintentos / ' + report.concurrencyConflicts().totalExhaustions() + ' agotamientos'}">
-                0 / 0 / 0
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Proceso</th>
-                        <th>Conflictos</th>
-                        <th>Reintentos</th>
-                        <th>Agotamientos</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Asignación ambulancia (DEC-017)</td>
-                        <td th:text="${report.concurrencyConflicts().ambulanceDispatch().conflicts()}">0</td>
-                        <td th:text="${report.concurrencyConflicts().ambulanceDispatch().retriesConsumed()}">0</td>
-                        <td th:text="${report.concurrencyConflicts().ambulanceDispatch().exhaustions()}">0</td>
-                    </tr>
-                    <tr>
-                        <td>Reserva hospitalaria (DEC-018)</td>
-                        <td th:text="${report.concurrencyConflicts().hospitalReservation().conflicts()}">0</td>
-                        <td th:text="${report.concurrencyConflicts().hospitalReservation().retriesConsumed()}">0</td>
-                        <td th:text="${report.concurrencyConflicts().hospitalReservation().exhaustions()}">0</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-    </div>
-
-    <h2>Registro funcional experimental trazable (RN-MET-003)</h2>
-    <p class="muted" th:if="${#lists.isEmpty(report.experimentalRecords())}">
-        No existen emergencias registradas para los criterios consultados.
-    </p>
-    <table th:if="${!#lists.isEmpty(report.experimentalRecords())}">
-        <thead>
-            <tr>
-                <th>Emergencia</th>
-                <th>Estado / Reglas</th>
-                <th>Recursos (Amb / Hosp)</th>
-                <th>Marcas de tiempo lógico (t)</th>
-                <th>Operaciones y conflictos</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr th:each="rec : ${report.experimentalRecords()}">
-                <td>
-                    <strong th:text="${rec.emergencyId()}">EMG-00001</strong>
-                    <div class="muted" th:if="${rec.lastOutcomeReason() != null}" th:text="${rec.lastOutcomeReason()}"></div>
-                </td>
-                <td>
-                    <span class="pill" th:text="${rec.currentState()}">COMPLETED</span>
-                    <div class="muted" th:text="'Versión: ' + ${rec.ruleVersionId()}">RUL-V01</div>
-                </td>
-                <td>
-                    <div th:text="'Amb: ' + ${rec.assignedAmbulanceId() != null ? rec.assignedAmbulanceId() : '-'}">Amb: -</div>
-                    <div th:text="'Hosp: ' + ${rec.hospitalId() != null ? rec.hospitalId() : '-'}">Hosp: -</div>
-                </td>
-                <td>
-                    <div th:text="'REGISTERED=' + ${rec.registeredAtTicks()}">REGISTERED=0</div>
-                    <div th:if="${rec.queueEnteredAtTicks() != null}" th:text="'WAITING_AMBULANCE=' + ${rec.queueEnteredAtTicks()}"></div>
-                    <div th:if="${rec.assignedAtTicks() != null}" th:text="'ASSIGNED=' + ${rec.assignedAtTicks()}"></div>
-                    <div th:if="${rec.atIncidentAtTicks() != null}" th:text="'AT_INCIDENT=' + ${rec.atIncidentAtTicks()}"></div>
-                    <div th:if="${rec.hospitalQueueEnteredAtTicks() != null}" th:text="'WAITING_HOSPITAL=' + ${rec.hospitalQueueEnteredAtTicks()}"></div>
-                    <div th:if="${rec.inTransportAtTicks() != null}" th:text="'IN_TRANSPORT=' + ${rec.inTransportAtTicks()}"></div>
-                    <div th:if="${rec.completedAtTicks() != null}" th:text="'COMPLETED=' + ${rec.completedAtTicks()}"></div>
-                    <div th:if="${rec.dischargedAtTicks() != null}" th:text="'DISCHARGED=' + ${rec.dischargedAtTicks()}"></div>
-                </td>
-                <td>
-                    <div th:if="${#lists.isEmpty(rec.operationResults())}" class="muted">Sin operaciones registradas</div>
-                    <div th:each="op : ${rec.operationResults()}">
-                        <strong th:text="${op.operationType()}">AUTOMATIC_DISPATCH</strong>:
-                        <span th:text="${op.finalStatus() + ' (intentos=' + op.totalAttempts() + ', t=' + op.logicalTicks() + ')'}"></span>
+    <!-- Volume, Utilization & Concurrency Metrics (4, 5, 6) -->
+    <section class="mb-4" aria-labelledby="volume-metrics-heading">
+        <h3 id="volume-metrics-heading" class="h5 fw-bold mb-3" style="color: var(--are-navy);">
+            Métricas de volumen, utilización y concurrencia (4, 5 y 6)
+        </h3>
+        <div class="row g-3">
+            <!-- MET-04 -->
+            <div class="col-12 col-lg-4">
+                <article class="are-card h-100">
+                    <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                        <h4 class="are-card-title">MET-04 — Número de emergencias completadas</h4>
+                        <div class="d-flex gap-1 align-items-center">
+                            <span class="are-badge are-badge-info">Datos globales</span>
+                            <span class="are-badge are-badge-success are-mono"
+                                  th:text="${report.completedEmergencies().completedCount()}">0</span>
+                        </div>
                     </div>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-</main>
+                    <div class="are-card-body">
+                        <p class="text-secondary small mb-2">
+                            Conteo entero de emergencias cerradas (atención finalizada) y desglose separado de activas.
+                        </p>
+                        <div class="fs-4 fw-bold mb-1" style="color: var(--are-navy);"
+                             th:text="${report.completedEmergencies().completedCount()} + ' completadas'">0 completadas</div>
+                        <div class="text-secondary small mb-3"
+                             th:text="'Activas / en curso: ' + ${report.completedEmergencies().activeCount()}">Activas / en curso: 0</div>
+                        <div class="are-table-wrap">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Estado en curso</th>
+                                    <th class="text-end">Cantidad</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="entry : ${report.completedEmergencies().activeCountsByState()}">
+                                    <td th:text="${@areUi.emergencyStateLabel(entry.key)}">Esperando ambulancia</td>
+                                    <td class="text-end are-mono fw-semibold" th:text="${entry.value}">0</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- MET-05 -->
+            <div class="col-12 col-lg-4">
+                <article class="are-card h-100">
+                    <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                        <h4 class="are-card-title">MET-05 — Utilización de ambulancias</h4>
+                        <div class="d-flex gap-1 align-items-center">
+                            <span class="are-badge are-badge-navy">Referencia temporal t</span>
+                            <span class="are-badge are-badge-primary are-mono"
+                                  th:text="${#numbers.formatDecimal(report.ambulanceUtilization().averageUtilizationRatio() * 100, 1, 2) + '%'}">0.00%</span>
+                        </div>
+                    </div>
+                    <div class="are-card-body">
+                        <p class="text-secondary small mb-2">
+                            Tiempo lógico ocupado sobre tiempo lógico transcurrido de la referencia temporal (sin división por cero si Δt=0).
+                        </p>
+                        <div class="fs-4 fw-bold mb-1" style="color: var(--are-navy);"
+                             th:text="${#numbers.formatDecimal(report.ambulanceUtilization().averageUtilizationRatio() * 100, 1, 2) + '% (' + report.ambulanceUtilization().totalOccupiedTicks() + ' u. ocupadas)'}">
+                            0.00% (0 u. ocupadas)
+                        </div>
+                        <div class="text-secondary small mb-3"
+                             th:text="'Tiempo lógico transcurrido: Δt=' + ${report.ambulanceUtilization().scenarioElapsedTicks()}">Δt=0</div>
+
+                        <p class="text-secondary small mb-0" th:if="${#lists.isEmpty(report.ambulanceUtilization().items())}">
+                            No hay ambulancias registradas.
+                        </p>
+                        <div th:if="${!#lists.isEmpty(report.ambulanceUtilization().items())}" class="are-table-wrap">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Unidad</th>
+                                    <th>Tipo</th>
+                                    <th>Estado</th>
+                                    <th class="text-end">Ocup. (u.)</th>
+                                    <th class="text-end">%</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="amb : ${report.ambulanceUtilization().items()}">
+                                    <td class="are-mono fw-bold" th:text="${amb.ambulanceId()}">AMB-01</td>
+                                    <td th:text="${@areUi.equipmentLabel(amb.equipmentType())}">Básica</td>
+                                    <td th:text="${@areUi.ambulanceStateLabel(amb.currentState())}">Disponible</td>
+                                    <td class="text-end are-mono" th:text="${amb.occupiedTicks()}">0</td>
+                                    <td class="text-end are-mono fw-semibold"
+                                        th:text="${#numbers.formatDecimal(amb.utilizationRatio() * 100, 1, 2) + '%'}">0.00%</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- MET-06 -->
+            <div class="col-12 col-lg-4">
+                <article class="are-card h-100">
+                    <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                        <h4 class="are-card-title">MET-06 — Conflictos concurrentes y reintentos</h4>
+                        <div class="d-flex gap-1 align-items-center">
+                            <span class="are-badge are-badge-info">Datos globales</span>
+                            <span class="are-badge are-badge-neutral are-mono"
+                                  th:text="${report.concurrencyConflicts().totalConflicts()} + ' conf.'">0 conf.</span>
+                        </div>
+                    </div>
+                    <div class="are-card-body">
+                        <p class="text-secondary small mb-2">
+                            Conteo exacto sin duplicados entre asignación automática (DEC-017) y reserva hospitalaria (DEC-018).
+                        </p>
+                        <div class="fs-5 fw-bold mb-3" style="color: var(--are-navy);"
+                             th:text="${report.concurrencyConflicts().totalConflicts() + ' conflictos / ' + report.concurrencyConflicts().totalRetriesConsumed() + ' reintentos / ' + report.concurrencyConflicts().totalExhaustions() + ' agotamientos'}">
+                            0 conflictos / 0 reintentos / 0 agotamientos
+                        </div>
+                        <div class="are-table-wrap">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Proceso</th>
+                                    <th class="text-end">Conf.</th>
+                                    <th class="text-end">Reint.</th>
+                                    <th class="text-end">Agot.</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>Asignación ambulancia (DEC-017)</td>
+                                    <td class="text-end are-mono" th:text="${report.concurrencyConflicts().ambulanceDispatch().conflicts()}">0</td>
+                                    <td class="text-end are-mono" th:text="${report.concurrencyConflicts().ambulanceDispatch().retriesConsumed()}">0</td>
+                                    <td class="text-end are-mono" th:text="${report.concurrencyConflicts().ambulanceDispatch().exhaustions()}">0</td>
+                                </tr>
+                                <tr>
+                                    <td>Reserva hospitalaria (DEC-018)</td>
+                                    <td class="text-end are-mono" th:text="${report.concurrencyConflicts().hospitalReservation().conflicts()}">0</td>
+                                    <td class="text-end are-mono" th:text="${report.concurrencyConflicts().hospitalReservation().retriesConsumed()}">0</td>
+                                    <td class="text-end are-mono" th:text="${report.concurrencyConflicts().hospitalReservation().exhaustions()}">0</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- Visual Charts Section (Chart.js 4.4.7 local) -->
+    <section id="are-reporting-charts-root" class="mb-4" aria-labelledby="charts-heading">
+        <h3 id="charts-heading" class="h5 fw-bold mb-3" style="color: var(--are-navy);">
+            Visualización gráfica de indicadores
+        </h3>
+
+        <!-- Hidden accessible data carriers for Chart.js -->
+        <div class="d-none" aria-hidden="true">
+            <span data-met04-item="COMPLETED" data-label="Atención finalizada"
+                  th:attr="data-count=${report.completedEmergencies().completedCount()}"></span>
+            <span th:each="entry : ${report.completedEmergencies().activeCountsByState()}"
+                  th:attr="data-met04-item=${entry.key},data-label=${@areUi.emergencyStateLabel(entry.key)},data-count=${entry.value}"></span>
+            <span th:each="amb : ${report.ambulanceUtilization().items()}"
+                  th:attr="data-met05-item=${amb.ambulanceId()},data-id=${amb.ambulanceId()},data-percent=${amb.utilizationRatio() * 100}"></span>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-6">
+                <div class="are-card h-100">
+                    <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                        <h4 class="are-card-title">Promedios temporales cerrados (u. tiempo lógico)</h4>
+                        <span class="are-badge are-badge-info">Datos globales</span>
+                    </div>
+                    <div class="are-card-body">
+                        <p class="text-secondary small mb-2"
+                           th:if="${report.waitingForAmbulance().closedAverageTicks() == null and report.responseToIncident().closedAverageTicks() == null and report.pickupToHospital().closedAverageTicks() == null and report.waitingForHospital().closedAverageTicks() == null}">
+                            Sin mediciones cerradas disponibles para graficar promedios temporales.
+                        </p>
+                        <div style="position: relative; height: 240px;"
+                             th:if="${report.waitingForAmbulance().closedAverageTicks() != null or report.responseToIncident().closedAverageTicks() != null or report.pickupToHospital().closedAverageTicks() != null or report.waitingForHospital().closedAverageTicks() != null}">
+                            <canvas id="chart-temporal-metrics"
+                                    aria-label="Gráfico de barras de promedios temporales cerrados en unidades de tiempo lógico"
+                                    th:attr="data-met01=${report.waitingForAmbulance().closedAverageTicks()},data-met02=${report.responseToIncident().closedAverageTicks()},data-met03=${report.pickupToHospital().closedAverageTicks()},data-met07=${report.waitingForHospital().closedAverageTicks()}">
+                            </canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="are-card h-100">
+                    <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                        <h4 class="are-card-title">Distribución de emergencias por estado (MET-04)</h4>
+                        <span class="are-badge are-badge-info">Datos globales</span>
+                    </div>
+                    <div class="are-card-body">
+                        <p class="text-secondary small mb-2">Incluye atención finalizada y estados en curso.</p>
+                        <p class="text-secondary small mb-2"
+                           th:if="${report.completedEmergencies().completedCount() + report.completedEmergencies().activeCount() == 0}">
+                            No hay emergencias registradas para graficar distribución de estados.
+                        </p>
+                        <div style="position: relative; height: 240px;"
+                             th:if="${report.completedEmergencies().completedCount() + report.completedEmergencies().activeCount() > 0}">
+                            <canvas id="chart-emergency-states"
+                                    aria-label="Gráfico de distribución de emergencias por estado"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="are-card h-100">
+                    <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                        <h4 class="are-card-title">Utilización por ambulancia (%) (MET-05)</h4>
+                        <span class="are-badge are-badge-navy">Referencia temporal t</span>
+                    </div>
+                    <div class="are-card-body">
+                        <p class="text-secondary small mb-2"
+                           th:if="${#lists.isEmpty(report.ambulanceUtilization().items())}">
+                            No hay ambulancias registradas para graficar utilización de flota.
+                        </p>
+                        <div style="position: relative; height: 240px;"
+                             th:if="${!#lists.isEmpty(report.ambulanceUtilization().items())}">
+                            <canvas id="chart-ambulance-utilization"
+                                    aria-label="Gráfico de barras de porcentaje de utilización por ambulancia"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="are-card h-100">
+                    <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                        <h4 class="are-card-title">Conflictos, reintentos y agotamientos (MET-06)</h4>
+                        <span class="are-badge are-badge-info">Datos globales</span>
+                    </div>
+                    <div class="are-card-body">
+                        <div style="position: relative; height: 240px;">
+                            <canvas id="chart-concurrency-metrics"
+                                    aria-label="Gráfico comparativo de conflictos, reintentos y agotamientos por proceso"
+                                    th:attr="data-ambulance=${'[' + report.concurrencyConflicts().ambulanceDispatch().conflicts() + ',' + report.concurrencyConflicts().ambulanceDispatch().retriesConsumed() + ',' + report.concurrencyConflicts().ambulanceDispatch().exhaustions() + ']'},data-hospital=${'[' + report.concurrencyConflicts().hospitalReservation().conflicts() + ',' + report.concurrencyConflicts().hospitalReservation().retriesConsumed() + ',' + report.concurrencyConflicts().hospitalReservation().exhaustions() + ']'}">
+                            </canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Traceable Experimental Records (RN-MET-003) -->
+    <section class="are-card" aria-labelledby="traceable-records-heading">
+        <div class="are-card-header d-flex align-items-center justify-content-between">
+            <h3 id="traceable-records-heading" class="are-card-title">
+                Registro funcional experimental trazable (RN-MET-003)
+            </h3>
+            <span class="are-badge are-badge-neutral are-mono"
+                  th:text="${#lists.size(report.experimentalRecords())} + ' registro(s)'">0 registro(s)</span>
+        </div>
+        <div class="are-card-body">
+            <p class="text-secondary mb-0" th:if="${#lists.isEmpty(report.experimentalRecords())}">
+                No existen emergencias registradas para los criterios consultados.
+            </p>
+            <div th:if="${!#lists.isEmpty(report.experimentalRecords())}" class="are-table-wrap">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Emergencia</th>
+                        <th>Estado / Reglas</th>
+                        <th>Recursos (Amb / Hosp)</th>
+                        <th>Marcas de tiempo lógico (t)</th>
+                        <th>Operaciones y conflictos</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="rec : ${report.experimentalRecords()}">
+                        <td>
+                            <a class="are-mono fw-bold" th:href="@{/emergencies/{id}(id=${rec.emergencyId()})}"
+                               th:text="${rec.emergencyId()}">EMG-00001</a>
+                            <div class="text-secondary small" th:if="${rec.lastOutcomeReason() != null}"
+                                 th:text="${@areUi.operationStatusLabel(rec.lastOutcomeReason())}"
+                                 th:title="${rec.lastOutcomeReason()}"></div>
+                        </td>
+                        <td>
+                            <span class="are-badge"
+                                  th:classappend="'are-badge-' + ${@areUi.badgeTone('EMERGENCY', rec.currentState())}"
+                                  th:text="${@areUi.emergencyStateLabel(rec.currentState())}">Atención finalizada</span>
+                            <div class="text-secondary small mt-1" th:text="'Versión: ' + ${rec.ruleVersionId()}">RUL-V01</div>
+                        </td>
+                        <td class="are-mono small">
+                            <div th:text="'Amb: ' + ${rec.assignedAmbulanceId() != null ? rec.assignedAmbulanceId() : '-'}">Amb: -</div>
+                            <div th:text="'Hosp: ' + ${rec.hospitalId() != null ? rec.hospitalId() : '-'}">Hosp: -</div>
+                        </td>
+                        <td class="are-mono small">
+                            <div th:text="'Registrada: t=' + ${rec.registeredAtTicks()}">Registrada: t=0</div>
+                            <div th:if="${rec.queueEnteredAtTicks() != null}" th:text="'Cola amb.: t=' + ${rec.queueEnteredAtTicks()}"></div>
+                            <div th:if="${rec.assignedAtTicks() != null}" th:text="'Asignada: t=' + ${rec.assignedAtTicks()}"></div>
+                            <div th:if="${rec.atIncidentAtTicks() != null}" th:text="'En incidente: t=' + ${rec.atIncidentAtTicks()}"></div>
+                            <div th:if="${rec.hospitalQueueEnteredAtTicks() != null}" th:text="'Cola hosp.: t=' + ${rec.hospitalQueueEnteredAtTicks()}"></div>
+                            <div th:if="${rec.inTransportAtTicks() != null}" th:text="'En traslado: t=' + ${rec.inTransportAtTicks()}"></div>
+                            <div th:if="${rec.completedAtTicks() != null}" th:text="'Finalizada: t=' + ${rec.completedAtTicks()}"></div>
+                            <div th:if="${rec.dischargedAtTicks() != null}" th:text="'Alta hosp.: t=' + ${rec.dischargedAtTicks()}"></div>
+                        </td>
+                        <td class="small">
+                            <div th:if="${#lists.isEmpty(rec.operationResults())}" class="text-secondary">Sin operaciones registradas</div>
+                            <div th:each="op : ${rec.operationResults()}">
+                                <strong th:text="${@areUi.operationTypeLabel(op.operationType())}"
+                                        th:title="${op.operationType()}">Despacho automático</strong>:
+                                <span th:text="${@areUi.operationStatusLabel(op.finalStatus())}"
+                                      th:title="${op.finalStatus()}"
+                                      th:attr="data-status=${op.finalStatus()}">Asignada</span>
+                                <span class="text-secondary are-mono"
+                                      th:text="'(intentos=' + ${op.totalAttempts()} + ', t=' + ${op.logicalTicks()} + ')'"></span>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <script defer th:src="@{/vendor/chartjs/4.4.7/chart.umd.min.js}"></script>
+    <script defer th:src="@{/js/are-reporting-charts.js}"></script>
+</th:block>
+
 </body>
 </html>

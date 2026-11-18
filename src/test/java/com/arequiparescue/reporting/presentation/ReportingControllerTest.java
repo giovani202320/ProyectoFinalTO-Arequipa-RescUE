@@ -4,15 +4,20 @@ import com.arequiparescue.reporting.application.ReportingApplicationService;
 import com.arequiparescue.reporting.domain.ReportingCalculator;
 import com.arequiparescue.reporting.domain.ReportingSourceData;
 import com.arequiparescue.reporting.domain.SimulationReportSnapshot;
+import com.arequiparescue.shared.presentation.AreUiFormatter;
+import com.arequiparescue.shared.presentation.HtmlStructureAssertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -20,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ReportingController.class)
+@Import(AreUiFormatter.class)
 class ReportingControllerTest {
 
     @Autowired
@@ -45,7 +51,7 @@ class ReportingControllerTest {
         when(reportingService.generateReport(null, null))
                 .thenReturn(new ReportingApplicationService.ReportViewResult(snapshot, source.scenarios()));
 
-        mockMvc.perform(get("/reporting"))
+        String html = mockMvc.perform(get("/reporting"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("MET-01")))
                 .andExpect(content().string(containsString("MET-02")))
@@ -55,7 +61,17 @@ class ReportingControllerTest {
                 .andExpect(content().string(containsString("MET-06")))
                 .andExpect(content().string(containsString("MET-07")))
                 .andExpect(content().string(containsString("Sin mediciones cerradas")))
-                .andExpect(content().string(containsString("Registro funcional experimental trazable")));
+                .andExpect(content().string(containsString("Registro funcional experimental trazable")))
+                .andExpect(content().string(containsString("Esperando ambulancia")))
+                .andExpect(content().string(containsString("/vendor/chartjs/4.4.7/chart.umd.min.js")))
+                .andExpect(content().string(containsString("/js/are-reporting-charts.js")))
+                .andExpect(content().string(containsString("/css/are-design-system.css")))
+                .andExpect(content().string(containsString("aria-current=\"page\"")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(html, "reporting-page-title");
+        assertThat(HtmlStructureAssertions.countOccurrences(html, "<form")).isEqualTo(1);
     }
 
     @Test
@@ -82,5 +98,95 @@ class ReportingControllerTest {
                 .andExpect(content().string(containsString("SCN-02")));
 
         verify(reportingService).generateReport("SCN-02", "WAITING_AMBULANCE");
+    }
+
+    @Test
+    void rendersPopulatedMetricsChartsDataAndSpanishLabels() throws Exception {
+        ReportingSourceData source = new ReportingSourceData(
+                "SCN-03",
+                "ACTIVE",
+                10L,
+                List.of(new ReportingSourceData.ScenarioRow("SCN-03", "Prueba", "ACTIVE", 10L)),
+                List.of(new ReportingSourceData.EmergencyRow(
+                        "EMG-00001", "COMPLETED", "RUL-V01", "AMB-01", "HOSP-01",
+                        null, 0L, 1L, 3L, 5L, 5L, 6L, 9L)),
+                List.of(new ReportingSourceData.AmbulanceRow("AMB-01", "BASIC", "AVAILABLE", null)),
+                List.of(),
+                List.of(new ReportingSourceData.OperationResultRow(
+                        "OP-1", "AUTOMATIC_DISPATCH", "EMG-00001", "AMB-01",
+                        1, "ASSIGNED", "Asignación confirmada", 3L)),
+                List.of()
+        );
+        SimulationReportSnapshot snapshot = ReportingCalculator.calculate(source, null);
+        when(reportingService.generateReport("SCN-03", null))
+                .thenReturn(new ReportingApplicationService.ReportViewResult(snapshot, source.scenarios()));
+
+        mockMvc.perform(get("/reporting").param("scenarioId", "SCN-03"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("unidades de tiempo lógico")))
+                .andExpect(content().string(containsString("60.00%")))
+                .andExpect(content().string(containsString("Básica")))
+                .andExpect(content().string(containsString("Disponible")))
+                .andExpect(content().string(containsString("Atención finalizada")))
+                .andExpect(content().string(containsString("Despacho automático")))
+                .andExpect(content().string(containsString("Asignada")))
+                .andExpect(content().string(containsString("Datos globales")))
+                .andExpect(content().string(containsString("Referencia temporal t")))
+                .andExpect(content().string(containsString("EMG-00001")))
+                .andExpect(content().string(containsString("AMB-01")))
+                .andExpect(content().string(containsString("HOSP-01")))
+                .andExpect(content().string(containsString("RUL-V01")))
+                .andExpect(content().string(containsString("title=\"AUTOMATIC_DISPATCH\"")))
+                .andExpect(content().string(containsString("title=\"ASSIGNED\"")))
+                .andExpect(content().string(not(containsString(">ASSIGNED<"))))
+                .andExpect(content().string(containsString("data-met01=\"2.0\"")))
+                .andExpect(content().string(containsString("data-percent=\"60.0\"")));
+    }
+
+    @Test
+    void updatesMet05WhenReferenceScenarioTimeChangesWhileKeepingGlobalMetricsInvariant() throws Exception {
+        ReportingSourceData baseSourceAt10 = new ReportingSourceData(
+                "SCN-10",
+                "ACTIVE",
+                10L,
+                List.of(
+                        new ReportingSourceData.ScenarioRow("SCN-10", "Escenario 10", "ACTIVE", 10L),
+                        new ReportingSourceData.ScenarioRow("SCN-20", "Escenario 20", "COMPLETED", 20L)
+                ),
+                List.of(new ReportingSourceData.EmergencyRow(
+                        "EMG-00001", "COMPLETED", "RUL-V01", "AMB-01", "HOSP-01",
+                        null, 0L, 1L, 3L, 5L, 5L, 6L, 9L)),
+                List.of(new ReportingSourceData.AmbulanceRow("AMB-01", "BASIC", "AVAILABLE", null)),
+                List.of(),
+                List.of(),
+                List.of()
+        );
+        ReportingSourceData sameGlobalAt20 = new ReportingSourceData(
+                "SCN-20",
+                "COMPLETED",
+                20L,
+                baseSourceAt10.scenarios(),
+                baseSourceAt10.emergencies(),
+                baseSourceAt10.ambulances(),
+                baseSourceAt10.hospitalReservations(),
+                baseSourceAt10.operationResults(),
+                baseSourceAt10.attemptLogs()
+        );
+        when(reportingService.generateReport("SCN-10", null))
+                .thenReturn(new ReportingApplicationService.ReportViewResult(
+                        ReportingCalculator.calculate(baseSourceAt10, null), baseSourceAt10.scenarios()));
+        when(reportingService.generateReport("SCN-20", null))
+                .thenReturn(new ReportingApplicationService.ReportViewResult(
+                        ReportingCalculator.calculate(sameGlobalAt20, null), sameGlobalAt20.scenarios()));
+
+        mockMvc.perform(get("/reporting").param("scenarioId", "SCN-10"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("60.00%")))
+                .andExpect(content().string(containsString("data-met01=\"2.0\"")));
+
+        mockMvc.perform(get("/reporting").param("scenarioId", "SCN-20"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("30.00%")))
+                .andExpect(content().string(containsString("data-met01=\"2.0\"")));
     }
 }
