@@ -345,6 +345,18 @@ textarea:focus-visible,
     border-color: var(--are-border);
 }
 
+.are-badge-info {
+    background-color: #e0f2fe;
+    color: #075985;
+    border-color: #7dd3fc;
+}
+
+.are-badge-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
 /* Alerts */
 .are-alert {
     border-radius: var(--are-radius-sm);
@@ -372,6 +384,12 @@ textarea:focus-visible,
     background-color: var(--are-danger-bg);
     border-color: var(--are-danger-border);
     color: #7f1d1d;
+}
+
+.are-alert-info {
+    background-color: var(--are-primary-soft);
+    border-color: #93c5fd;
+    color: var(--are-primary-fg);
 }
 
 /* Tables & Forms */

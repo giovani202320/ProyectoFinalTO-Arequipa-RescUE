@@ -28,13 +28,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -89,12 +92,19 @@ class HospitalDispatchControllerTest {
                         "inTransportEmergencies", "completedEmergencies", "hospitalReservations", "exhaustedNotices"))
                 .andExpect(content().string(containsString("HOSP-01")))
                 .andExpect(content().string(containsString("Habilitado")))
+                .andExpect(content().string(containsString("href=\"/admin/hospitals\"")))
+                .andExpect(content().string(not(containsString("href=\"/hospitals\""))))
                 .andExpect(content().string(containsString("/css/are-design-system.css")))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
         HtmlStructureAssertions.assertSingleAppShellStructure(html, "hospital-queue-page-title");
         assertThat(HtmlStructureAssertions.countOccurrences(html, "<form")).isEqualTo(1);
+
+        String designSystemCss = new String(
+                new ClassPathResource("static/css/are-design-system.css").getInputStream().readAllBytes(),
+                StandardCharsets.UTF_8);
+        assertThat(designSystemCss).contains(".are-alert-info", ".are-badge-info", ".are-badge-icon");
     }
 
     @Test
