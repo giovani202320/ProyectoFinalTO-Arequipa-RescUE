@@ -15,9 +15,14 @@
                     Gestión hospitalaria y cola de espera hospitalaria
                 </h2>
                 <p class="text-secondary small mb-0">
-                    Confirma la llegada de la ambulancia al incidente, selecciona el hospital habilitado alcanzable de menor costo con cupo disponible (<code>D &gt;= 1</code>)
-                    y administra en orden FIFO la cola de espera hospitalaria preservando la ambulancia retenida en sitio.
+                    Confirma la llegada de la ambulancia al incidente, selecciona el hospital habilitado de menor costo con cupo disponible y administra en orden FIFO la cola hospitalaria.
                 </p>
+                <details class="mt-2 small text-secondary">
+                    <summary class="fw-semibold" style="cursor: pointer;">Trazabilidad normativa (HU-09 a HU-12)</summary>
+                    <p class="mb-0 mt-1">
+                        Reglas aplicadas: <code>D &gt;= 1</code>, preservación de la ambulancia retenida en sitio, orden FIFO estricto y alta simulada idempotente (<code>CA-SIM-03</code>).
+                    </p>
+                </details>
             </div>
             <div class="d-flex flex-wrap gap-2 flex-shrink-0">
                 <a th:replace="~{fragments/components :: actionLink(@{/emergencies}, 'Emergencias', 'outline', 'siren')}"></a>
@@ -289,7 +294,9 @@
                         <td>
                             <form th:if="${res.status == 'OCCUPIED'}"
                                   th:action="@{/dispatch/hospital-reservations/{reservationId}/discharge(reservationId=${res.id})}"
-                                  method="post">
+                                  method="post"
+                                  data-confirm-title="Confirmar alta hospitalaria simulada"
+                                  data-confirm="Se liberará la cama ocupada en el hospital y se reevaluará automáticamente la cola de espera hospitalaria.">
                                 <button type="submit" class="btn btn-sm btn-are-outline d-inline-flex align-items-center gap-1">
                                     <i data-lucide="log-out" class="are-badge-icon" aria-hidden="true"></i>
                                     <span>Ejecutar alta simulada (HU-12)</span>

@@ -19,10 +19,14 @@
                     Catálogo de 7 Métricas Experimentales y Registro Trazable
                 </h2>
                 <p class="text-secondary small mb-0">
-                    Panel de solo lectura conforme a <code>RN-MET-003</code> y <code>RN-MET-004</code>. Separa mediciones cerradas de emergencias aún en curso
-                    (para evidenciar <em>starvation</em> sin distorsionar promedios ni dividir por cero). El selector de escenario aporta la referencia temporal <code>t</code>
-                    para observaciones globales de emergencias, flota y concurrencia.
+                    Panel de solo lectura que separa mediciones cerradas de emergencias en curso para evitar distorsiones en los promedios.
                 </p>
+                <details class="mt-2 small text-secondary">
+                    <summary class="fw-semibold" style="cursor: pointer;">Trazabilidad normativa (RN-MET-003, RN-MET-004, HU-14)</summary>
+                    <p class="mb-0 mt-1">
+                        Evidencia <em>starvation</em> sin dividir por cero. El selector de escenario aporta la referencia temporal <code>t</code> para observaciones globales de emergencias, flota y concurrencia.
+                    </p>
+                </details>
             </div>
             <div class="d-flex flex-wrap gap-2 flex-shrink-0">
                 <a th:replace="~{fragments/components :: actionLink(@{/simulation}, 'Simulación (HU-13)', 'outline', 'clock')}"></a>

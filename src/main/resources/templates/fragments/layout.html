@@ -68,9 +68,31 @@
         </footer>
     </div>
 
+    <!-- Reusable Accessible Confirmation Modal (UX-02) -->
+    <div class="modal fade" id="areConfirmModal" tabindex="-1"
+         aria-labelledby="areConfirmModalTitle" aria-describedby="areConfirmModalBody" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5 fw-bold mb-0" id="areConfirmModalTitle" style="color: var(--are-navy);">
+                        Confirmar operación
+                    </h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="areConfirmModalBody" class="mb-0 text-secondary">¿Desea continuar con esta operación?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-are-outline" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-are-primary" id="areConfirmModalAccept">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script th:src="@{/vendor/bootstrap/5.3.3/js/bootstrap.bundle.min.js}"></script>
     <script th:src="@{/vendor/lucide/0.469.0/lucide.min.js}"></script>
-    <script th:src="@{/js/are-ui.js}"></script>
+    <script th:src="@{/js/are-ui.js(v='4c-ux06')}"></script>
 </div>
 
 </body>

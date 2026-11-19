@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Error de navegación')}"></head>
+<body th:replace="~{fragments/layout :: appShell('Error de navegación', 'No se pudo completar la solicitud solicitada', 'home', ~{::errorContent})}">
+
+<th:block th:fragment="errorContent">
+    <section class="are-card" aria-labelledby="error-page-title">
+        <div class="are-card-body py-4">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                <span class="are-badge are-badge-danger are-mono"
+                      th:text="${status != null ? 'HTTP ' + status : 'Error'}">HTTP 404</span>
+                <span class="text-secondary small" th:if="${path != null}"
+                      th:text="'Ruta: ' + ${path}">Ruta: /</span>
+            </div>
+
+            <h2 id="error-page-title" class="h4 fw-bold mb-2" style="color: var(--are-navy);"
+                th:text="${status == 404 ? 'Página o recurso no encontrado' : (status == 400 ? 'Solicitud inválida' : 'No fue posible procesar la operación')}">
+                No fue posible procesar la operación
+            </h2>
+
+            <p class="text-secondary mb-4"
+               th:text="${status == 404 ? 'La ruta o identificador solicitado no existe en el simulador ARE. Verifique la dirección e intente nuevamente.' : 'Ocurrió un inconveniente al procesar su solicitud. Ninguna regla de negocio fue omitida; puede regresar al panel principal.'}">
+                Ocurrió un inconveniente al procesar su solicitud.
+            </p>
+
+            <div class="d-flex flex-wrap gap-2">
+                <a th:replace="~{fragments/components :: actionLink(@{/}, 'Volver al inicio', 'primary', 'layout-dashboard')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/emergencies}, 'Ir a emergencias', 'outline', 'siren')}"></a>
+            </div>
+        </div>
+    </section>
+</th:block>
+
+</body>
+</html>

@@ -94,6 +94,8 @@ class HospitalDispatchControllerTest {
                 .andExpect(content().string(containsString("Habilitado")))
                 .andExpect(content().string(containsString("href=\"/admin/hospitals\"")))
                 .andExpect(content().string(not(containsString("href=\"/hospitals\""))))
+                .andExpect(content().string(containsString("id=\"areConfirmModal\"")))
+                .andExpect(content().string(containsString("/js/are-ui.js")))
                 .andExpect(content().string(containsString("/css/are-design-system.css")))
                 .andReturn()
                 .getResponse()
