@@ -49,6 +49,11 @@
         </div>
     </div>
 
+    <div th:if="${errorMessage != null}" class="are-alert are-alert-danger mb-3" role="alert" aria-live="assertive">
+        <i data-lucide="alert-circle" class="are-nav-icon mt-1" aria-hidden="true"></i>
+        <div th:text="${errorMessage}">Error de validación</div>
+    </div>
+
     <!-- Register New Ambulance Form -->
     <section class="are-card mb-4" aria-labelledby="register-ambulance-heading">
         <div class="are-card-header">
@@ -72,7 +77,7 @@
                         </div>
                         <div class="col-12 col-md-3">
                             <label for="ambEquipment" class="form-label fw-semibold">Equipamiento</label>
-                            <select id="ambEquipment" th:field="*{equipmentType}" class="form-select">
+                            <select id="ambEquipment" th:field="*{equipmentType}" class="form-select" required>
                                 <option value="">Seleccione equipamiento...</option>
                                 <option value="BASIC">Básica</option>
                                 <option value="SPECIALIZED">Especializada</option>
@@ -80,7 +85,7 @@
                         </div>
                         <div class="col-12 col-md-4">
                             <label for="ambNode" class="form-label fw-semibold">Nodo de ubicación</label>
-                            <select id="ambNode" th:field="*{nodeId}" class="form-select">
+                            <select id="ambNode" th:field="*{nodeId}" class="form-select" required>
                                 <option value="">Seleccione nodo...</option>
                                 <option th:each="node : ${nodes}" th:value="${node.id.value}" th:text="${node.id.value + ' — ' + node.displayName}">N01</option>
                             </select>
@@ -118,7 +123,7 @@
                         <th scope="col">Estado operativo</th>
                         <th scope="col">Disponibilidad</th>
                         <th scope="col">Emergencia vinculada</th>
-                        <th scope="col">Actualizar configuración</th>
+                        <th scope="col" class="text-end">Acciones</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -140,19 +145,21 @@
                             <span th:replace="~{fragments/components :: statusBadge(${amb.stateCode == 'AVAILABLE' ? 'Disponible' : 'Ocupada'}, ${amb.stateCode == 'AVAILABLE' ? 'success' : 'warning'})}"></span>
                         </td>
                         <td class="are-mono" th:text="${amb.assignedEmergencyId != null ? amb.assignedEmergencyId : '—'}">—</td>
-                        <td>
-                            <form th:action="@{'/admin/ambulances/' + ${amb.id}}" method="post">
-                                <fieldset th:disabled="${scenarioActive}" class="d-flex flex-wrap gap-2 align-items-center border-0 p-0 m-0">
-                                    <select name="equipmentType" class="form-select form-select-sm w-auto" aria-label="Equipamiento">
-                                        <option value="BASIC" th:selected="${amb.equipmentTypeCode == 'BASIC'}">Básica</option>
-                                        <option value="SPECIALIZED" th:selected="${amb.equipmentTypeCode == 'SPECIALIZED'}">Especializada</option>
-                                    </select>
-                                    <select name="nodeId" class="form-select form-select-sm w-auto" aria-label="Nodo">
-                                        <option th:each="node : ${nodes}" th:value="${node.id.value}" th:selected="${amb.currentNodeId == node.id.value}" th:text="${node.id.value}">N01</option>
-                                    </select>
-                                    <button type="submit" class="btn btn-sm btn-are-outline">Actualizar</button>
-                                </fieldset>
-                            </form>
+                        <td class="text-end">
+                            <button type="button"
+                                    class="btn btn-sm btn-are-outline"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editAmbulanceModal"
+                                    th:disabled="${scenarioActive}"
+                                    th:attr="data-amb-id=${amb.id},
+                                             data-amb-equipment=${amb.equipmentTypeCode},
+                                             data-amb-node=${amb.currentNodeId},
+                                             data-amb-state=${@areUi.ambulanceStateLabel(amb.stateCode)},
+                                             data-edit-action=@{'/admin/ambulances/' + ${amb.id}},
+                                             aria-label=${'Editar ambulancia ' + amb.id}">
+                                <i data-lucide="pencil" class="are-nav-icon" aria-hidden="true"></i>
+                                <span>Editar</span>
+                            </button>
                         </td>
                     </tr>
                     </tbody>
@@ -160,6 +167,53 @@
             </div>
         </div>
     </section>
+
+    <!-- Edit Ambulance Modal -->
+    <div class="modal fade" id="editAmbulanceModal" tabindex="-1"
+         aria-labelledby="editAmbulanceModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="editAmbulanceForm" method="post" action="" data-edit-form="ambulance">
+                    <div class="modal-header">
+                        <h4 class="modal-title h5 fw-bold" id="editAmbulanceModalTitle" style="color: var(--are-navy);">
+                            Editar ambulancia <span id="editAmbIdBadge" class="are-badge are-badge-neutral are-mono ms-1">—</span>
+                        </h4>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <fieldset th:disabled="${scenarioActive}" class="border-0 p-0 m-0">
+                            <div class="mb-3">
+                                <label for="editAmbId" class="form-label fw-semibold">Identificador de ambulancia</label>
+                                <input id="editAmbId" type="text" class="form-control are-mono" readonly aria-readonly="true">
+                            </div>
+                            <div class="mb-3">
+                                <label for="editAmbEquipment" class="form-label fw-semibold">Equipamiento</label>
+                                <select id="editAmbEquipment" name="equipmentType" class="form-select" required>
+                                    <option value="BASIC">Básica</option>
+                                    <option value="SPECIALIZED">Especializada</option>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <label for="editAmbNode" class="form-label fw-semibold">Nodo de ubicación</label>
+                                <select id="editAmbNode" name="nodeId" class="form-select" required>
+                                    <option th:each="node : ${nodes}"
+                                            th:value="${node.id.value}"
+                                            th:text="${node.id.value + ' — ' + node.displayName}">N01</option>
+                                </select>
+                            </div>
+                            <p class="text-secondary small mb-0">
+                                Estado operativo actual: <strong id="editAmbStateLabel">—</strong>.
+                            </p>
+                        </fieldset>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-are-outline" data-bs-dismiss="modal">Cancelar</button>
+                        <button id="editAmbSubmitBtn" type="submit" class="btn btn-are-primary" disabled>Guardar cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </th:block>
 
 </body>

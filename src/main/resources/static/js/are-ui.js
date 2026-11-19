@@ -77,6 +77,10 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    function isValidCatalogEditAction(action) {
+        return typeof action === "string" && /^\/admin\/(ambulances|hospitals)\/[^/]+$/.test(action);
+    }
+
     document.addEventListener("submit", function (event) {
         var form = event.target;
         if (!form || form.tagName !== "FORM") {
@@ -85,6 +89,13 @@ document.addEventListener("DOMContentLoaded", function () {
         var method = (form.getAttribute("method") || "get").toLowerCase();
         if (method !== "post") {
             return;
+        }
+        if (form.hasAttribute("data-edit-form")) {
+            var editAction = form.getAttribute("action") || "";
+            if (!isValidCatalogEditAction(editAction)) {
+                event.preventDefault();
+                return;
+            }
         }
         if (event.defaultPrevented) {
             return;
@@ -129,25 +140,141 @@ document.addEventListener("DOMContentLoaded", function () {
         lockFormSubmission(form, submitter);
     });
 
-    window.addEventListener("pageshow", function () {
-        document.querySelectorAll("form[data-are-submitting='true']").forEach(function (form) {
-            delete form.dataset.areSubmitting;
-            delete form.dataset.areConfirmed;
-            form.removeAttribute("aria-busy");
+    function resetFormSubmitState(form) {
+        if (!form) {
+            return;
+        }
+        delete form.dataset.areSubmitting;
+        delete form.dataset.areConfirmed;
+        form.removeAttribute("aria-busy");
 
-            var proxy = form.querySelector("input[type='hidden'][data-are-submitter-proxy='true']");
-            if (proxy) {
-                proxy.remove();
+        var proxy = form.querySelector("input[type='hidden'][data-are-submitter-proxy='true']");
+        if (proxy) {
+            proxy.remove();
+        }
+        form.querySelectorAll("[data-are-js-disabled='true']").forEach(function (btn) {
+            btn.disabled = false;
+            btn.removeAttribute("aria-disabled");
+            delete btn.dataset.areJsDisabled;
+            if (btn.dataset.areOriginalText !== undefined) {
+                btn.textContent = btn.dataset.areOriginalText;
+                delete btn.dataset.areOriginalText;
             }
-            form.querySelectorAll("[data-are-js-disabled='true']").forEach(function (btn) {
-                btn.disabled = false;
-                btn.removeAttribute("aria-disabled");
-                delete btn.dataset.areJsDisabled;
-                if (btn.dataset.areOriginalText !== undefined) {
-                    btn.textContent = btn.dataset.areOriginalText;
-                    delete btn.dataset.areOriginalText;
-                }
-            });
         });
+    }
+
+    window.addEventListener("pageshow", function () {
+        document.querySelectorAll("form[data-are-submitting='true']").forEach(resetFormSubmitState);
+    });
+
+    function setupCatalogEditModal(modalId, formId, focusTargetId, populateFields) {
+        var editModalEl = document.getElementById(modalId);
+        var editFormEl = document.getElementById(formId);
+        if (!editModalEl || !editFormEl) {
+            return;
+        }
+        var submitBtn = editFormEl.querySelector("button[type='submit']");
+
+        editModalEl.addEventListener("show.bs.modal", function (event) {
+            var trigger = event.relatedTarget;
+            if (!trigger) {
+                event.preventDefault();
+                return;
+            }
+            var action = trigger.getAttribute("data-edit-action") || "";
+            if (!isValidCatalogEditAction(action)) {
+                event.preventDefault();
+                return;
+            }
+            editFormEl.setAttribute("action", action);
+            resetFormSubmitState(editFormEl);
+            populateFields(trigger);
+
+            var fieldset = editFormEl.querySelector("fieldset");
+            var isLocked = fieldset && fieldset.disabled;
+            if (submitBtn) {
+                submitBtn.disabled = Boolean(isLocked);
+            }
+        });
+
+        editModalEl.addEventListener("shown.bs.modal", function () {
+            var target = document.getElementById(focusTargetId);
+            if (target && !target.disabled && typeof target.focus === "function") {
+                target.focus();
+            }
+        });
+
+        editModalEl.addEventListener("hidden.bs.modal", function () {
+            resetFormSubmitState(editFormEl);
+            if (submitBtn) {
+                submitBtn.disabled = true;
+            }
+        });
+    }
+
+    setupCatalogEditModal("editAmbulanceModal", "editAmbulanceForm", "editAmbEquipment", function (trigger) {
+        var ambId = trigger.getAttribute("data-amb-id") || "";
+        var ambIdInput = document.getElementById("editAmbId");
+        var ambIdBadge = document.getElementById("editAmbIdBadge");
+        var ambEquip = document.getElementById("editAmbEquipment");
+        var ambNode = document.getElementById("editAmbNode");
+        var ambState = document.getElementById("editAmbStateLabel");
+
+        if (ambIdInput) {
+            ambIdInput.value = ambId;
+        }
+        if (ambIdBadge) {
+            ambIdBadge.textContent = ambId || "—";
+        }
+        if (ambEquip) {
+            ambEquip.value = trigger.getAttribute("data-amb-equipment") || "BASIC";
+        }
+        if (ambNode) {
+            ambNode.value = trigger.getAttribute("data-amb-node") || "";
+        }
+        if (ambState) {
+            ambState.textContent = trigger.getAttribute("data-amb-state") || "—";
+        }
+    });
+
+    setupCatalogEditModal("editHospitalModal", "editHospitalForm", "editHospName", function (trigger) {
+        var hospId = trigger.getAttribute("data-hosp-id") || "";
+        var hospIdInput = document.getElementById("editHospId");
+        var hospIdBadge = document.getElementById("editHospIdBadge");
+        var hospName = document.getElementById("editHospName");
+        var hospNode = document.getElementById("editHospNode");
+        var hospCapacity = document.getElementById("editHospCapacity");
+        var hospEnabled = document.getElementById("editHospEnabled");
+        var hospReserved = document.getElementById("editHospReserved");
+        var hospOccupied = document.getElementById("editHospOccupied");
+        var hospAvailable = document.getElementById("editHospAvailable");
+
+        if (hospIdInput) {
+            hospIdInput.value = hospId;
+        }
+        if (hospIdBadge) {
+            hospIdBadge.textContent = hospId || "—";
+        }
+        if (hospName) {
+            hospName.value = trigger.getAttribute("data-hosp-name") || "";
+        }
+        if (hospNode) {
+            hospNode.value = trigger.getAttribute("data-hosp-node") || "";
+        }
+        if (hospCapacity) {
+            hospCapacity.value = trigger.getAttribute("data-hosp-capacity") || "0";
+        }
+        if (hospEnabled) {
+            hospEnabled.checked = trigger.getAttribute("data-hosp-enabled") === "true";
+        }
+        if (hospReserved) {
+            hospReserved.textContent = trigger.getAttribute("data-hosp-reserved") || "0";
+        }
+        if (hospOccupied) {
+            hospOccupied.textContent = trigger.getAttribute("data-hosp-occupied") || "0";
+        }
+        if (hospAvailable) {
+            hospAvailable.textContent = trigger.getAttribute("data-hosp-available") || "0";
+        }
     });
 });

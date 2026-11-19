@@ -37,6 +37,11 @@
         </div>
     </div>
 
+    <div th:if="${successMessage != null}" class="are-alert are-alert-success mb-3" role="status" aria-live="polite">
+        <i data-lucide="check-circle-2" class="are-nav-icon mt-1" aria-hidden="true"></i>
+        <div th:text="${successMessage}">Hospital guardado correctamente.</div>
+    </div>
+
     <!-- Register New Hospital Form -->
     <section class="are-card mb-4" aria-labelledby="register-hospital-heading">
         <div class="are-card-header">
@@ -60,18 +65,18 @@
                     </div>
                     <div class="col-12 col-md-3">
                         <label for="hospName" class="form-label fw-semibold">Nombre del hospital</label>
-                        <input id="hospName" type="text" th:field="*{name}" class="form-control" placeholder="Hospital Base Simulado">
+                        <input id="hospName" type="text" th:field="*{name}" class="form-control" maxlength="120" required placeholder="Hospital Base Simulado">
                     </div>
                     <div class="col-12 col-md-3">
                         <label for="hospNode" class="form-label fw-semibold">Nodo de ubicación</label>
-                        <select id="hospNode" th:field="*{nodeId}" class="form-select">
+                        <select id="hospNode" th:field="*{nodeId}" class="form-select" required>
                             <option value="">Seleccione nodo...</option>
                             <option th:each="node : ${nodes}" th:value="${node.id.value}" th:text="${node.id.value + ' — ' + node.displayName}">N01</option>
                         </select>
                     </div>
                     <div class="col-6 col-md-2">
                         <label for="hospCapacity" class="form-label fw-semibold">Capacidad total (C)</label>
-                        <input id="hospCapacity" type="number" min="0" th:field="*{totalCapacity}" class="form-control">
+                        <input id="hospCapacity" type="number" min="0" th:field="*{totalCapacity}" class="form-control" required>
                     </div>
                     <div class="col-6 col-md-2 d-flex flex-column gap-2">
                         <div class="form-check">
@@ -118,7 +123,7 @@
                         <th scope="col">Ocupación (O)</th>
                         <th scope="col">Disponibilidad (D)</th>
                         <th scope="col" style="min-width: 140px;">Uso de capacidad</th>
-                        <th scope="col">Actualizar configuración</th>
+                        <th scope="col" class="text-end">Acciones</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -164,21 +169,25 @@
                             </div>
                             <span th:if="${hosp.totalCapacity == 0}" class="text-muted small">Sin capacidad (C=0)</span>
                         </td>
-                        <td>
-                            <form th:action="@{'/admin/hospitals/' + ${hosp.id}}" method="post">
-                                <fieldset th:disabled="${scenarioActive}" class="d-flex flex-wrap gap-2 align-items-center border-0 p-0 m-0">
-                                    <input type="text" name="name" th:value="${hosp.name}" class="form-control form-control-sm" style="width: 145px;" aria-label="Nombre">
-                                    <select name="nodeId" class="form-select form-select-sm w-auto" aria-label="Nodo">
-                                        <option th:each="node : ${nodes}" th:value="${node.id.value}" th:selected="${hosp.nodeId == node.id.value}" th:text="${node.id.value}">N01</option>
-                                    </select>
-                                    <input type="number" name="totalCapacity" min="0" th:value="${hosp.totalCapacity}" class="form-control form-control-sm" style="width: 72px;" aria-label="Capacidad total C">
-                                    <div class="form-check mb-0">
-                                        <input class="form-check-input" type="checkbox" name="enabled" th:checked="${hosp.enabled}" aria-label="Habilitado">
-                                        <span class="small">Hab.</span>
-                                    </div>
-                                    <button type="submit" class="btn btn-sm btn-are-outline">Actualizar</button>
-                                </fieldset>
-                            </form>
+                        <td class="text-end">
+                            <button type="button"
+                                    class="btn btn-sm btn-are-outline"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editHospitalModal"
+                                    th:disabled="${scenarioActive}"
+                                    th:attr="data-hosp-id=${hosp.id},
+                                             data-hosp-name=${hosp.name},
+                                             data-hosp-node=${hosp.nodeId},
+                                             data-hosp-capacity=${hosp.totalCapacity},
+                                             data-hosp-reserved=${hosp.reservedSlots},
+                                             data-hosp-occupied=${hosp.occupiedSlots},
+                                             data-hosp-available=${hosp.availableSlots},
+                                             data-hosp-enabled=${hosp.enabled},
+                                             data-edit-action=@{'/admin/hospitals/' + ${hosp.id}},
+                                             aria-label=${'Editar hospital ' + hosp.id + ' ' + hosp.name}">
+                                <i data-lucide="pencil" class="are-nav-icon" aria-hidden="true"></i>
+                                <span>Editar</span>
+                            </button>
                         </td>
                     </tr>
                     </tbody>
@@ -186,6 +195,64 @@
             </div>
         </div>
     </section>
+
+    <!-- Edit Hospital Modal -->
+    <div class="modal fade" id="editHospitalModal" tabindex="-1"
+         aria-labelledby="editHospitalModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="editHospitalForm" method="post" action="" data-edit-form="hospital">
+                    <div class="modal-header">
+                        <h4 class="modal-title h5 fw-bold" id="editHospitalModalTitle" style="color: var(--are-navy);">
+                            Editar hospital <span id="editHospIdBadge" class="are-badge are-badge-neutral are-mono ms-1">—</span>
+                        </h4>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <fieldset th:disabled="${scenarioActive}" class="border-0 p-0 m-0">
+                            <div class="mb-3">
+                                <label for="editHospId" class="form-label fw-semibold">Identificador del hospital</label>
+                                <input id="editHospId" type="text" class="form-control are-mono" readonly aria-readonly="true">
+                            </div>
+                            <div class="mb-3">
+                                <label for="editHospName" class="form-label fw-semibold">Nombre del hospital</label>
+                                <input id="editHospName" type="text" name="name" class="form-control" maxlength="120" required>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-sm-7">
+                                    <label for="editHospNode" class="form-label fw-semibold">Nodo de ubicación</label>
+                                    <select id="editHospNode" name="nodeId" class="form-select" required>
+                                        <option th:each="node : ${nodes}"
+                                                th:value="${node.id.value}"
+                                                th:text="${node.id.value + ' — ' + node.displayName}">N01</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-sm-5">
+                                    <label for="editHospCapacity" class="form-label fw-semibold">Capacidad total (C)</label>
+                                    <input id="editHospCapacity" type="number" name="totalCapacity" min="0" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input id="editHospEnabled" class="form-check-input" type="checkbox" name="enabled" value="true">
+                                <input type="hidden" name="_enabled" value="on">
+                                <label class="form-check-label fw-semibold" for="editHospEnabled">Hospital habilitado para recibir emergencias</label>
+                            </div>
+                            <p class="text-secondary small mb-0" id="editHospCapacityHint">
+                                Invariante <span class="are-mono fw-semibold">C = R + O + D</span>:
+                                R = <span id="editHospReserved" class="are-mono">0</span>,
+                                O = <span id="editHospOccupied" class="are-mono">0</span>,
+                                D = <span id="editHospAvailable" class="are-mono">0</span>.
+                            </p>
+                        </fieldset>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-are-outline" data-bs-dismiss="modal">Cancelar</button>
+                        <button id="editHospSubmitBtn" type="submit" class="btn btn-are-primary" disabled>Guardar cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </th:block>
 
 </body>

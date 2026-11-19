@@ -45,6 +45,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -176,25 +178,58 @@ class AdminAndRulesControllersTest {
     @Test
     @DisplayName("GET y POST /admin/ambulances gestionan el catálogo y retornan HTTP 400 ante rechazo")
     void shouldManageAmbulanceCatalog() throws Exception {
-        Ambulance amb = Ambulance.registerInCatalog(AmbulanceId.of("AMB-01"), EquipmentType.SPECIALIZED, NodeId.of("N01"));
+        Ambulance amb1 = Ambulance.registerInCatalog(AmbulanceId.of("AMB-01"), EquipmentType.SPECIALIZED, NodeId.of("N01"));
+        Ambulance amb2 = Ambulance.registerInCatalog(AmbulanceId.of("AMB-02"), EquipmentType.BASIC, NodeId.of("N02"));
         when(roadGraphRepository.loadGraph()).thenReturn(sampleGraphWithIsolatedN10());
-        when(ambulanceCatalogService.listAmbulances()).thenReturn(List.of(amb));
+        when(ambulanceCatalogService.listAmbulances()).thenReturn(List.of(amb1, amb2));
         when(activeScenarioChecker.isAnyScenarioActive()).thenReturn(false);
 
         String ambulancesHtml = mockMvc.perform(get("/admin/ambulances"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("AMB-01")))
+                .andExpect(content().string(containsString("AMB-02")))
                 .andExpect(content().string(containsString("Especializada")))
                 .andExpect(content().string(containsString("Disponible")))
                 .andExpect(content().string(containsString("/css/are-design-system.css")))
+                .andExpect(content().string(containsString("/js/are-ui.js?v=4c-ux06")))
                 .andExpect(content().string(containsString("aria-current=\"page\"")))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
         HtmlStructureAssertions.assertSingleAppShellStructure(ambulancesHtml, "ambulances-page-title");
         assertThat(HtmlStructureAssertions.countOccurrences(ambulancesHtml, "<form ")).isEqualTo(2);
+        assertThat(HtmlStructureAssertions.countOccurrences(ambulancesHtml, "</form>")).isEqualTo(2);
+        assertThat(ambulancesHtml)
+                .contains("data-bs-target=\"#editAmbulanceModal\"")
+                .contains("data-edit-action=\"/admin/ambulances/AMB-01\"")
+                .contains("data-amb-id=\"AMB-01\"")
+                .contains("data-amb-equipment=\"SPECIALIZED\"")
+                .contains("data-amb-node=\"N01\"")
+                .contains("data-edit-action=\"/admin/ambulances/AMB-02\"")
+                .contains("data-amb-id=\"AMB-02\"")
+                .contains("data-amb-equipment=\"BASIC\"")
+                .contains("data-amb-node=\"N02\"")
+                .contains("aria-label=\"Editar ambulancia AMB-01\"")
+                .contains("aria-label=\"Editar ambulancia AMB-02\"")
+                .contains("id=\"editAmbulanceModal\"")
+                .contains("id=\"editAmbulanceForm\" method=\"post\" action=\"\" data-edit-form=\"ambulance\"")
+                .doesNotContain("id=\"editAmbulanceForm\" method=\"post\" action=\"/admin/ambulances\"")
+                .contains("id=\"editAmbId\"")
+                .contains("id=\"editAmbEquipment\"")
+                .contains("id=\"editAmbNode\"")
+                .contains("id=\"editAmbSubmitBtn\" type=\"submit\" class=\"btn btn-are-primary\" disabled");
 
-        when(ambulanceCatalogService.registerAmbulance(any())).thenReturn(amb);
+        when(ambulanceCatalogService.updateAmbulance(any())).thenReturn(amb2);
+
+        mockMvc.perform(post("/admin/ambulances/AMB-02")
+                        .param("equipmentType", "SPECIALIZED")
+                        .param("nodeId", "N01"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("AMB-02")));
+        verify(ambulanceCatalogService).updateAmbulance(any());
+        verify(ambulanceCatalogService, never()).registerAmbulance(any());
+
+        when(ambulanceCatalogService.registerAmbulance(any())).thenReturn(amb1);
 
         mockMvc.perform(post("/admin/ambulances")
                         .param("id", "AMB-01")
@@ -217,31 +252,73 @@ class AdminAndRulesControllersTest {
     @Test
     @DisplayName("GET y POST /admin/hospitals gestionan capacidad C, R, O, D y rechazan violaciones con HTTP 400")
     void shouldManageHospitalCatalog() throws Exception {
-        Hospital hospital = Hospital.registerInCatalog(
+        Hospital hospital1 = Hospital.registerInCatalog(
                 HospitalId.of("HOSP-01"),
                 "Hospital Base",
                 NodeId.of("N01"),
                 true,
                 10
         );
+        Hospital hospital2 = Hospital.registerInCatalog(
+                HospitalId.of("HOSP-02"),
+                "Hospital Norte",
+                NodeId.of("N02"),
+                false,
+                4
+        );
         when(roadGraphRepository.loadGraph()).thenReturn(sampleGraphWithIsolatedN10());
-        when(hospitalCatalogService.listHospitals()).thenReturn(List.of(hospital));
+        when(hospitalCatalogService.listHospitals()).thenReturn(List.of(hospital1, hospital2));
         when(activeScenarioChecker.isAnyScenarioActive()).thenReturn(false);
 
         String hospitalsHtml = mockMvc.perform(get("/admin/hospitals"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("HOSP-01")))
+                .andExpect(content().string(containsString("HOSP-02")))
                 .andExpect(content().string(containsString("Hospital Base")))
+                .andExpect(content().string(containsString("Hospital Norte")))
                 .andExpect(content().string(containsString("Habilitado")))
                 .andExpect(content().string(containsString("/css/are-design-system.css")))
+                .andExpect(content().string(containsString("/js/are-ui.js?v=4c-ux06")))
                 .andExpect(content().string(containsString("aria-current=\"page\"")))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
         HtmlStructureAssertions.assertSingleAppShellStructure(hospitalsHtml, "hospitals-page-title");
         assertThat(HtmlStructureAssertions.countOccurrences(hospitalsHtml, "<form ")).isEqualTo(2);
+        assertThat(HtmlStructureAssertions.countOccurrences(hospitalsHtml, "</form>")).isEqualTo(2);
+        assertThat(hospitalsHtml)
+                .contains("data-bs-target=\"#editHospitalModal\"")
+                .contains("data-edit-action=\"/admin/hospitals/HOSP-01\"")
+                .contains("data-hosp-id=\"HOSP-01\"")
+                .contains("data-hosp-enabled=\"true\"")
+                .contains("data-edit-action=\"/admin/hospitals/HOSP-02\"")
+                .contains("data-hosp-id=\"HOSP-02\"")
+                .contains("data-hosp-enabled=\"false\"")
+                .contains("aria-label=\"Editar hospital HOSP-01 Hospital Base\"")
+                .contains("aria-label=\"Editar hospital HOSP-02 Hospital Norte\"")
+                .contains("id=\"editHospitalModal\"")
+                .contains("id=\"editHospitalForm\" method=\"post\" action=\"\" data-edit-form=\"hospital\"")
+                .doesNotContain("id=\"editHospitalForm\" method=\"post\" action=\"/admin/hospitals\"")
+                .contains("id=\"editHospId\"")
+                .contains("id=\"editHospName\"")
+                .contains("id=\"editHospNode\"")
+                .contains("id=\"editHospCapacity\"")
+                .contains("id=\"editHospEnabled\"")
+                .contains("name=\"_enabled\"")
+                .contains("id=\"editHospSubmitBtn\" type=\"submit\" class=\"btn btn-are-primary\" disabled");
 
-        when(hospitalCatalogService.registerHospital(any())).thenReturn(hospital);
+        when(hospitalCatalogService.updateHospital(any())).thenReturn(hospital2);
+
+        mockMvc.perform(post("/admin/hospitals/HOSP-02")
+                        .param("name", "Hospital Norte Editado")
+                        .param("nodeId", "N02")
+                        .param("totalCapacity", "6"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/hospitals"));
+        verify(hospitalCatalogService).updateHospital(any());
+        verify(hospitalCatalogService, never()).registerHospital(any());
+
+        when(hospitalCatalogService.registerHospital(any())).thenReturn(hospital1);
 
         mockMvc.perform(post("/admin/hospitals")
                         .param("id", "HOSP-01")
