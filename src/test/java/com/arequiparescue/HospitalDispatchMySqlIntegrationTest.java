@@ -117,6 +117,7 @@ class HospitalDispatchMySqlIntegrationTest {
     @AfterEach
     void resetDatabaseState() {
         MySqlTestSchemaGuard.assertIsolatedTestSchema(jdbcTemplate);
+        jdbcTemplate.update("DELETE FROM emergency_route_segments");
         springDataHospitalReservationRepository.deleteAll();
         attemptLogRepository.deleteAll();
         operationResultRepository.deleteAll();

@@ -228,6 +228,114 @@
                 </div>
             </section>
         </div>
+
+        <!-- 4. Route Traceability (Recorrido de atención de emergencia: Tramo A & Tramo B) -->
+        <div class="col-12">
+            <section class="are-card" aria-labelledby="section-route-traceability">
+                <div class="are-card-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+                    <h3 id="section-route-traceability" class="are-card-title mb-0">4. Recorrido de atención de emergencia</h3>
+                    <span class="are-badge are-badge-neutral">Solo lectura · Grafo esquemático</span>
+                </div>
+                <div class="are-card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 rounded border bg-light h-100">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="text-dark small fw-bold">TRAMO A — Ambulancia → Emergencia</span>
+                                    <span class="are-badge are-badge-primary">Azul</span>
+                                </div>
+                                <p class="small text-secondary mb-0" th:if="${emergency.assignedAmbulanceId == null}">
+                                    Sin ambulancia asignada. No existe recorrido histórico.
+                                    Puede previsualizar rutas candidatas en
+                                    <a th:href="@{/dispatch/emergencies/{id}(id=${emergency.id})}">Despacho supervisado</a>.
+                                </p>
+                                <div class="small" th:if="${emergency.assignedAmbulanceId != null}">
+                                    <div>Ambulancia: <strong class="are-mono" th:text="${tramoADefined ? tramoAAmbulanceId : emergency.assignedAmbulanceId}">AMB-01</strong></div>
+                                    <div th:if="${tramoADefined}">
+                                        Origen histórico: <strong class="are-mono" th:text="${tramoAOrigin}">N02</strong> ·
+                                        Destino (emergencia): <strong class="are-mono" th:text="${tramoADestination}">N01</strong>
+                                    </div>
+                                    <div th:if="${tramoADefined}">
+                                        Secuencia: <span class="are-mono fw-semibold" th:text="${tramoAPathFormatted}">N02 → N01</span> ·
+                                        Costo: <strong class="are-mono" th:text="${tramoACost}">5</strong> (unidades abstractas)
+                                    </div>
+                                    <div th:if="${!tramoADefined}">
+                                        Nodo emergencia: <strong class="are-mono" th:text="${emergency.nodeId}">N01</strong>
+                                        <p class="text-secondary mb-0 mt-1">
+                                            Origen histórico, secuencia y costo del Tramo A no disponibles (emergencia previa a la persistencia histórica de segmentos; no se usa su ubicación actual).
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 rounded border bg-light h-100">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="text-dark small fw-bold">TRAMO B — Emergencia → Hospital</span>
+                                    <span class="are-badge are-badge-navy">Violeta</span>
+                                </div>
+                                <p class="small text-secondary mb-0" th:if="${!hospitalLegDefined}"
+                                   th:text="${hospitalLegMessage != null ? hospitalLegMessage : 'Destino hospitalario aún no definido.'}">
+                                    Destino hospitalario aún no definido.
+                                </p>
+                                <div class="small" th:if="${hospitalLegDefined}">
+                                    <div>
+                                        Hospital reservado: <strong class="are-mono" th:text="${hospitalLegHospitalId}">HOSP-01</strong>
+                                        — <span th:text="${hospitalLegHospitalName}">Hospital Base</span>
+                                    </div>
+                                    <div>
+                                        Origen: <strong class="are-mono" th:text="${hospitalLegOrigin}">N01</strong> ·
+                                        Destino: <strong class="are-mono" th:text="${hospitalLegDestination}">N04</strong>
+                                    </div>
+                                    <div>
+                                        Secuencia: <span class="are-mono fw-semibold" th:text="${hospitalLegPathFormatted}">N01 → N04</span> ·
+                                        Costo: <strong class="are-mono" th:text="${hospitalLegCost}">5</strong> (unidades abstractas)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="small text-secondary mb-3" th:if="${emergency.assignedAmbulanceId != null or hospitalLegDefined}">
+                        <strong>Costo combinado (Tramo A + Tramo B):</strong>
+                        <span th:if="${combinedRouteCost != null}" class="are-mono fw-semibold" th:text="${combinedRouteCost} + ' unidades abstractas'">0</span>
+                        <span th:if="${combinedRouteCost == null}">No disponible mientras falte alguno de los dos tramos históricos.</span>
+                    </div>
+
+                    <div th:if="${!#lists.isEmpty(graphNodes)}">
+                        <div class="d-flex flex-wrap gap-2 small mb-2">
+                            <span class="are-badge are-badge-success">Nodo emergencia</span>
+                            <span class="are-badge are-badge-danger" th:if="${hospitalLegDefined}">Hospital reservado</span>
+                            <span class="are-badge are-badge-primary">Tramo A (Azul)</span>
+                            <span class="are-badge are-badge-navy">Tramo B (Violeta)</span>
+                            <span class="are-badge are-badge-neutral">Solapado (Azul + Violeta discontinuo)</span>
+                        </div>
+                        <div class="border rounded-3 bg-light p-2">
+                            <svg id="areTopologySvg"
+                                 viewBox="0 0 800 470"
+                                 class="w-100 h-auto d-block"
+                                 style="max-height: 410px;"
+                                 role="img"
+                                 aria-label="Visualización esquemática del recorrido de atención de emergencia (Tramo A y Tramo B)">
+                            </svg>
+                        </div>
+                        <script id="areDetailTopologyBootstrap" th:inline="javascript">
+                            window.ARE_TOPOLOGY_DATA = {
+                                nodes: /*[[${graphNodes}]]*/ [],
+                                edges: /*[[${graphEdges}]]*/ [],
+                                incidentNodeId: /*[[${emergency.nodeId}]]*/ "",
+                                routeOrigin: /*[[${hospitalLegOrigin}]]*/ "",
+                                routeDestination: /*[[${hospitalLegDestination}]]*/ "",
+                                routePathNodesA: /*[[${tramoANodes}]]*/ [],
+                                routePathNodesB: /*[[${hospitalLegNodes}]]*/ [],
+                                routeType: "TRAMO_B"
+                            };
+                        </script>
+                        <script th:src="@{/js/are-topology-graph.js(v='5a-a07')}"></script>
+                    </div>
+                </div>
+            </section>
+        </div>
     </div>
 </th:block>
 

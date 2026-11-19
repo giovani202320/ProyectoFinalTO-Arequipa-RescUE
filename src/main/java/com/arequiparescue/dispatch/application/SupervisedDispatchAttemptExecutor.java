@@ -8,8 +8,12 @@ import com.arequiparescue.dispatch.domain.AmbulanceEligibilityPolicy;
 import com.arequiparescue.dispatch.domain.EligibleAmbulanceCandidate;
 import com.arequiparescue.emergency.domain.Emergency;
 import com.arequiparescue.emergency.domain.EmergencyId;
+import com.arequiparescue.emergency.domain.EmergencyRouteSegment;
 import com.arequiparescue.emergency.domain.EmergencyState;
+import com.arequiparescue.emergency.domain.RouteSegmentType;
 import com.arequiparescue.emergency.domain.port.EmergencyRepository;
+import com.arequiparescue.emergency.domain.port.EmergencyRouteSegmentRepository;
+import com.arequiparescue.routing.domain.NodeId;
 import com.arequiparescue.routing.domain.RoadGraph;
 import com.arequiparescue.routing.domain.port.RoadGraphRepository;
 import com.arequiparescue.shared.domain.LogicalTime;
@@ -41,16 +45,19 @@ public class SupervisedDispatchAttemptExecutor {
     private final EmergencyRepository emergencyRepository;
     private final AmbulanceRepository ambulanceRepository;
     private final RoadGraphRepository roadGraphRepository;
+    private final EmergencyRouteSegmentRepository routeSegmentRepository;
     private final AmbulanceEligibilityPolicy eligibilityPolicy;
 
     public SupervisedDispatchAttemptExecutor(
             EmergencyRepository emergencyRepository,
             AmbulanceRepository ambulanceRepository,
-            RoadGraphRepository roadGraphRepository
+            RoadGraphRepository roadGraphRepository,
+            EmergencyRouteSegmentRepository routeSegmentRepository
     ) {
         this.emergencyRepository = Objects.requireNonNull(emergencyRepository);
         this.ambulanceRepository = Objects.requireNonNull(ambulanceRepository);
         this.roadGraphRepository = Objects.requireNonNull(roadGraphRepository);
+        this.routeSegmentRepository = Objects.requireNonNull(routeSegmentRepository);
         this.eligibilityPolicy = new AmbulanceEligibilityPolicy();
     }
 
@@ -126,9 +133,11 @@ public class SupervisedDispatchAttemptExecutor {
         List<EligibleAmbulanceCandidate> eligible =
                 eligibilityPolicy.evaluateEligibleCandidates(emergency, catalog, graph);
 
-        boolean stillEligible = eligible.stream()
-                .anyMatch(c -> c.ambulance().id().equals(ambulanceId));
-        if (!stillEligible) {
+        EligibleAmbulanceCandidate confirmedCandidate = eligible.stream()
+                .filter(c -> c.ambulance().id().equals(ambulanceId))
+                .findFirst()
+                .orElse(null);
+        if (confirmedCandidate == null) {
             return new AttemptOutcome(
                     false,
                     true,
@@ -139,11 +148,23 @@ public class SupervisedDispatchAttemptExecutor {
             );
         }
 
+        NodeId departureNode = ambulance.currentNode();
         Emergency assignedEmergency = emergency.assignAmbulance(ambulance.id().value(), at);
         Ambulance assignedAmbulance = ambulance.assignToEmergency(emergency.id());
 
         Emergency savedEmergency = emergencyRepository.save(assignedEmergency);
         Ambulance savedAmbulance = ambulanceRepository.save(assignedAmbulance);
+
+        routeSegmentRepository.saveIfAbsent(new EmergencyRouteSegment(
+                savedEmergency.id(),
+                RouteSegmentType.AMBULANCE_TO_INCIDENT,
+                savedAmbulance.id().value(),
+                departureNode,
+                savedEmergency.locationNode(),
+                confirmedCandidate.routePath(),
+                confirmedCandidate.routeCost(),
+                at.ticks()
+        ));
 
         return new AttemptOutcome(
                 true,

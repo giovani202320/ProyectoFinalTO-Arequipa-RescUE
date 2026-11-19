@@ -3,10 +3,12 @@ package com.arequiparescue.emergency.application;
 import com.arequiparescue.emergency.domain.DeterministicTriageService;
 import com.arequiparescue.emergency.domain.Emergency;
 import com.arequiparescue.emergency.domain.EmergencyId;
+import com.arequiparescue.emergency.domain.EmergencyRouteSegment;
 import com.arequiparescue.emergency.domain.IncidentCategory;
 import com.arequiparescue.emergency.domain.TriageClassification;
 import com.arequiparescue.emergency.domain.TriageRuleVersion;
 import com.arequiparescue.emergency.domain.port.EmergencyRepository;
+import com.arequiparescue.emergency.domain.port.EmergencyRouteSegmentRepository;
 import com.arequiparescue.emergency.domain.port.TriageRuleVersionRepository;
 import com.arequiparescue.routing.domain.GraphNode;
 import com.arequiparescue.routing.domain.NodeId;
@@ -14,6 +16,7 @@ import com.arequiparescue.routing.domain.RoadGraph;
 import com.arequiparescue.routing.domain.port.RoadGraphRepository;
 import com.arequiparescue.shared.domain.LogicalClock;
 import com.arequiparescue.shared.domain.LogicalTime;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +36,7 @@ public class EmergencyApplicationService {
     private final TriageRuleVersionRepository triageRuleVersionRepository;
     private final RoadGraphRepository roadGraphRepository;
     private final LogicalClock logicalClock;
+    private final EmergencyRouteSegmentRepository routeSegmentRepository;
     private final DeterministicTriageService deterministicTriageService;
 
     public EmergencyApplicationService(
@@ -41,11 +45,31 @@ public class EmergencyApplicationService {
             RoadGraphRepository roadGraphRepository,
             LogicalClock logicalClock
     ) {
+        this(emergencyRepository, triageRuleVersionRepository, roadGraphRepository, logicalClock, null);
+    }
+
+    @Autowired
+    public EmergencyApplicationService(
+            EmergencyRepository emergencyRepository,
+            TriageRuleVersionRepository triageRuleVersionRepository,
+            RoadGraphRepository roadGraphRepository,
+            LogicalClock logicalClock,
+            EmergencyRouteSegmentRepository routeSegmentRepository
+    ) {
         this.emergencyRepository = Objects.requireNonNull(emergencyRepository);
         this.triageRuleVersionRepository = Objects.requireNonNull(triageRuleVersionRepository);
         this.roadGraphRepository = Objects.requireNonNull(roadGraphRepository);
         this.logicalClock = Objects.requireNonNull(logicalClock);
+        this.routeSegmentRepository = routeSegmentRepository;
         this.deterministicTriageService = new DeterministicTriageService();
+    }
+
+    @Transactional(readOnly = true)
+    public List<EmergencyRouteSegment> findRouteSegments(EmergencyId emergencyId) {
+        if (routeSegmentRepository == null || emergencyId == null) {
+            return List.of();
+        }
+        return routeSegmentRepository.findByEmergencyId(emergencyId);
     }
 
     /**

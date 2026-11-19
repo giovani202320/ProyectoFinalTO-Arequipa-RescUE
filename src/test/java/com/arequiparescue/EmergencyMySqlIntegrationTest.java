@@ -69,6 +69,7 @@ class EmergencyMySqlIntegrationTest {
     @BeforeEach
     void resetDatabaseState() {
         MySqlTestSchemaGuard.assertIsolatedTestSchema(jdbcTemplate);
+        jdbcTemplate.update("DELETE FROM emergency_route_segments");
         springDataEmergencyRepository.deleteAll();
         springDataEmergencySequenceRepository.saveAndFlush(
                 new EmergencySequenceJpaEntity(EmergencyJpaAdapter.EMERGENCY_SEQUENCE_NAME, 1L)
@@ -78,6 +79,7 @@ class EmergencyMySqlIntegrationTest {
     @AfterEach
     void cleanUpEmergencies() {
         MySqlTestSchemaGuard.assertIsolatedTestSchema(jdbcTemplate);
+        jdbcTemplate.update("DELETE FROM emergency_route_segments");
         springDataEmergencyRepository.deleteAll();
         springDataEmergencySequenceRepository.saveAndFlush(
                 new EmergencySequenceJpaEntity(EmergencyJpaAdapter.EMERGENCY_SEQUENCE_NAME, 1L)

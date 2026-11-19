@@ -116,6 +116,7 @@ class ReportingMySqlIntegrationTest {
     @AfterEach
     void resetDatabase() {
         MySqlTestSchemaGuard.assertIsolatedTestSchema(jdbcTemplate);
+        jdbcTemplate.update("DELETE FROM emergency_route_segments");
         simulationEventJpaRepository.deleteAll();
         simulationScenarioJpaRepository.deleteAll();
         hospitalReservationJpaRepository.deleteAll();
