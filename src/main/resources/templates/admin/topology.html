@@ -32,6 +32,112 @@
         </div>
     </section>
 
+    <!-- Interactive Dijkstra Route Consultation & SVG Schematic Graph -->
+    <section class="are-card mb-4" aria-labelledby="topology-graph-heading">
+        <div class="are-card-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+            <div>
+                <h3 id="topology-graph-heading" class="are-card-title mb-1">
+                    Visualización esquemática del grafo y rutas de Dijkstra
+                </h3>
+                <p class="text-secondary small mb-0">
+                    Representación esquemática determinista de nodos y costos abstractos; las posiciones visuales no representan coordenadas GPS reales.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2 small">
+                <span class="are-badge are-badge-neutral">Conectado</span>
+                <span class="are-badge are-badge-warning">Aislado</span>
+                <span class="are-badge are-badge-success">Origen</span>
+                <span class="are-badge are-badge-danger">Destino</span>
+                <span class="are-badge are-badge-primary">Ruta Dijkstra</span>
+            </div>
+        </div>
+        <div class="are-card-body">
+            <!-- Route Query Form (GET /admin/topology) -->
+            <form id="dijkstraRouteForm" th:action="@{/admin/topology}" method="get" class="row g-3 align-items-end mb-3">
+                <div class="col-12 col-sm-4">
+                    <label for="routeOrigin" class="form-label fw-semibold">Nodo origen</label>
+                    <select id="routeOrigin" name="origin" class="form-select" required>
+                        <option value="">Seleccione origen...</option>
+                        <option th:each="node : ${nodes}"
+                                th:value="${node.id}"
+                                th:selected="${routeOrigin == node.id}"
+                                th:text="${node.id + ' — ' + node.displayName}">N01</option>
+                    </select>
+                </div>
+                <div class="col-12 col-sm-4">
+                    <label for="routeDestination" class="form-label fw-semibold">Nodo destino</label>
+                    <select id="routeDestination" name="destination" class="form-select" required>
+                        <option value="">Seleccione destino...</option>
+                        <option th:each="node : ${nodes}"
+                                th:value="${node.id}"
+                                th:selected="${routeDestination == node.id}"
+                                th:text="${node.id + ' — ' + node.displayName}">N06</option>
+                    </select>
+                </div>
+                <div class="col-12 col-sm-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-are-primary flex-grow-1">Consultar ruta Dijkstra</button>
+                    <a th:href="@{/admin/topology}" class="btn btn-are-outline" th:if="${routeEvaluated}">Limpiar</a>
+                </div>
+            </form>
+
+            <!-- Route Result Banner -->
+            <div th:if="${routeEvaluated and routeFound}" class="are-alert are-alert-success mb-3" role="status" aria-live="polite">
+                <i data-lucide="route" class="are-nav-icon mt-1" aria-hidden="true"></i>
+                <div>
+                    <strong>Ruta mínima Dijkstra (<span class="are-mono" th:text="${routeOrigin}">N01</span> → <span class="are-mono" th:text="${routeDestination}">N06</span>):</strong>
+                    costo total <strong class="are-mono" th:text="${routeCost}">0</strong>
+                    · secuencia: <span class="are-mono fw-semibold" th:text="${routePathFormatted}">N01 → N06</span>.
+                </div>
+            </div>
+
+            <div th:if="${routeEvaluated and !routeFound and routeMessage != null}" class="are-alert are-alert-warning mb-3" role="status" aria-live="polite">
+                <i data-lucide="alert-triangle" class="are-nav-icon mt-1" aria-hidden="true"></i>
+                <div th:text="${routeMessage}">No existe camino alcanzable.</div>
+            </div>
+
+            <div class="row g-3 align-items-stretch">
+                <div class="col-12 col-lg-8">
+                    <div class="border rounded-3 bg-light p-2">
+                        <svg id="areTopologySvg"
+                             viewBox="0 0 800 470"
+                             class="w-100 h-auto d-block"
+                             style="max-height: 460px;"
+                             role="img"
+                             aria-label="Grafo esquemático de la topología de Arequipa RescUE con nodos, aristas ponderadas y ruta mínima de Dijkstra">
+                        </svg>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <div id="areNodeDetailPanel" class="border rounded-3 p-3 h-100 bg-white" aria-live="polite">
+                        <h4 class="h6 fw-bold mb-2" style="color: var(--are-navy);">Detalle del nodo seleccionado</h4>
+                        <p id="areNodeDetailEmpty" class="text-secondary small mb-0">
+                            Seleccione un nodo en el grafo (con clic o teclado mediante Tab + Enter/Espacio) para consultar su zona, grado y aristas incidentes.
+                        </p>
+                        <div id="areNodeDetailBody" class="d-none small">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span id="areNodeDetailId" class="are-badge are-badge-navy are-mono">N01</span>
+                                <span id="areNodeDetailZone" class="are-mono text-secondary">Z01</span>
+                            </div>
+                            <p class="fw-semibold mb-1" id="areNodeDetailName">Nombre</p>
+                            <p class="text-secondary mb-1">Grado activo: <strong id="areNodeDetailDegree" class="are-mono">0</strong></p>
+                            <p class="text-secondary mb-2">Estado: <strong id="areNodeDetailStatus">Conectado</strong></p>
+                            <div class="fw-semibold mb-1">Ambulancias en este nodo: <span id="areNodeDetailAmbsSummary" class="are-mono text-secondary">0</span></div>
+                            <ul id="areNodeDetailAmbsList" class="ps-3 mb-2"></ul>
+                            <div class="fw-semibold mb-1">Hospitales en este nodo: <span id="areNodeDetailHospsSummary" class="are-mono text-secondary">0</span></div>
+                            <ul id="areNodeDetailHospsList" class="ps-3 mb-2"></ul>
+                            <div class="fw-semibold mb-1">Conexiones directas:</div>
+                            <ul id="areNodeDetailEdges" class="ps-3 mb-3"></ul>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button id="areNodeUseOriginBtn" type="button" class="btn btn-sm btn-are-outline">Usar como origen</button>
+                                <button id="areNodeUseDestBtn" type="button" class="btn btn-sm btn-are-outline">Usar como destino</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Nodes Table -->
     <section class="are-card mb-4" aria-labelledby="topology-nodes-heading">
         <div class="are-card-header d-flex align-items-center justify-content-between">
@@ -47,6 +153,7 @@
                         <th>Código de zona</th>
                         <th>Nombre descriptivo</th>
                         <th>Grado (aristas activas)</th>
+                        <th>Recursos registrados</th>
                         <th>Condición topológica</th>
                     </tr>
                     </thead>
@@ -56,6 +163,9 @@
                         <td class="are-mono" th:text="${node.zoneCode}">ZONA-01</td>
                         <td th:text="${node.displayName}">Centro Histórico</td>
                         <td class="are-mono" th:text="${node.degree}">3</td>
+                        <td class="small are-mono">
+                            <span th:text="${node.ambulanceCount + ' amb. (' + node.availableAmbulanceCount + ' disp.) · ' + node.hospitalCount + ' hosp.'}">0 amb. · 0 hosp.</span>
+                        </td>
                         <td>
                             <span th:if="${node.isolated}" class="are-badge are-badge-warning">
                                 <i data-lucide="alert-triangle" class="are-badge-icon" aria-hidden="true"></i>
@@ -102,6 +212,17 @@
             </div>
         </div>
     </section>
+
+    <script id="areTopologyBootstrap" th:inline="javascript">
+        window.ARE_TOPOLOGY_DATA = {
+            nodes: /*[[${nodes}]]*/ [],
+            edges: /*[[${edges}]]*/ [],
+            routeOrigin: /*[[${routeOrigin}]]*/ "",
+            routeDestination: /*[[${routeDestination}]]*/ "",
+            routeNodes: /*[[${routeNodes}]]*/ []
+        };
+    </script>
+    <script th:src="@{/js/are-topology-graph.js(v='5a-fix')}"></script>
 </th:block>
 
 </body>

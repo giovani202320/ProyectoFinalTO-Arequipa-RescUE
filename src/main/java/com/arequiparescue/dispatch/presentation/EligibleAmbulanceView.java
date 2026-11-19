@@ -3,6 +3,7 @@ package com.arequiparescue.dispatch.presentation;
 import com.arequiparescue.dispatch.domain.EligibleAmbulanceCandidate;
 import com.arequiparescue.routing.domain.NodeId;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -15,14 +16,16 @@ public record EligibleAmbulanceView(
         String stateCode,
         int routeCost,
         String routePathFormatted,
+        List<String> routePathNodes,
         boolean supplementalSpecialized,
         boolean topRecommended
 ) {
 
     public static EligibleAmbulanceView fromDomain(EligibleAmbulanceCandidate candidate, boolean topRecommended) {
-        String formattedPath = candidate.routePath().stream()
+        List<String> pathNodes = candidate.routePath().stream()
                 .map(NodeId::value)
-                .collect(Collectors.joining(" -> "));
+                .toList();
+        String formattedPath = String.join(" -> ", pathNodes);
         return new EligibleAmbulanceView(
                 candidate.ambulance().id().value(),
                 candidate.ambulance().equipmentType().name(),
@@ -30,6 +33,7 @@ public record EligibleAmbulanceView(
                 candidate.ambulance().state().name(),
                 candidate.routeCost(),
                 formattedPath,
+                pathNodes,
                 candidate.supplementalSpecialized(),
                 topRecommended
         );

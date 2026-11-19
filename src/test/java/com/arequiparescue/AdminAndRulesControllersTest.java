@@ -344,7 +344,11 @@ class AdminAndRulesControllersTest {
     @Test
     @DisplayName("GET /admin/topology muestra nodos, costos positivos de aristas y condición aislada de N10 (HU-03 CA-4)")
     void shouldShowTopologyWithIsolatedN10() throws Exception {
+        Ambulance amb = Ambulance.registerInCatalog(AmbulanceId.of("AMB-01"), EquipmentType.BASIC, NodeId.of("N01"));
+        Hospital hospital = Hospital.registerInCatalog(HospitalId.of("HOSP-01"), "Hospital Base", NodeId.of("N01"), true, 5);
         when(roadGraphRepository.loadGraph()).thenReturn(sampleGraphWithIsolatedN10());
+        when(ambulanceCatalogService.listAmbulances()).thenReturn(List.of(amb));
+        when(hospitalCatalogService.listHospitals()).thenReturn(List.of(hospital));
 
         String html = mockMvc.perform(get("/admin/topology"))
                 .andExpect(status().isOk())
@@ -353,12 +357,44 @@ class AdminAndRulesControllersTest {
                 .andExpect(content().string(containsString("EDG-01")))
                 .andExpect(content().string(containsString("Conectado")))
                 .andExpect(content().string(containsString("Nodo aislado sin aristas activas")))
+                .andExpect(content().string(containsString("1 amb. (1 disp.) · 1 hosp.")))
+                .andExpect(content().string(containsString("\"ambulanceCount\":1")))
+                .andExpect(content().string(containsString("\"hospitalCount\":1")))
+                .andExpect(content().string(containsString("id=\"areTopologySvg\"")))
+                .andExpect(content().string(containsString("id=\"dijkstraRouteForm\"")))
+                .andExpect(content().string(containsString("/js/are-topology-graph.js?v=5a-fix")))
+                .andExpect(content().string(containsString("no representan coordenadas GPS reales")))
                 .andExpect(content().string(containsString("/css/are-design-system.css")))
                 .andExpect(content().string(containsString("aria-current=\"page\"")))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
         HtmlStructureAssertions.assertSingleAppShellStructure(html, "topology-page-title");
+
+        String routeHtml = mockMvc.perform(get("/admin/topology")
+                        .param("origin", "N01")
+                        .param("destination", "N02"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Ruta mínima Dijkstra")))
+                .andExpect(content().string(containsString("costo total <strong class=\"are-mono\">5</strong>")))
+                .andExpect(content().string(containsString("N01 → N02")))
+                .andExpect(content().string(containsString("routeNodes: [\"N01\",\"N02\"]")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(routeHtml, "topology-page-title");
+
+        mockMvc.perform(get("/admin/topology")
+                        .param("origin", "N01")
+                        .param("destination", "N10"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("No existe camino alcanzable entre N01 y N10")));
+
+        mockMvc.perform(get("/admin/topology")
+                        .param("origin", "INVALID")
+                        .param("destination", "N02"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Identificador de nodo inválido")));
     }
 
     @Test
