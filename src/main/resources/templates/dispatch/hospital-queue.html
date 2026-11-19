@@ -289,7 +289,9 @@
                         <td>
                             <form th:if="${res.status == 'OCCUPIED'}"
                                   th:action="@{/dispatch/hospital-reservations/{reservationId}/discharge(reservationId=${res.id})}"
-                                  method="post">
+                                  method="post"
+                                  data-confirm-title="Confirmar alta hospitalaria simulada"
+                                  data-confirm="Se liberará la cama ocupada en el hospital y se reevaluará automáticamente la cola de espera hospitalaria.">
                                 <button type="submit" class="btn btn-sm btn-are-outline d-inline-flex align-items-center gap-1">
                                     <i data-lucide="log-out" class="are-badge-icon" aria-hidden="true"></i>
                                     <span>Ejecutar alta simulada (HU-12)</span>

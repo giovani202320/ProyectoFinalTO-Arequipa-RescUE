@@ -64,30 +64,32 @@
                     </div>
                 </div>
 
-                <div class="row g-3 align-items-end">
-                    <div class="col-12 col-md-3">
-                        <label for="ambId" class="form-label fw-semibold">Identificador (opcional)</label>
-                        <input id="ambId" type="text" th:field="*{id}" class="form-control" placeholder="Ej. AMB-01 (automático si vacío)">
+                <fieldset th:disabled="${scenarioActive}" class="border-0 p-0 m-0">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12 col-md-3">
+                            <label for="ambId" class="form-label fw-semibold">Identificador (opcional)</label>
+                            <input id="ambId" type="text" th:field="*{id}" class="form-control" placeholder="Ej. AMB-01 (automático si vacío)">
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label for="ambEquipment" class="form-label fw-semibold">Equipamiento</label>
+                            <select id="ambEquipment" th:field="*{equipmentType}" class="form-select">
+                                <option value="">Seleccione equipamiento...</option>
+                                <option value="BASIC">Básica</option>
+                                <option value="SPECIALIZED">Especializada</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label for="ambNode" class="form-label fw-semibold">Nodo de ubicación</label>
+                            <select id="ambNode" th:field="*{nodeId}" class="form-select">
+                                <option value="">Seleccione nodo...</option>
+                                <option th:each="node : ${nodes}" th:value="${node.id.value}" th:text="${node.id.value + ' — ' + node.displayName}">N01</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-2 d-grid">
+                            <button type="submit" class="btn btn-are-primary">Registrar</button>
+                        </div>
                     </div>
-                    <div class="col-12 col-md-3">
-                        <label for="ambEquipment" class="form-label fw-semibold">Equipamiento</label>
-                        <select id="ambEquipment" th:field="*{equipmentType}" class="form-select">
-                            <option value="">Seleccione equipamiento...</option>
-                            <option value="BASIC">Básica</option>
-                            <option value="SPECIALIZED">Especializada</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <label for="ambNode" class="form-label fw-semibold">Nodo de ubicación</label>
-                        <select id="ambNode" th:field="*{nodeId}" class="form-select">
-                            <option value="">Seleccione nodo...</option>
-                            <option th:each="node : ${nodes}" th:value="${node.id.value}" th:text="${node.id.value + ' — ' + node.displayName}">N01</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-2 d-grid">
-                        <button type="submit" class="btn btn-are-primary">Registrar</button>
-                    </div>
-                </div>
+                </fieldset>
             </form>
         </div>
     </section>
@@ -139,15 +141,17 @@
                         </td>
                         <td class="are-mono" th:text="${amb.assignedEmergencyId != null ? amb.assignedEmergencyId : '—'}">—</td>
                         <td>
-                            <form th:action="@{'/admin/ambulances/' + ${amb.id}}" method="post" class="d-flex flex-wrap gap-2 align-items-center">
-                                <select name="equipmentType" class="form-select form-select-sm w-auto" aria-label="Equipamiento">
-                                    <option value="BASIC" th:selected="${amb.equipmentTypeCode == 'BASIC'}">Básica</option>
-                                    <option value="SPECIALIZED" th:selected="${amb.equipmentTypeCode == 'SPECIALIZED'}">Especializada</option>
-                                </select>
-                                <select name="nodeId" class="form-select form-select-sm w-auto" aria-label="Nodo">
-                                    <option th:each="node : ${nodes}" th:value="${node.id.value}" th:selected="${amb.currentNodeId == node.id.value}" th:text="${node.id.value}">N01</option>
-                                </select>
-                                <button type="submit" class="btn btn-sm btn-are-outline">Actualizar</button>
+                            <form th:action="@{'/admin/ambulances/' + ${amb.id}}" method="post">
+                                <fieldset th:disabled="${scenarioActive}" class="d-flex flex-wrap gap-2 align-items-center border-0 p-0 m-0">
+                                    <select name="equipmentType" class="form-select form-select-sm w-auto" aria-label="Equipamiento">
+                                        <option value="BASIC" th:selected="${amb.equipmentTypeCode == 'BASIC'}">Básica</option>
+                                        <option value="SPECIALIZED" th:selected="${amb.equipmentTypeCode == 'SPECIALIZED'}">Especializada</option>
+                                    </select>
+                                    <select name="nodeId" class="form-select form-select-sm w-auto" aria-label="Nodo">
+                                        <option th:each="node : ${nodes}" th:value="${node.id.value}" th:selected="${amb.currentNodeId == node.id.value}" th:text="${node.id.value}">N01</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-are-outline">Actualizar</button>
+                                </fieldset>
                             </form>
                         </td>
                     </tr>

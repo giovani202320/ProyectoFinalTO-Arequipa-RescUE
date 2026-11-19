@@ -283,4 +283,44 @@ class AdminAndRulesControllersTest {
                 .getContentAsString();
         HtmlStructureAssertions.assertSingleAppShellStructure(html, "topology-page-title");
     }
+
+    @Test
+    @DisplayName("UX-01: deshabilita fieldsets administrativos cuando scenarioActive es true y los habilita cuando es false")
+    void shouldDisableAdministrativeFieldsetsWhenScenarioIsActiveAndEnableWhenInactive() throws Exception {
+        TriageRuleVersion v1 = sampleRuleVersion("RUL-V01", 1, TriageRuleStatus.ACTIVE);
+        Ambulance amb = Ambulance.registerInCatalog(AmbulanceId.of("AMB-01"), EquipmentType.BASIC, NodeId.of("N01"));
+        Hospital hospital = Hospital.registerInCatalog(HospitalId.of("HOSP-01"), "Hospital Base", NodeId.of("N01"), true, 5);
+
+        when(roadGraphRepository.loadGraph()).thenReturn(sampleGraphWithIsolatedN10());
+        when(ambulanceCatalogService.listAmbulances()).thenReturn(List.of(amb));
+        when(hospitalCatalogService.listHospitals()).thenReturn(List.of(hospital));
+        when(triageRuleCatalogService.findActiveVersion()).thenReturn(Optional.of(v1));
+        when(triageRuleCatalogService.listAllVersions()).thenReturn(List.of(v1));
+
+        when(activeScenarioChecker.isAnyScenarioActive()).thenReturn(true);
+        when(triageRuleCatalogService.isAnyScenarioActive()).thenReturn(true);
+
+        mockMvc.perform(get("/admin/ambulances"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("disabled=\"disabled\"")));
+        mockMvc.perform(get("/admin/hospitals"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("disabled=\"disabled\"")));
+        mockMvc.perform(get("/admin/triage-rules"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("disabled=\"disabled\"")));
+
+        when(activeScenarioChecker.isAnyScenarioActive()).thenReturn(false);
+        when(triageRuleCatalogService.isAnyScenarioActive()).thenReturn(false);
+
+        mockMvc.perform(get("/admin/ambulances"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("disabled=\"disabled\""))));
+        mockMvc.perform(get("/admin/hospitals"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("disabled=\"disabled\""))));
+        mockMvc.perform(get("/admin/triage-rules"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("disabled=\"disabled\""))));
+    }
 }

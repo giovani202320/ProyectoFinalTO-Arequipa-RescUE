@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Arrays;
 import java.util.List;
@@ -62,7 +63,8 @@ public class EmergencyController {
             @Valid @ModelAttribute("form") RegisterEmergencyForm form,
             BindingResult bindingResult,
             Model model,
-            HttpServletResponse response
+            HttpServletResponse response,
+            RedirectAttributes redirectAttributes
     ) {
         if (bindingResult.hasErrors()) {
             populateFormReferenceData(model);
@@ -76,9 +78,8 @@ public class EmergencyController {
                     form.getNodeId(),
                     form.getDescription()
             ));
-            model.addAttribute("emergency", EmergencyView.fromDomain(saved));
-            model.addAttribute("justRegistered", true);
-            return "emergencies/detail";
+            redirectAttributes.addFlashAttribute("justRegistered", true);
+            return "redirect:/emergencies/" + saved.id().value();
         } catch (EmergencyValidationException ex) {
             if ("incidentCategory".equals(ex.field())
                     || "nodeId".equals(ex.field())
@@ -97,7 +98,9 @@ public class EmergencyController {
     public String showEmergencyDetail(@PathVariable("id") String id, Model model) {
         Emergency emergency = emergencyApplicationService.getEmergencyById(id);
         model.addAttribute("emergency", EmergencyView.fromDomain(emergency));
-        model.addAttribute("justRegistered", false);
+        if (!model.containsAttribute("justRegistered")) {
+            model.addAttribute("justRegistered", false);
+        }
         return "emergencies/detail";
     }
 

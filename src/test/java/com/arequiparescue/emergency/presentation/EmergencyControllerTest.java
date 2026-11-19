@@ -32,14 +32,18 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -101,14 +105,22 @@ class EmergencyControllerTest {
         );
         when(emergencyApplicationService.registerEmergency(any(RegisterEmergencyCommand.class)))
                 .thenReturn(registered);
+        when(emergencyApplicationService.getEmergencyById("EMG-00001"))
+                .thenReturn(registered);
 
         mockMvc.perform(post("/emergencies")
                         .param("incidentCategory", "INC-A")
                         .param("nodeId", "N01")
                         .param("description", "Emergencia simulada en Cercado"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/emergencies/EMG-00001"))
+                .andExpect(flash().attribute("justRegistered", true));
+
+        mockMvc.perform(get("/emergencies/EMG-00001").flashAttr("justRegistered", true))
                 .andExpect(status().isOk())
                 .andExpect(view().name("emergencies/detail"))
                 .andExpect(model().attribute("justRegistered", true))
+                .andExpect(content().string(containsString("Emergencia registrada y clasificada correctamente")))
                 .andExpect(content().string(containsString("EMG-00001")))
                 .andExpect(content().string(containsString("INC-A")))
                 .andExpect(content().string(containsString("N01")))
@@ -117,6 +129,13 @@ class EmergencyControllerTest {
                 .andExpect(content().string(containsString("RUL-V01")))
                 .andExpect(content().string(containsString("Registrada")))
                 .andExpect(content().string(containsString("/css/are-design-system.css")));
+
+        mockMvc.perform(get("/emergencies/EMG-00001"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("justRegistered", false))
+                .andExpect(content().string(not(containsString("Emergencia registrada y clasificada correctamente"))));
+
+        verify(emergencyApplicationService, times(1)).registerEmergency(any(RegisterEmergencyCommand.class));
     }
 
     @Test

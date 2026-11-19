@@ -52,6 +52,7 @@
                 </div>
                 <div class="are-card-body">
                     <form th:action="@{/admin/triage-rules}" th:object="${form}" method="post">
+                        <fieldset th:disabled="${scenarioActive}" class="border-0 p-0 m-0">
                         <div class="are-table-wrap mb-3">
                             <table class="table align-middle">
                                 <thead>
@@ -130,6 +131,7 @@
                             </table>
                         </div>
                         <button type="submit" class="btn btn-are-primary">Publicar y activar nueva versión</button>
+                        </fieldset>
                     </form>
                 </div>
             </section>
