@@ -67,6 +67,38 @@ public class AreUiFormatter {
             "LOW", "Baja"
     );
 
+    private static final Map<String, String> OPERATION_TYPES = Map.of(
+            "AUTOMATIC_DISPATCH", "Despacho automático",
+            "SUPERVISED_DISPATCH", "Despacho supervisado",
+            "HOSPITAL_RESERVATION", "Reserva hospitalaria",
+            "HOSPITAL_DELIVERY", "Entrega hospitalaria",
+            "HOSPITAL_DISCHARGE", "Alta simulada"
+    );
+
+    private static final Map<String, String> IN_PROGRESS_LABELS = Map.of(
+            "EN_ESPERA", "En espera de ambulancia",
+            "PENDIENTE_LLEGADA_INCIDENTE", "Pendiente de llegada al incidente",
+            "EN_PROCESO_TRASLADO", "En proceso de traslado",
+            "WAITING_HOSPITAL", "Esperando hospital"
+    );
+
+    private static final Map<String, String> OPERATION_STATUSES = Map.ofEntries(
+            Map.entry("ASSIGNED", "Asignada"),
+            Map.entry("WAITING_AMBULANCE", "Esperando ambulancia"),
+            Map.entry("CONCURRENCY_RETRY_EXHAUSTED", "Reintentos de concurrencia agotados"),
+            Map.entry("NO_ELIGIBLE_AMBULANCE", "Sin ambulancia elegible"),
+            Map.entry("IN_TRANSPORT", "En traslado"),
+            Map.entry("WAITING_HOSPITAL", "Esperando hospital"),
+            Map.entry("NO_ELIGIBLE_HOSPITAL", "Sin hospital elegible"),
+            Map.entry("HOSPITAL_RESERVATION_RETRY_EXHAUSTED", "Reintentos de reserva hospitalaria agotados"),
+            Map.entry("COMPLETED", "Entrega completada"),
+            Map.entry("DISCHARGED", "Alta simulada ejecutada"),
+            Map.entry("DUPLICATE_OR_INVALID_STATE", "Operación duplicada o estado inválido"),
+            Map.entry("CONFLICT_RELOAD_REQUIRED", "Conflicto concurrente detectado"),
+            Map.entry("CONCURRENCY_CONFLICT", "Conflicto de concurrencia"),
+            Map.entry("OK", "Ejecutada correctamente")
+    );
+
     public String emergencyStateLabel(String code) {
         return lookup(EMERGENCY_STATES, code);
     }
@@ -97,6 +129,18 @@ public class AreUiFormatter {
 
     public String priorityLabel(String code) {
         return lookup(PRIORITY_LEVELS, code);
+    }
+
+    public String operationTypeLabel(String code) {
+        return lookup(OPERATION_TYPES, code);
+    }
+
+    public String inProgressStatusLabel(String code) {
+        return lookup(IN_PROGRESS_LABELS, code);
+    }
+
+    public String operationStatusLabel(String code) {
+        return lookup(OPERATION_STATUSES, code);
     }
 
     /**
