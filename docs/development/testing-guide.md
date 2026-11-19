@@ -10,11 +10,13 @@ ARE separa las pruebas rápidas de dominio/MVC de las pruebas de integración re
 - **Controladores MVC (`@WebMvcTest` con Mockito y `MockMvc`):** validan rutas HTTP, renderizado Thymeleaf, estructura única `appShell` y ausencia de IDs HTML duplicados (`HtmlStructureAssertions`). Ejemplos: `AdminAndRulesControllersTest`, `DispatchControllerTest`, `EmergencyControllerTest`, `HospitalDispatchControllerTest`, `SimulationControllerTest`, `ReportingControllerTest`.
 - **Integración MySQL (`*MySqlIntegrationTest`):** ejecutan con `@ActiveProfiles("mysql-test")` y `@EnabledIfSystemProperty(named = "are.mysql.integration", matches = "true")` sobre **`arequipa_rescue_test`** (Flyway + JPA + concurrencia real).
 
+- **Guardia de migraciones y conexión (`DatabaseMigrationSafetyGuardTest`, `MySqlTestDatabaseSafetyGuardTest`):** verifican el bloqueo fail-closed de URL explícita, perfil `historical`, configuraciones contradictorias y aislamiento exclusivo en `arequipa_rescue_test`.
+
 ---
 
 ## 2. Comandos de ejecución (PowerShell)
 
-### Suite sin integración MySQL (omite los 29 tests de integración MySQL)
+### Suite sin integración MySQL (omite los 32 tests de integración MySQL)
 
 ```powershell
 .\mvnw.cmd clean test

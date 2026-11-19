@@ -82,9 +82,11 @@ Copiar `.env` permite que **Docker Compose** lea las variables, pero **Spring Bo
 ```powershell
 $env:ARE_DB_USERNAME = "are_user"
 $env:ARE_DB_PASSWORD = "SU_PASSWORD_SEGURO"
-$env:ARE_DB_URL = "jdbc:mysql://localhost:3306/arequipa_rescue?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+$env:ARE_DB_URL = "jdbc:mysql://localhost:3306/arequipa_rescue_demo?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
 $env:ARE_SERVER_PORT = "8080"
 ```
+
+> **Importante:** `application.properties` no tiene fallback silencioso hacia `arequipa_rescue`. Si inicia sin `ARE_DB_URL` (y sin perfil `demo`), la aplicación abortará de forma segura antes de Flyway.
 
 ---
 
@@ -104,11 +106,30 @@ Suite completa incluyendo pruebas de integración contra `arequipa_rescue_test`:
 
 ---
 
-## 6. Iniciar la aplicación y acceder en el navegador
+## 6. Iniciar la aplicación según el entorno
 
-Al iniciar Spring Boot, Flyway ejecuta automáticamente las migraciones `V1`–`V7` sobre la base configurada en `ARE_DB_URL`:
+- **Instalación nueva / desarrollo** (Flyway aplica migraciones sobre la base indicada en `$env:ARE_DB_URL`):
 
 ```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+- **Entorno demo aislado** (`arequipa_rescue_demo` sin necesidad de `$env:ARE_DB_URL`):
+
+```powershell
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=demo"
+```
+
+- **Operación normal sobre la base histórica `arequipa_rescue`** (sin migraciones automáticas de Flyway; requiere `$env:ARE_DB_URL` apuntando a `arequipa_rescue`):
+
+```powershell
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=historical"
+```
+
+- **Migración explícitamente autorizada sobre `arequipa_rescue`** (solo tras respaldo previo con `mysqldump` y aprobación):
+
+```powershell
+$env:ARE_ALLOW_HISTORICAL_MIGRATION = "true"
 .\mvnw.cmd spring-boot:run
 ```
 
@@ -122,6 +143,9 @@ Una vez iniciado el servidor, abra en el navegador:
 
 | Síntoma | Causa probable | Solución |
 |---|---|---|
+| `ABORTADO (fail-closed): debe definir ARE_DB_URL explícitamente` | No se definió `$env:ARE_DB_URL` ni se activó `demo` | Exporte `$env:ARE_DB_URL` en PowerShell o ejecute con `-Dspring-boot.run.profiles=demo`. |
+| `ABORTADO (fail-closed): la base histórica 'arequipa_rescue' está protegida` | Intentó arrancar sin perfil `historical` apuntando a `arequipa_rescue` | Use `-Dspring-boot.run.profiles=historical` para uso normal, o `ARE_ALLOW_HISTORICAL_MIGRATION=true` solo tras respaldo autorizado. |
+| `ABORTADO (fail-closed): configuración contradictoria` | Combinó `historical` con `spring.flyway.enabled=true`, `demo`, `mysql-test` o `ARE_ALLOW_HISTORICAL_MIGRATION=true` | Separe los perfiles y limpie variables contradictorias en la sesión actual. |
 | `Access denied for user 'are_user'` | `ARE_DB_PASSWORD` no está definida en PowerShell o no coincide con MySQL | Exporte `$env:ARE_DB_PASSWORD` con la misma contraseña usada al crear el usuario o definida en `.env`. |
 | `Unknown database 'arequipa_rescue_test'` | No se creó la base aislada de pruebas | Cree `arequipa_rescue_test` y otorgue permisos a `are_user` (paso 3). |
 | `Port 8080 was already in use` | Otro proceso ocupa el puerto `8080` | Defina `$env:ARE_SERVER_PORT = "8081"` antes de ejecutar `.\mvnw.cmd spring-boot:run`. |
