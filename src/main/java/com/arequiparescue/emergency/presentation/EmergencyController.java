@@ -5,6 +5,7 @@ import com.arequiparescue.emergency.application.EmergencyNotFoundException;
 import com.arequiparescue.emergency.application.EmergencyValidationException;
 import com.arequiparescue.emergency.application.RegisterEmergencyCommand;
 import com.arequiparescue.emergency.domain.Emergency;
+import com.arequiparescue.emergency.domain.EmergencyState;
 import com.arequiparescue.emergency.domain.IncidentCategory;
 import com.arequiparescue.emergency.domain.TriageRuleVersion;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -40,12 +42,31 @@ public class EmergencyController {
     }
 
     @GetMapping
-    public String listEmergencies(Model model) {
-        List<EmergencyView> emergencies = emergencyApplicationService.listEmergencies()
+    public String listEmergencies(
+            @RequestParam(name = "q", required = false) String query,
+            @RequestParam(name = "state", required = false) String stateFilter,
+            Model model
+    ) {
+        String normalizedQuery = query == null ? "" : query.trim();
+        String normalizedState = stateFilter == null ? "" : stateFilter.trim().toUpperCase();
+
+        List<EmergencyView> allEmergencies = emergencyApplicationService.listEmergencies()
                 .stream()
                 .map(EmergencyView::fromDomain)
                 .toList();
-        model.addAttribute("emergencies", emergencies);
+
+        List<EmergencyView> filtered = allEmergencies.stream()
+                .filter(item -> normalizedQuery.isEmpty()
+                        || item.id().toUpperCase().contains(normalizedQuery.toUpperCase()))
+                .filter(item -> normalizedState.isEmpty()
+                        || item.stateCode().equalsIgnoreCase(normalizedState))
+                .toList();
+
+        model.addAttribute("emergencies", filtered);
+        model.addAttribute("totalEmergenciesCount", allEmergencies.size());
+        model.addAttribute("searchQuery", normalizedQuery);
+        model.addAttribute("selectedState", normalizedState);
+        model.addAttribute("states", EmergencyState.values());
         model.addAttribute("currentLogicalTicks", emergencyApplicationService.currentLogicalTime().ticks());
         model.addAttribute("activeRuleVersionId", resolveActiveRuleVersionId());
         return "emergencies/list";

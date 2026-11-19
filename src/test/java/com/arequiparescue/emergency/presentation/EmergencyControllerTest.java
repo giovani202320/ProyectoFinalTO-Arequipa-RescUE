@@ -24,9 +24,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
@@ -231,5 +233,38 @@ class EmergencyControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(view().name("emergencies/list"))
                 .andExpect(content().string(containsString("EMG-99999")));
+    }
+
+    @Test
+    @DisplayName("UX-04 y UX-03: GET /emergencies filtra por ID y estado y existe plantilla error.html segura")
+    void shouldFilterEmergenciesByQueryAndStateAndProvideSafeErrorTemplate() throws Exception {
+        Emergency e1 = Emergency.register(
+                EmergencyId.of("EMG-00001"), NodeId.of("N01"), "Primera",
+                new TriageClassification(IncidentCategory.INC_A, SimulatedPriority.HIGH, EquipmentType.SPECIALIZED, TriageRuleVersionId.of("RUL-V01")),
+                LogicalTime.ZERO);
+        Emergency e2 = Emergency.register(
+                EmergencyId.of("EMG-00002"), NodeId.of("N02"), "Segunda",
+                new TriageClassification(IncidentCategory.INC_C, SimulatedPriority.LOW, EquipmentType.BASIC, TriageRuleVersionId.of("RUL-V01")),
+                LogicalTime.of(2)).enterOrRemainInWaitingAmbulance(LogicalTime.of(2), "NO_ELIGIBLE_AMBULANCE");
+
+        when(emergencyApplicationService.listEmergencies()).thenReturn(List.of(e1, e2));
+
+        mockMvc.perform(get("/emergencies").param("q", "EMG-00002").param("state", "WAITING_AMBULANCE"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("EMG-00002")))
+                .andExpect(content().string(not(containsString(">EMG-00001<"))))
+                .andExpect(content().string(containsString("1 / 2")));
+
+        mockMvc.perform(get("/emergencies").param("q", "EMG-99999"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("No hay emergencias que coincidan con el filtro")));
+
+        String errorTemplate = new String(
+                new ClassPathResource("templates/error.html").getInputStream().readAllBytes(),
+                StandardCharsets.UTF_8);
+        assertThat(errorTemplate)
+                .contains("fragments/layout :: appShell")
+                .doesNotContain("th:utext")
+                .doesNotContain("${trace}");
     }
 }

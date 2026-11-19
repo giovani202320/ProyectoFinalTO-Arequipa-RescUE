@@ -7,7 +7,7 @@
      th:if="${message != null and !#strings.isEmpty(message)}"
      class="are-alert mb-3"
      th:classappend="${tone == 'success' ? 'are-alert-success' : (tone == 'warning' ? 'are-alert-warning' : 'are-alert-danger')}"
-     th:attr="role=${tone == 'danger' ? 'alert' : 'status'}">
+     th:attr="role=${tone == 'danger' ? 'alert' : 'status'},aria-live=${tone == 'danger' ? 'assertive' : 'polite'}">
     <i th:attr="data-lucide=${tone == 'success' ? 'check-circle-2' : (tone == 'warning' ? 'alert-triangle' : 'alert-circle')}"
        class="are-nav-icon mt-1" aria-hidden="true"></i>
     <div th:text="${message}">Mensaje informativo</div>

@@ -47,12 +47,45 @@
         <div class="col-12 col-md-4">
             <div class="are-card h-100">
                 <div class="are-card-body py-3">
-                    <div class="text-muted small fw-semibold">Total registradas</div>
-                    <div class="fs-5 fw-bold are-mono mt-1" style="color: var(--are-navy);" th:text="${#lists.size(emergencies)}">0</div>
+                    <div class="text-muted small fw-semibold">Mostradas / total</div>
+                    <div class="fs-5 fw-bold are-mono mt-1" style="color: var(--are-navy);"
+                         th:text="${totalEmergenciesCount != null ? #lists.size(emergencies) + ' / ' + totalEmergenciesCount : #lists.size(emergencies)}">0</div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Search & Filter Bar (UX-04) -->
+    <section class="are-card mb-4" aria-labelledby="emergencies-filter-heading">
+        <div class="are-card-body">
+            <h3 id="emergencies-filter-heading" class="visually-hidden">Buscar y filtrar emergencias</h3>
+            <form method="get" th:action="@{/emergencies}" class="row g-3 align-items-end">
+                <div class="col-12 col-md-5">
+                    <label for="emergencySearch" class="form-label fw-semibold">Buscar por identificador</label>
+                    <input id="emergencySearch" name="q" type="search" class="form-control"
+                           th:value="${searchQuery}" placeholder="Ej. EMG-00001">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="emergencyStateFilter" class="form-label fw-semibold">Filtrar por estado</label>
+                    <select id="emergencyStateFilter" name="state" class="form-select">
+                        <option value="" th:selected="${selectedState == null or selectedState == ''}">Todos los estados</option>
+                        <option th:each="st : ${states}"
+                                th:value="${st.name()}"
+                                th:selected="${st.name() == selectedState}"
+                                th:text="${@areUi.emergencyStateLabel(st.name())}">Registrada</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-are-primary flex-grow-1 d-inline-flex align-items-center justify-content-center gap-2">
+                        <i data-lucide="search" class="are-badge-icon" aria-hidden="true"></i>
+                        <span>Filtrar</span>
+                    </button>
+                    <a th:if="${(searchQuery != null and !searchQuery.isEmpty()) or (selectedState != null and !selectedState.isEmpty())}"
+                       th:href="@{/emergencies}" class="btn btn-are-outline">Limpiar</a>
+                </div>
+            </form>
+        </div>
+    </section>
 
     <!-- Empty State -->
     <section th:if="${#lists.isEmpty(emergencies)}" class="are-card text-center py-5 px-3">
@@ -60,11 +93,18 @@
             <span class="are-module-icon mx-auto mb-3" aria-hidden="true">
                 <i data-lucide="inbox"></i>
             </span>
-            <h3 class="h5 fw-bold mb-2" style="color: var(--are-navy);">No hay emergencias registradas</h3>
-            <p class="text-secondary small mb-3">
-                Todavía no existen solicitudes simuladas en el sistema. Registre una nueva emergencia para iniciar el ciclo operativo.
+            <h3 class="h5 fw-bold mb-2" style="color: var(--are-navy);"
+                th:text="${(searchQuery != null and !searchQuery.isEmpty()) or (selectedState != null and !selectedState.isEmpty()) ? 'No hay emergencias que coincidan con el filtro' : 'No hay emergencias registradas'}">
+                No hay emergencias registradas
+            </h3>
+            <p class="text-secondary small mb-3"
+               th:text="${(searchQuery != null and !searchQuery.isEmpty()) or (selectedState != null and !selectedState.isEmpty()) ? 'Ajuste el identificador o estado seleccionado para ver otros registros.' : 'Todavía no existen solicitudes simuladas en el sistema. Registre una nueva emergencia para iniciar el ciclo operativo.'}">
+                Todavía no existen solicitudes simuladas en el sistema.
             </p>
-            <a th:replace="~{fragments/components :: actionLink(@{/emergencies/new}, 'Registrar primera emergencia', 'primary', 'plus-circle')}"></a>
+            <a th:if="${(searchQuery != null and !searchQuery.isEmpty()) or (selectedState != null and !selectedState.isEmpty())}"
+               th:href="@{/emergencies}" class="btn btn-are-outline">Ver todas las emergencias</a>
+            <a th:if="${(searchQuery == null or searchQuery.isEmpty()) and (selectedState == null or selectedState.isEmpty())}"
+               th:replace="~{fragments/components :: actionLink(@{/emergencies/new}, 'Registrar primera emergencia', 'primary', 'plus-circle')}"></a>
         </div>
     </section>
 
