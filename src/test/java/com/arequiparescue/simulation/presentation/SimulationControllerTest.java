@@ -12,6 +12,7 @@ import com.arequiparescue.simulation.domain.DiscreteEventType;
 import com.arequiparescue.simulation.domain.ScheduledSimulationEvent;
 import com.arequiparescue.simulation.domain.ScenarioStatus;
 import com.arequiparescue.simulation.domain.SimulationScenario;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -46,6 +47,15 @@ class SimulationControllerTest {
 
     @MockitoBean
     private LogicalClock logicalClock;
+
+    @MockitoBean
+    private SimulationPanelViewHelper panelViewHelper;
+
+    @BeforeEach
+    void setUpDefaultPanelHelper() {
+        when(panelViewHelper.buildOperationalSnapshot()).thenReturn(SimulationPanelViewHelper.OperationalSnapshot.empty());
+        when(panelViewHelper.captureRawState()).thenReturn(SimulationPanelViewHelper.RawOperationalState.empty());
+    }
 
     @Test
     void rendersSimulationPanelWithActiveScenarioAndPendingEvents() throws Exception {
@@ -240,5 +250,87 @@ class SimulationControllerTest {
                 .andExpect(content().string(containsString("Fallido")))
                 .andExpect(content().string(containsString("EV-OK")))
                 .andExpect(content().string(containsString("EV-BAD")));
+    }
+
+    @Test
+    void rendersLiveOperationalResourcesAutocompleteLinksAndClockDistinction() throws Exception {
+        SimulationScenario scenario = new SimulationScenario("SCN-02", "Demo visual", ScenarioStatus.ACTIVE, LogicalTime.of(5));
+        SimulationPanelViewHelper.OperationalSnapshot snapshot = new SimulationPanelViewHelper.OperationalSnapshot(
+                List.of(new SimulationPanelViewHelper.ActiveEmergencyItem(
+                        "EMG-00008", "ASSIGNED", "N02", "SPECIALIZED", "AMB-01", null)),
+                1,
+                3L,
+                List.of(new SimulationPanelViewHelper.AmbulanceItem(
+                        "AMB-01", "SPECIALIZED", "N05", "ASSIGNED", "EMG-00008")),
+                0L,
+                1,
+                List.of(new SimulationPanelViewHelper.HospitalCapacityItem(
+                        "HOSP-01", "Hospital General Demo", "N05", true, 5, 1, 2, 2)),
+                2,
+                5,
+                List.of(new SimulationPanelViewHelper.ActiveReservationItem(
+                        "RES-EMG-00008", "EMG-00008", "HOSP-01", "OCCUPIED")),
+                List.of(
+                        new SimulationPanelViewHelper.SubjectSuggestion("SYS-QUEUE", "Evaluación de colas"),
+                        new SimulationPanelViewHelper.SubjectSuggestion("EMG-00008", "Llegada al incidente"),
+                        new SimulationPanelViewHelper.SubjectSuggestion("RES-EMG-00008", "Alta simulada")
+                )
+        );
+        when(panelViewHelper.buildOperationalSnapshot()).thenReturn(snapshot);
+        when(scenarioService.listScenarios()).thenReturn(List.of(scenario));
+        when(scenarioService.findActiveScenario()).thenReturn(Optional.of(scenario));
+        when(scenarioService.listScenarioEvents("SCN-02")).thenReturn(List.of());
+        when(logicalClock.currentTicks()).thenReturn(9L);
+
+        String html = mockMvc.perform(get("/simulation"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Reloj lógico global (sistema): t=9")))
+                .andExpect(content().string(containsString("Reloj del escenario (SCN-02): t=5")))
+                .andExpect(content().string(containsString("Estado operativo actual de recursos")))
+                .andExpect(content().string(containsString("href=\"/emergencies/EMG-00008\"")))
+                .andExpect(content().string(containsString("href=\"/admin/topology\"")))
+                .andExpect(content().string(containsString("HOSP-01")))
+                .andExpect(content().string(containsString("D=2 / C=5")))
+                .andExpect(content().string(containsString("RES-EMG-00008 (OCCUPIED)")))
+                .andExpect(content().string(containsString("id=\"simulationSubjectSuggestions\"")))
+                .andExpect(content().string(containsString("value=\"EMG-00008\"")))
+                .andExpect(content().string(containsString("value=\"RES-EMG-00008\"")))
+                .andExpect(content().string(containsString("Eventos discretos vs. concurrencia multihilo")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(html, "simulation-page-title");
+        assertThat(HtmlStructureAssertions.countOccurrences(html, "<form")).isEqualTo(4);
+    }
+
+    @Test
+    void rendersBeforeAfterComparisonAndNoOperationalChangesExplicitly() throws Exception {
+        SimulationScenario scenario = new SimulationScenario("SCN-02", "Demo", ScenarioStatus.ACTIVE, LogicalTime.of(5));
+        when(scenarioService.listScenarios()).thenReturn(List.of(scenario));
+        when(scenarioService.findActiveScenario()).thenReturn(Optional.of(scenario));
+        when(scenarioService.listScenarioEvents("SCN-02")).thenReturn(List.of());
+        when(logicalClock.currentTicks()).thenReturn(5L);
+
+        SimulationPanelViewHelper.StepComparisonView withDelta = new SimulationPanelViewHelper.StepComparisonView(
+                "EVT-02", "AMBULANCE_ARRIVAL_AT_INCIDENT", "EMG-00008", 2L, 5L, "EXECUTED",
+                "Evento EVT-02 ejecutado en t=5.",
+                List.of(new SimulationPanelViewHelper.ResourceDelta(
+                        "EMG-00008", "Emergencia", "ASSIGNED · AMB-01", "IN_TRANSPORT · AMB-01 · HOSP-01"))
+        );
+        mockMvc.perform(get("/simulation").flashAttr("lastStepComparison", withDelta))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Último evento procesado — Comparación real Antes / Después")))
+                .andExpect(content().string(containsString("t=2 → t=5")))
+                .andExpect(content().string(containsString("ASSIGNED · AMB-01")))
+                .andExpect(content().string(containsString("IN_TRANSPORT · AMB-01 · HOSP-01")));
+
+        SimulationPanelViewHelper.StepComparisonView noChanges = new SimulationPanelViewHelper.StepComparisonView(
+                "EVT-01", "EMERGENCY_REGISTRATION", "EMG-00008", 0L, 2L, "EXECUTED",
+                "Evento EVT-01 ejecutado en t=2.",
+                List.of()
+        );
+        mockMvc.perform(get("/simulation").flashAttr("lastStepComparison", noChanges))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sin cambios operativos")));
     }
 }

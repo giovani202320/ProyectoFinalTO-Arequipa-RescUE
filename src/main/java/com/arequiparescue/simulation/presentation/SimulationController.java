@@ -32,13 +32,16 @@ public class SimulationController {
 
     private final SimulationScenarioApplicationService scenarioService;
     private final LogicalClock logicalClock;
+    private final SimulationPanelViewHelper panelViewHelper;
 
     public SimulationController(
             SimulationScenarioApplicationService scenarioService,
-            LogicalClock logicalClock
+            LogicalClock logicalClock,
+            SimulationPanelViewHelper panelViewHelper
     ) {
         this.scenarioService = Objects.requireNonNull(scenarioService);
         this.logicalClock = Objects.requireNonNull(logicalClock);
+        this.panelViewHelper = Objects.requireNonNull(panelViewHelper);
     }
 
     @GetMapping
@@ -48,11 +51,13 @@ public class SimulationController {
     ) {
         List<SimulationScenario> scenarios = scenarioService.listScenarios();
         Optional<SimulationScenario> selectedScenario = resolveSelectedScenario(scenarioId, scenarios);
+        SimulationPanelViewHelper.OperationalSnapshot operationalSnapshot = panelViewHelper.buildOperationalSnapshot();
 
         model.addAttribute("scenarios", scenarios);
         model.addAttribute("selectedScenario", selectedScenario.orElse(null));
         model.addAttribute("eventTypes", DiscreteEventType.values());
         model.addAttribute("globalClockTicks", logicalClock.currentTicks());
+        model.addAttribute("operationalSnapshot", operationalSnapshot);
 
         if (selectedScenario.isPresent()) {
             String activeId = selectedScenario.get().id();
@@ -67,10 +72,12 @@ public class SimulationController {
             model.addAttribute("historyEvents", historyEvents);
             boolean isActive = selectedScenario.get().isActive();
             model.addAttribute("nextPendingEvent", isActive && !pendingEvents.isEmpty() ? pendingEvents.getFirst() : null);
+            model.addAttribute("latestHistoryEvent", !historyEvents.isEmpty() ? historyEvents.getLast() : null);
         } else {
             model.addAttribute("pendingEvents", List.of());
             model.addAttribute("historyEvents", List.of());
             model.addAttribute("nextPendingEvent", null);
+            model.addAttribute("latestHistoryEvent", null);
         }
 
         return "simulation/scenarios";
@@ -138,12 +145,21 @@ public class SimulationController {
             RedirectAttributes redirectAttributes
     ) {
         try {
+            SimulationPanelViewHelper.RawOperationalState before = panelViewHelper.captureRawState();
             SimulationStepResult result = scenarioService.advanceNextStep(scenarioId);
             if (result.outcome() == SimulationStepOutcome.EXECUTED) {
+                SimulationPanelViewHelper.RawOperationalState after = panelViewHelper.captureRawState();
+                redirectAttributes.addFlashAttribute(
+                        "lastStepComparison",
+                        SimulationPanelViewHelper.buildStepComparison(before, after, result));
                 redirectAttributes.addFlashAttribute("successMessage", result.message());
             } else if (result.outcome() == SimulationStepOutcome.NO_PENDING_EVENTS) {
                 redirectAttributes.addFlashAttribute("warnMessage", result.message());
             } else {
+                SimulationPanelViewHelper.RawOperationalState after = panelViewHelper.captureRawState();
+                redirectAttributes.addFlashAttribute(
+                        "lastStepComparison",
+                        SimulationPanelViewHelper.buildStepComparison(before, after, result));
                 redirectAttributes.addFlashAttribute("errorMessage", result.message());
             }
         } catch (IllegalArgumentException | IllegalStateException ex) {
