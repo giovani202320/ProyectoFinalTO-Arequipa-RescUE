@@ -44,10 +44,10 @@
         </div>
         <div class="are-card-body">
             <form method="get" th:action="@{/reporting}" class="row g-3 align-items-end">
-                <div class="col-12 col-md-5">
+                <div class="col-12 col-md-4">
                     <label for="scenarioId" class="form-label fw-semibold">Escenario de referencia temporal (t actual)</label>
                     <select id="scenarioId" name="scenarioId" class="form-select">
-                        <option value="">Automático (Activo o último)</option>
+                        <option value="">Automático (Activo o mayor t)</option>
                         <option th:each="sc : ${scenarios}"
                                 th:value="${sc.id()}"
                                 th:selected="${sc.id() == selectedScenarioId}"
@@ -55,10 +55,10 @@
                         </option>
                     </select>
                 </div>
-                <div class="col-12 col-md-4">
-                    <label for="state" class="form-label fw-semibold">Filtrar registro trazable por estado</label>
+                <div class="col-12 col-sm-6 col-md-2">
+                    <label for="state" class="form-label fw-semibold">Estado (tabla)</label>
                     <select id="state" name="state" class="form-select">
-                        <option value="" th:selected="${selectedState == ''}">Todos los estados</option>
+                        <option value="" th:selected="${selectedState == ''}">Todos</option>
                         <option th:each="st : ${states}"
                                 th:value="${st.name()}"
                                 th:selected="${st.name() == selectedState}"
@@ -66,20 +66,55 @@
                         </option>
                     </select>
                 </div>
-                <div class="col-12 col-md-3 d-grid">
+                <div class="col-12 col-sm-6 col-md-2">
+                    <label for="priority" class="form-label fw-semibold">Prioridad (tabla)</label>
+                    <select id="priority" name="priority" class="form-select">
+                        <option value="" th:selected="${selectedPriority == null or selectedPriority == ''}">Todas</option>
+                        <option th:each="pr : ${priorities}"
+                                th:value="${pr.name()}"
+                                th:selected="${pr.name() == selectedPriority}"
+                                th:text="${pr.name()}">
+                        </option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-1">
+                    <label for="fromTicks" class="form-label fw-semibold">t desde</label>
+                    <input id="fromTicks" name="fromTicks" type="number" min="0" class="form-control"
+                           th:value="${selectedFromTicks}" placeholder="0">
+                </div>
+                <div class="col-6 col-md-1">
+                    <label for="toTicks" class="form-label fw-semibold">t hasta</label>
+                    <input id="toTicks" name="toTicks" type="number" min="0" class="form-control"
+                           th:value="${selectedToTicks}" placeholder="∞">
+                </div>
+                <div class="col-12 col-md-2 d-grid gap-2">
                     <button type="submit" class="btn btn-are-primary d-inline-flex align-items-center justify-content-center gap-2">
                         <i data-lucide="refresh-cw" class="are-nav-icon" aria-hidden="true"></i>
-                        <span>Actualizar reporte</span>
+                        <span>Actualizar</span>
                     </button>
                 </div>
             </form>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+                <span class="small text-secondary">
+                    Exportación de trazabilidad (UTF-8 con BOM compatible con Excel, respetando los filtros activos):
+                </span>
+                <a class="btn btn-sm btn-are-outline d-inline-flex align-items-center gap-1"
+                   th:href="@{/reporting/export.csv(scenarioId=${selectedScenarioId},state=${selectedState},priority=${selectedPriority},fromTicks=${selectedFromTicks},toTicks=${selectedToTicks})}">
+                    <i data-lucide="download" class="are-badge-icon" aria-hidden="true"></i>
+                    <span>Exportar CSV</span>
+                </a>
+            </div>
+            <div class="are-alert are-alert-danger mt-3 mb-0" th:if="${filterErrorMessage != null}" role="alert">
+                <i data-lucide="alert-circle" class="are-nav-icon mt-1" aria-hidden="true"></i>
+                <div class="small" th:text="${filterErrorMessage}">Error de filtro</div>
+            </div>
             <div class="are-alert are-alert-info mt-3 mb-0" role="status">
                 <i data-lucide="info" class="are-nav-icon mt-1" aria-hidden="true"></i>
                 <div class="small">
                     <strong>Alcance de los filtros (RN-MET-004):</strong>
-                    las métricas <strong>MET-01, MET-02, MET-03, MET-04, MET-06 y MET-07</strong> son <strong>Datos globales</strong> del sistema.
+                    las métricas <strong>MET-01 a MET-07</strong> y los indicadores complementarios son <strong>Datos globales</strong> del sistema.
                     El selector de escenario fija únicamente la referencia temporal <code>t</code> (afecta a <strong>MET-05</strong> y tiempos acumulados en curso),
-                    y el filtro por estado se aplica exclusivamente a la tabla <strong>Registro funcional experimental trazable (RN-MET-003)</strong>.
+                    y los filtros de estado, prioridad y rango <code>t</code> se aplican exclusivamente a la tabla <strong>Registro funcional experimental trazable (RN-MET-003)</strong> y a su exportación CSV.
                 </div>
             </div>
         </div>
@@ -280,6 +315,173 @@
                                 </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- Supplementary Operational Indicators (P1-2 MVP, Global Data) -->
+    <section class="mb-4" aria-labelledby="supplementary-metrics-heading">
+        <h3 id="supplementary-metrics-heading" class="h5 fw-bold mb-3" style="color: var(--are-navy);">
+            Indicadores complementarios de operación (Datos globales)
+        </h3>
+        <div class="row g-3">
+            <!-- A. Priority & Category Distribution -->
+            <div class="col-12 col-xl-4">
+                <article class="are-card h-100">
+                    <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                        <h4 class="are-card-title">Distribución por prioridad y categoría</h4>
+                        <span class="are-badge are-badge-primary are-mono"
+                              th:text="${report.emergencyDistribution().totalEmergencies()} + ' total'">0 total</span>
+                    </div>
+                    <div class="are-card-body">
+                        <p class="text-secondary small mb-2">
+                            Desglose global de emergencias activas vs. completadas por prioridad y categoría de triaje.
+                        </p>
+                        <div class="are-table-wrap mb-3">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Prioridad</th>
+                                    <th class="text-end">Activas</th>
+                                    <th class="text-end">Comp.</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="b : ${report.emergencyDistribution().byPriority()}">
+                                    <td class="are-mono fw-semibold" th:text="${b.key()}">HIGH</td>
+                                    <td class="text-end are-mono" th:text="${b.activeCount()}">0</td>
+                                    <td class="text-end are-mono" th:text="${b.completedCount()}">0</td>
+                                    <td class="text-end are-mono fw-bold" th:text="${b.totalCount()}">0</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="are-table-wrap">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Categoría</th>
+                                    <th class="text-end">Activas</th>
+                                    <th class="text-end">Comp.</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="b : ${report.emergencyDistribution().byCategory()}">
+                                    <td class="are-mono fw-semibold" th:text="${b.key()}">INC-A</td>
+                                    <td class="text-end are-mono" th:text="${b.activeCount()}">0</td>
+                                    <td class="text-end are-mono" th:text="${b.completedCount()}">0</td>
+                                    <td class="text-end are-mono fw-bold" th:text="${b.totalCount()}">0</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- B. Hospital Capacity C/R/O/D -->
+            <div class="col-12 col-xl-4">
+                <article class="are-card h-100">
+                    <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                        <h4 class="are-card-title">Capacidad hospitalaria (C / R / O / D)</h4>
+                        <span class="are-badge are-mono"
+                              th:classappend="${report.hospitalCapacity().allInvariantsValid() ? 'are-badge-success' : 'are-badge-danger'}"
+                              th:text="${report.hospitalCapacity().allInvariantsValid() ? 'Invariante OK' : 'Inconsistencia'}">Invariante OK</span>
+                    </div>
+                    <div class="are-card-body">
+                        <p class="text-secondary small mb-2"
+                           th:text="'Habilitados: ' + ${report.hospitalCapacity().enabledHospitals()} + ' · Deshabilitados: ' + ${report.hospitalCapacity().disabledHospitals()} + ' · Disponibles operativos (habilitados): D=' + ${report.hospitalCapacity().enabledAvailable()} + ' / C=' + ${report.hospitalCapacity().totalCapacity()}">
+                            Habilitados: 0
+                        </p>
+                        <p class="text-secondary small mb-0" th:if="${#lists.isEmpty(report.hospitalCapacity().items())}">
+                            No hay hospitales registrados.
+                        </p>
+                        <div th:if="${!#lists.isEmpty(report.hospitalCapacity().items())}" class="are-table-wrap">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Hospital</th>
+                                    <th>Est.</th>
+                                    <th class="text-end">C</th>
+                                    <th class="text-end">R</th>
+                                    <th class="text-end">O</th>
+                                    <th class="text-end">D</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="h : ${report.hospitalCapacity().items()}">
+                                    <td class="are-mono fw-bold" th:title="${h.name()}" th:text="${h.hospitalId()}">HOSP-01</td>
+                                    <td class="small" th:text="${h.enabled() ? 'Hab.' : 'Deshab.'}">Hab.</td>
+                                    <td class="text-end are-mono" th:text="${h.totalCapacity()}">0</td>
+                                    <td class="text-end are-mono" th:text="${h.reservedSlots()}">0</td>
+                                    <td class="text-end are-mono" th:text="${h.occupiedSlots()}">0</td>
+                                    <td class="text-end are-mono fw-bold"
+                                        th:classappend="${!h.invariantValid() ? ' text-danger' : ''}"
+                                        th:text="${h.availableSlots()}">0</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- C. Operation Final Outcomes vs Attempt Logs -->
+            <div class="col-12 col-xl-4">
+                <article class="are-card h-100">
+                    <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                        <h4 class="are-card-title">Resultados de operaciones e intentos</h4>
+                        <span class="are-badge are-badge-neutral are-mono"
+                              th:text="${report.operationOutcomes().totalFinalOperations()} + ' ops'">0 ops</span>
+                    </div>
+                    <div class="are-card-body">
+                        <p class="text-secondary small mb-2">
+                            Resultados finales únicos (<code>experiment_operation_results</code>) separados de los intentos técnicos individuales (<code>operation_attempt_logs</code>).
+                        </p>
+                        <div class="are-table-wrap mb-3">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Categoría de resultado final</th>
+                                    <th class="text-end">Cantidad</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>Exitosas (asignación, traslado, entrega, alta)</td>
+                                    <td class="text-end are-mono fw-semibold" th:text="${report.operationOutcomes().successfulCount()}">0</td>
+                                </tr>
+                                <tr>
+                                    <td>Diferidas a cola (espera ambulancia/hospital)</td>
+                                    <td class="text-end are-mono fw-semibold" th:text="${report.operationOutcomes().deferredToQueueCount()}">0</td>
+                                </tr>
+                                <tr>
+                                    <td>Rechazadas, conflictos o agotamientos</td>
+                                    <td class="text-end are-mono fw-semibold" th:text="${report.operationOutcomes().rejectedOrFailedCount()}">0</td>
+                                </tr>
+                                <tr th:if="${report.operationOutcomes().otherFinalStatusCount() > 0}">
+                                    <td>Otros estados finales</td>
+                                    <td class="text-end are-mono" th:text="${report.operationOutcomes().otherFinalStatusCount()}">0</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-secondary"><em>Intentos técnicos individuales registrados (separado)</em></td>
+                                    <td class="text-end are-mono text-secondary" th:text="${report.operationOutcomes().totalAttemptLogs()}">0</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="small" th:if="${!#maps.isEmpty(report.operationOutcomes().emergencyOutcomeReasons())}">
+                            <div class="fw-semibold text-secondary mb-1">Motivos de espera/rechazo vigentes en emergencias:</div>
+                            <div class="d-flex flex-wrap gap-1">
+                                <span th:each="r : ${report.operationOutcomes().emergencyOutcomeReasons()}"
+                                      class="are-badge are-badge-warning are-mono"
+                                      th:text="${r.key + ': ' + r.value}">NO_ELIGIBLE_AMBULANCE: 1</span>
+                            </div>
                         </div>
                     </div>
                 </article>

@@ -50,7 +50,8 @@ public class ReportingDataJdbcAdapter implements ReportingDataQueryPort {
                 """
                 SELECT id, state, rule_version_id, assigned_ambulance_id, hospital_id, last_outcome_reason,
                        registered_at_t, queue_entered_at_t, assigned_at_t, at_incident_at_t,
-                       hospital_queue_entered_at_t, in_transport_at_t, completed_at_t
+                       hospital_queue_entered_at_t, in_transport_at_t, completed_at_t,
+                       simulated_priority, incident_category
                 FROM emergencies
                 ORDER BY id ASC
                 """,
@@ -67,7 +68,9 @@ public class ReportingDataJdbcAdapter implements ReportingDataQueryPort {
                         getNullableLong(rs, "at_incident_at_t"),
                         getNullableLong(rs, "hospital_queue_entered_at_t"),
                         getNullableLong(rs, "in_transport_at_t"),
-                        getNullableLong(rs, "completed_at_t")
+                        getNullableLong(rs, "completed_at_t"),
+                        rs.getString("simulated_priority"),
+                        rs.getString("incident_category")
                 )
         );
 
@@ -129,6 +132,19 @@ public class ReportingDataJdbcAdapter implements ReportingDataQueryPort {
                 )
         );
 
+        List<ReportingSourceData.HospitalRow> hospitals = jdbcTemplate.query(
+                "SELECT id, name, node_id, enabled, capacity_total, reserved_slots, occupied_slots FROM hospitals ORDER BY id ASC",
+                (rs, rowNum) -> new ReportingSourceData.HospitalRow(
+                        rs.getString("id"),
+                        rs.getString("name"),
+                        rs.getString("node_id"),
+                        rs.getBoolean("enabled"),
+                        rs.getInt("capacity_total"),
+                        rs.getInt("reserved_slots"),
+                        rs.getInt("occupied_slots")
+                )
+        );
+
         return new ReportingSourceData(
                 referenceScenarioId,
                 referenceScenarioStatus,
@@ -138,7 +154,8 @@ public class ReportingDataJdbcAdapter implements ReportingDataQueryPort {
                 ambulances,
                 reservations,
                 operationResults,
-                attemptLogs
+                attemptLogs,
+                hospitals
         );
     }
 

@@ -183,6 +183,30 @@ class ReportingMySqlIntegrationTest {
         assertEquals(0.0, report.waitingForHospital().closedAverageTicks());
         assertTrue(report.ambulanceUtilization().totalOccupiedTicks() >= 8L);
         assertEquals(2, report.experimentalRecords().size());
+
+        // P1-2: verificar indicadores complementarios reales desde MySQL
+        assertEquals(2L, report.emergencyDistribution().totalEmergencies());
+        assertEquals(1L, report.emergencyDistribution().completedEmergencies());
+        assertEquals(1L, report.emergencyDistribution().activeEmergencies());
+        assertTrue(report.emergencyDistribution().totalsConsistent());
+        assertEquals(1, report.hospitalCapacity().totalHospitals());
+        assertEquals(1, report.hospitalCapacity().enabledHospitals());
+        assertEquals(0, report.hospitalCapacity().disabledHospitals());
+        assertTrue(report.hospitalCapacity().allInvariantsValid());
+        assertTrue(report.operationOutcomes().totalFinalOperations() >= 2L);
+        assertTrue(report.operationOutcomes().totalAttemptLogs() >= 2L);
+
+        // P1-2: verificar filtro por prioridad HIGH (INC-A) sin alterar métricas globales
+        SimulationReportSnapshot highOnly = reportingService.generateFilteredReport(
+                "SCN-REP",
+                new com.arequiparescue.reporting.domain.ReportingSupplementaryMetrics.TraceabilityFilter(
+                        null, "HIGH", null, null)
+        ).snapshot();
+        assertEquals(1, highOnly.experimentalRecords().size());
+        assertEquals("HIGH", highOnly.experimentalRecords().getFirst().simulatedPriority());
+        assertEquals("INC-A", highOnly.experimentalRecords().getFirst().incidentCategory());
+        assertEquals(1L, highOnly.completedEmergencies().completedCount());
+        assertEquals(1L, highOnly.completedEmergencies().activeCount());
     }
 
     @Test

@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 public final class ReportingCalculator {
 
     private static final String OP_HOSPITAL_RESERVATION = "HOSPITAL_RESERVATION";
+    private static final List<String> PRIORITY_ORDER = List.of("HIGH", "MEDIUM", "LOW");
+    private static final List<String> CATEGORY_ORDER = List.of("INC-A", "INC-B", "INC-C", "INC-D");
     private static final List<String> ACTIVE_STATES_ORDER = List.of(
             "REGISTERED",
             "WAITING_AMBULANCE",
@@ -28,7 +30,16 @@ public final class ReportingCalculator {
     }
 
     public static SimulationReportSnapshot calculate(ReportingSourceData source, String stateFilter) {
+        return calculateWithFilter(source, new ReportingSupplementaryMetrics.TraceabilityFilter(stateFilter, null, null, null));
+    }
+
+    public static SimulationReportSnapshot calculateWithFilter(
+            ReportingSourceData source,
+            ReportingSupplementaryMetrics.TraceabilityFilter filter
+    ) {
         Objects.requireNonNull(source, "Los datos fuente de reporte no pueden ser nulos.");
+        ReportingSupplementaryMetrics.TraceabilityFilter effectiveFilter =
+                filter != null ? filter : ReportingSupplementaryMetrics.TraceabilityFilter.none();
         long currentTicks = Math.max(0L, source.currentLogicalTicks());
 
         List<ReportingSourceData.EmergencyRow> emergencies = source.emergencies().stream()
@@ -45,12 +56,19 @@ public final class ReportingCalculator {
                 computeConcurrencyMetric(source.operationResults(), source.attemptLogs());
         TemporalMetricSummary waitingForHospital = computeWaitingForHospital(emergencies, currentTicks);
 
+        ReportingSupplementaryMetrics.EmergencyDistributionSummary emergencyDistribution =
+                computeEmergencyDistribution(emergencies);
+        ReportingSupplementaryMetrics.HospitalCapacitySummary hospitalCapacity =
+                computeHospitalCapacity(source.hospitals());
+        ReportingSupplementaryMetrics.OperationOutcomeSummary operationOutcomes =
+                computeOperationOutcomes(emergencies, source.operationResults(), source.attemptLogs());
+
         List<ExperimentalEmergencyRecord> records = buildExperimentalRecords(
                 emergencies,
                 source.hospitalReservations(),
                 source.operationResults(),
                 source.attemptLogs(),
-                stateFilter
+                effectiveFilter
         );
 
         return new SimulationReportSnapshot(
@@ -64,7 +82,10 @@ public final class ReportingCalculator {
                 ambulanceUtilization,
                 concurrencyConflicts,
                 waitingForHospital,
-                records
+                records,
+                emergencyDistribution,
+                hospitalCapacity,
+                operationOutcomes
         );
     }
 
@@ -339,7 +360,7 @@ public final class ReportingCalculator {
             List<ReportingSourceData.HospitalReservationRow> reservations,
             List<ReportingSourceData.OperationResultRow> operationResults,
             List<ReportingSourceData.AttemptLogRow> attemptLogs,
-            String stateFilter
+            ReportingSupplementaryMetrics.TraceabilityFilter filter
     ) {
         Map<String, ReportingSourceData.HospitalReservationRow> reservationByEmergency = reservations.stream()
                 .collect(Collectors.toMap(
@@ -376,10 +397,18 @@ public final class ReportingCalculator {
                     ));
         }
 
-        String normalizedFilter = stateFilter == null || stateFilter.isBlank() ? null : stateFilter.trim();
         List<ExperimentalEmergencyRecord> records = new ArrayList<>();
         for (ReportingSourceData.EmergencyRow emg : emergencies) {
-            if (normalizedFilter != null && !normalizedFilter.equals(emg.state())) {
+            if (filter.state() != null && !filter.state().equals(emg.state())) {
+                continue;
+            }
+            if (filter.priority() != null && !filter.priority().equals(emg.simulatedPriority())) {
+                continue;
+            }
+            if (filter.fromTicks() != null && emg.registeredAtTicks() < filter.fromTicks()) {
+                continue;
+            }
+            if (filter.toTicks() != null && emg.registeredAtTicks() > filter.toTicks()) {
                 continue;
             }
             ReportingSourceData.HospitalReservationRow reservation = reservationByEmergency.get(emg.id());
@@ -404,10 +433,161 @@ public final class ReportingCalculator {
                     emg.completedAtTicks(),
                     dischargedAt,
                     List.copyOf(resultsByEmergency.getOrDefault(emg.id(), List.of())),
-                    List.copyOf(attemptsByEmergency.getOrDefault(emg.id(), List.of()))
+                    List.copyOf(attemptsByEmergency.getOrDefault(emg.id(), List.of())),
+                    emg.simulatedPriority(),
+                    emg.incidentCategory()
             ));
         }
         return List.copyOf(records);
+    }
+
+    private static ReportingSupplementaryMetrics.EmergencyDistributionSummary computeEmergencyDistribution(
+            List<ReportingSourceData.EmergencyRow> emergencies
+    ) {
+        Map<String, long[]> priorityMap = new LinkedHashMap<>();
+        for (String p : PRIORITY_ORDER) {
+            priorityMap.put(p, new long[2]); // [0] = active, [1] = completed
+        }
+        Map<String, long[]> categoryMap = new LinkedHashMap<>();
+        for (String c : CATEGORY_ORDER) {
+            categoryMap.put(c, new long[2]);
+        }
+
+        long activeTotal = 0L;
+        long completedTotal = 0L;
+        for (ReportingSourceData.EmergencyRow emg : emergencies) {
+            boolean completed = "COMPLETED".equals(emg.state());
+            if (completed) {
+                completedTotal++;
+            } else {
+                activeTotal++;
+            }
+            int idx = completed ? 1 : 0;
+            String prioKey = (emg.simulatedPriority() != null && !emg.simulatedPriority().isBlank())
+                    ? emg.simulatedPriority().trim()
+                    : "SIN_PRIORIDAD";
+            priorityMap.computeIfAbsent(prioKey, k -> new long[2])[idx]++;
+
+            String catKey = (emg.incidentCategory() != null && !emg.incidentCategory().isBlank())
+                    ? emg.incidentCategory().trim()
+                    : "SIN_CATEGORIA";
+            categoryMap.computeIfAbsent(catKey, k -> new long[2])[idx]++;
+        }
+
+        List<ReportingSupplementaryMetrics.DistributionBucket> byPriority = priorityMap.entrySet().stream()
+                .map(e -> new ReportingSupplementaryMetrics.DistributionBucket(
+                        e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[0] + e.getValue()[1]))
+                .toList();
+        List<ReportingSupplementaryMetrics.DistributionBucket> byCategory = categoryMap.entrySet().stream()
+                .map(e -> new ReportingSupplementaryMetrics.DistributionBucket(
+                        e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[0] + e.getValue()[1]))
+                .toList();
+
+        long total = emergencies.size();
+        long sumPrio = byPriority.stream().mapToLong(ReportingSupplementaryMetrics.DistributionBucket::totalCount).sum();
+        long sumCat = byCategory.stream().mapToLong(ReportingSupplementaryMetrics.DistributionBucket::totalCount).sum();
+        boolean consistent = (activeTotal + completedTotal == total) && (sumPrio == total) && (sumCat == total);
+
+        return new ReportingSupplementaryMetrics.EmergencyDistributionSummary(
+                total, activeTotal, completedTotal, byPriority, byCategory, consistent);
+    }
+
+    private static ReportingSupplementaryMetrics.HospitalCapacitySummary computeHospitalCapacity(
+            List<ReportingSourceData.HospitalRow> hospitals
+    ) {
+        if (hospitals == null || hospitals.isEmpty()) {
+            return ReportingSupplementaryMetrics.HospitalCapacitySummary.empty();
+        }
+        List<ReportingSourceData.HospitalRow> sorted = hospitals.stream()
+                .sorted(Comparator.comparing(ReportingSourceData.HospitalRow::id))
+                .toList();
+
+        int enabledCount = 0;
+        int disabledCount = 0;
+        int totalC = 0;
+        int totalR = 0;
+        int totalO = 0;
+        int totalD = 0;
+        int enabledD = 0;
+        boolean allValid = true;
+
+        List<ReportingSupplementaryMetrics.HospitalCapacityItem> items = new ArrayList<>();
+        for (ReportingSourceData.HospitalRow h : sorted) {
+            int available = h.capacityTotal() - h.reservedSlots() - h.occupiedSlots();
+            boolean valid = h.capacityTotal() >= 0
+                    && h.reservedSlots() >= 0
+                    && h.occupiedSlots() >= 0
+                    && available >= 0
+                    && (h.reservedSlots() + h.occupiedSlots() + available == h.capacityTotal());
+            if (!valid) {
+                allValid = false;
+            }
+            if (h.enabled()) {
+                enabledCount++;
+                enabledD += Math.max(0, available);
+            } else {
+                disabledCount++;
+            }
+            totalC += h.capacityTotal();
+            totalR += h.reservedSlots();
+            totalO += h.occupiedSlots();
+            totalD += available;
+
+            items.add(new ReportingSupplementaryMetrics.HospitalCapacityItem(
+                    h.id(), h.name(), h.nodeId(), h.enabled(),
+                    h.capacityTotal(), h.reservedSlots(), h.occupiedSlots(), available, valid));
+        }
+
+        return new ReportingSupplementaryMetrics.HospitalCapacitySummary(
+                sorted.size(), enabledCount, disabledCount,
+                totalC, totalR, totalO, totalD, enabledD, allValid, List.copyOf(items));
+    }
+
+    private static ReportingSupplementaryMetrics.OperationOutcomeSummary computeOperationOutcomes(
+            List<ReportingSourceData.EmergencyRow> emergencies,
+            List<ReportingSourceData.OperationResultRow> operationResults,
+            List<ReportingSourceData.AttemptLogRow> attemptLogs
+    ) {
+        long successful = 0L;
+        long deferred = 0L;
+        long rejected = 0L;
+        long other = 0L;
+        Map<String, Long> finalStatusBreakdown = new LinkedHashMap<>();
+
+        for (ReportingSourceData.OperationResultRow res : operationResults) {
+            String status = res.finalStatus() != null ? res.finalStatus().trim() : "UNKNOWN";
+            finalStatusBreakdown.merge(status, 1L, Long::sum);
+            switch (status) {
+                case "ASSIGNED", "IN_TRANSPORT", "COMPLETED", "DISCHARGED" -> successful++;
+                case "MOVED_TO_WAITING_AMBULANCE", "MOVED_TO_WAITING_HOSPITAL" -> deferred++;
+                case "DUPLICATE_OR_INVALID_STATE",
+                        "CONFLICT_RELOAD_REQUIRED",
+                        "CONCURRENCY_RETRY_EXHAUSTED",
+                        "HOSPITAL_RESERVATION_RETRY_EXHAUSTED" -> rejected++;
+                default -> other++;
+            }
+        }
+
+        Map<String, Long> outcomeReasons = new LinkedHashMap<>();
+        for (ReportingSourceData.EmergencyRow emg : emergencies) {
+            if (emg.lastOutcomeReason() != null && !emg.lastOutcomeReason().isBlank()) {
+                String reason = emg.lastOutcomeReason().trim();
+                if (!"HOSPITAL_DELIVERY_COMPLETED".equals(reason) && !"COMPLETED".equals(reason)) {
+                    outcomeReasons.merge(reason, 1L, Long::sum);
+                }
+            }
+        }
+
+        return new ReportingSupplementaryMetrics.OperationOutcomeSummary(
+                operationResults.size(),
+                successful,
+                deferred,
+                rejected,
+                other,
+                attemptLogs.size(),
+                Map.copyOf(finalStatusBreakdown),
+                Map.copyOf(outcomeReasons)
+        );
     }
 
     private static Double averageOrNull(List<Long> values) {

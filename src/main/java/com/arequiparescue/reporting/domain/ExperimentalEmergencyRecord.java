@@ -21,8 +21,34 @@ public record ExperimentalEmergencyRecord(
         Long completedAtTicks,
         Long dischargedAtTicks,
         List<OperationResultTrace> operationResults,
-        List<AttemptLogTrace> attemptLogs
+        List<AttemptLogTrace> attemptLogs,
+        String simulatedPriority,
+        String incidentCategory
 ) {
+
+    public ExperimentalEmergencyRecord(
+            String emergencyId,
+            String currentState,
+            String ruleVersionId,
+            String assignedAmbulanceId,
+            String hospitalId,
+            String lastOutcomeReason,
+            long registeredAtTicks,
+            Long queueEnteredAtTicks,
+            Long assignedAtTicks,
+            Long atIncidentAtTicks,
+            Long hospitalQueueEnteredAtTicks,
+            Long inTransportAtTicks,
+            Long completedAtTicks,
+            Long dischargedAtTicks,
+            List<OperationResultTrace> operationResults,
+            List<AttemptLogTrace> attemptLogs
+    ) {
+        this(emergencyId, currentState, ruleVersionId, assignedAmbulanceId, hospitalId, lastOutcomeReason,
+                registeredAtTicks, queueEnteredAtTicks, assignedAtTicks, atIncidentAtTicks,
+                hospitalQueueEnteredAtTicks, inTransportAtTicks, completedAtTicks, dischargedAtTicks,
+                operationResults, attemptLogs, null, null);
+    }
 
     public record OperationResultTrace(
             String operationId,
