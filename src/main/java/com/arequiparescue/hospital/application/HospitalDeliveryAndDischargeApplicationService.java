@@ -86,12 +86,19 @@ public class HospitalDeliveryAndDischargeApplicationService {
             );
         }
 
+        LogicalTime recordedTime = (outcome.reservation() != null && outcome.reservation().occupiedAt() != null)
+                ? outcome.reservation().occupiedAt()
+                : now;
+        if (now.isBefore(recordedTime)) {
+            logicalClock.synchronizeAtLeast(recordedTime);
+        }
+
         traceabilityRepository.recordAttempt(
                 operationId, OP_HOSPITAL_DELIVERY, emergencyId.value(), outcome.hospital().id().value(),
-                1, "COMPLETED", outcome.message(), now.ticks());
+                1, "COMPLETED", outcome.message(), recordedTime.ticks());
         traceabilityRepository.recordOperationResult(
                 operationId, OP_HOSPITAL_DELIVERY, emergencyId.value(), outcome.hospital().id().value(),
-                1, "COMPLETED", outcome.message(), now.ticks());
+                1, "COMPLETED", outcome.message(), recordedTime.ticks());
 
         // Reevaluación de WAITING_AMBULANCE fuera de la transacción de entrega (ADR-0002, RN-RUT-008)
         WaitingQueueEvaluationResult queueEval = dispatchApplicationService.evaluateWaitingAmbulanceQueueForAmbulance(
@@ -140,12 +147,19 @@ public class HospitalDeliveryAndDischargeApplicationService {
             );
         }
 
+        LogicalTime recordedTime = (outcome.reservation() != null && outcome.reservation().dischargedAt() != null)
+                ? outcome.reservation().dischargedAt()
+                : now;
+        if (now.isBefore(recordedTime)) {
+            logicalClock.synchronizeAtLeast(recordedTime);
+        }
+
         traceabilityRepository.recordAttempt(
                 operationId, OP_HOSPITAL_DISCHARGE, outcome.reservation().emergencyId().value(),
-                outcome.hospital().id().value(), 1, "DISCHARGED", outcome.message(), now.ticks());
+                outcome.hospital().id().value(), 1, "DISCHARGED", outcome.message(), recordedTime.ticks());
         traceabilityRepository.recordOperationResult(
                 operationId, OP_HOSPITAL_DISCHARGE, outcome.reservation().emergencyId().value(),
-                outcome.hospital().id().value(), 1, "DISCHARGED", outcome.message(), now.ticks());
+                outcome.hospital().id().value(), 1, "DISCHARGED", outcome.message(), recordedTime.ticks());
 
         // Reevaluación FIFO de WAITING_HOSPITAL fuera de la transacción de alta (ADR-0002, RN-HOS-011, RN-HOS-013)
         WaitingHospitalQueueEvaluationResult queueEval =

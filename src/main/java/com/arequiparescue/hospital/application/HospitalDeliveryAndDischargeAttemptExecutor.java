@@ -127,10 +127,11 @@ public class HospitalDeliveryAndDischargeAttemptExecutor {
             );
         }
 
-        Emergency completedEmergency = emergency.completeHospitalDelivery(at);
+        LogicalTime effectiveAt = at.isBefore(reservation.reservedAt()) ? reservation.reservedAt() : at;
+        Emergency completedEmergency = emergency.completeHospitalDelivery(effectiveAt);
         Ambulance releasedAmbulance = ambulance.completeDeliveryAtHospital(hospital.locationNode());
         Hospital updatedHospital = hospital.convertReservationToOccupation();
-        HospitalReservation occupiedReservation = reservation.occupy(at);
+        HospitalReservation occupiedReservation = reservation.occupy(effectiveAt);
 
         Emergency savedEmergency = emergencyRepository.save(completedEmergency);
         Ambulance savedAmbulance = ambulanceRepository.save(releasedAmbulance);
@@ -186,8 +187,12 @@ public class HospitalDeliveryAndDischargeAttemptExecutor {
             );
         }
 
+        LogicalTime minimumDischargeTime = reservation.occupiedAt() != null
+                ? reservation.occupiedAt()
+                : reservation.reservedAt();
+        LogicalTime effectiveAt = at.isBefore(minimumDischargeTime) ? minimumDischargeTime : at;
         Hospital updatedHospital = hospital.dischargeOccupiedSlot();
-        HospitalReservation dischargedReservation = reservation.discharge(at);
+        HospitalReservation dischargedReservation = reservation.discharge(effectiveAt);
 
         Hospital savedHospital = hospitalRepository.save(updatedHospital);
         HospitalReservation savedReservation = hospitalReservationRepository.save(dischargedReservation);
