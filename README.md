@@ -29,7 +29,7 @@ Versiones verificadas en [`pom.xml`](pom.xml), [`compose.yaml`](compose.yaml) y 
 | Persistencia | Spring Data JPA / Hibernate (`ddl-auto=validate`) |
 | Migraciones | Flyway (`flyway-core`, `flyway-mysql`) |
 | Base de datos | MySQL 8.4 LTS (InnoDB, UTF-8 / UTC) |
-| Frontend local | Bootstrap 5.3.3 y Lucide 0.469.0 (`src/main/resources/static/vendor/`) |
+| Frontend local | Bootstrap 5.3.3, Lucide 0.469.0 y Chart.js 4.4.7 (`src/main/resources/static/vendor/`) |
 | Construcción | Maven Wrapper (`mvnw` / `mvnw.cmd`, Apache Maven 3.9.9) |
 | Pruebas | JUnit 5, Mockito, AssertJ, Spring Boot Test y MockMvc |
 
@@ -79,17 +79,24 @@ ARE no almacena contraseñas ni secretos en el repositorio. Consulte [`.env.exam
 | `ARE_DB_PASSWORD` | Contraseña de `ARE_DB_USERNAME` | *Obligatoria (sin valor por defecto)* |
 | `ARE_DB_ROOT_PASSWORD` | Contraseña `root` para inicializar MySQL en Docker | *Obligatoria en Docker Compose* |
 | `ARE_DB_PORT` | Puerto expuesto en el host | `3306` |
-| `ARE_DB_URL` | URL JDBC utilizada por Spring Boot | `jdbc:mysql://localhost:3306/arequipa_rescue?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC` |
+| `ARE_DB_URL` | URL JDBC utilizada por Spring Boot | *Obligatoria (sin fallback silencioso fuera de `demo`/`mysql-test`)* |
+| `ARE_DB_DEMO_URL` | URL JDBC opcional del perfil `demo` | `jdbc:mysql://localhost:${ARE_DB_PORT:3306}/arequipa_rescue_demo?...` |
+| `ARE_DB_TEST_URL` | URL JDBC aislada del perfil `mysql-test` | `jdbc:mysql://localhost:${ARE_DB_PORT:3306}/arequipa_rescue_test?...` |
+| `ARE_ALLOW_HISTORICAL_MIGRATION` | Autorización explícita para migrar `arequipa_rescue` tras respaldo | `false` |
 | `ARE_SERVER_PORT` | Puerto HTTP de Spring Boot | `8080` |
 
 En Windows PowerShell (sesión actual):
 
 ```powershell
+$env:ARE_DB_USERNAME = "are_user"
 $env:ARE_DB_PASSWORD = "su_password_seguro"
 $env:ARE_DB_ROOT_PASSWORD = "su_root_password_seguro"
+$env:ARE_DB_URL = "jdbc:mysql://localhost:3306/arequipa_rescue_demo?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
 ```
 
-También puede copiar `.env.example` a `.env` (ignorado por Git) para uso con `docker compose`.
+> **Protección fail-closed (`DatabaseMigrationSafetyGuard`):** Spring Boot valida la conexión **antes** de inicializar Flyway. Arrancar sin `ARE_DB_URL` (fuera de los perfiles `demo`/`mysql-test`), intentar migrar automáticamente `arequipa_rescue` sin `ARE_ALLOW_HISTORICAL_MIGRATION=true` o combinar perfiles contradictorios (`historical` con Flyway habilitado, `demo` o `mysql-test`) aborta el arranque de forma segura.
+
+También puede copiar `.env.example` a `.env` (ignorado por Git) para uso con `docker compose`. Tenga en cuenta que `.\mvnw.cmd` no carga `.env` automáticamente.
 
 ### 3. Opción A: MySQL 8.4 con Docker Compose (recomendada)
 
@@ -110,9 +117,9 @@ GRANT ALL PRIVILEGES ON arequipa_rescue.* TO 'are_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-### 5. Migraciones Flyway (`V1`–`V7`)
+### 5. Migraciones Flyway (`V1`–`V8`)
 
-Al iniciar la aplicación, Flyway ejecuta automáticamente las migraciones ubicadas en `src/main/resources/db/migration/`:
+Al iniciar la aplicación en un perfil con Flyway habilitado (desarrollo con `ARE_DB_URL` explícita, `demo` o `mysql-test`), Flyway ejecuta las migraciones ubicadas en `src/main/resources/db/migration/`:
 
 - `V1__init_schema.sql`
 - `V2__seed_initial_graph.sql`
@@ -121,26 +128,39 @@ Al iniciar la aplicación, Flyway ejecuta automáticamente las migraciones ubica
 - `V5__create_dispatch_traceability_tables.sql`
 - `V6__create_hospital_reservations_table.sql`
 - `V7__create_simulation_events_table.sql`
+- `V8__create_emergency_route_segments_table.sql`
 
 ---
 
-## Compilación y ejecución
+## Perfiles, compilación y ejecución
+
+| Entorno | Perfil Spring | Base destino | Flyway | Hibernate |
+|---|---|---|---|---|
+| Desarrollo / instalación nueva | *(por defecto)* | `ARE_DB_URL` (obligatoria) | `true` | `validate` |
+| Demostración académica | `demo` | `arequipa_rescue_demo` (`ARE_DB_DEMO_URL`) | `true` | `validate` |
+| Base histórica protegida | `historical` | `arequipa_rescue` (`ARE_DB_URL` explícita) | `false` | `validate` |
+| Pruebas de integración MySQL | `mysql-test` | `arequipa_rescue_test` (`ARE_DB_TEST_URL`) | `true` | `validate` |
 
 En Windows PowerShell:
 
+- **Entorno demo aislado (`arequipa_rescue_demo`):**
+```powershell
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=demo"
+```
+- **Base histórica protegida (`arequipa_rescue`, sin migraciones automáticas, con `$env:ARE_DB_URL` definida):**
+```powershell
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=historical"
+```
+- **Desarrollo general (requiere `$env:ARE_DB_URL` explícita apuntando a una base no protegida):**
 ```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-En Linux / macOS:
-
-```bash
-./mvnw spring-boot:run
-```
+En Linux / macOS use `./mvnw` en lugar de `.\mvnw.cmd`.
 
 Una vez iniciada la aplicación, acceda desde el navegador a:
 
-- `http://localhost:8080/`
+- `http://localhost:8080/` (o el puerto configurado en `ARE_SERVER_PORT`)
 
 ---
 
@@ -185,7 +205,9 @@ docker exec -i are-mysql mysql -u root -p"$env:ARE_DB_ROOT_PASSWORD" -e "CREATE 
 │   │   └── uml/                 # Diagramas de casos de uso y máquinas de estado
 │   ├── decisions/
 │   │   ├── decision-log.md      # Registro de decisiones aprobadas
-│   │   └── adr/                 # ADR-0001 y ADR-0002
+│   │   └── adr/                 # ADR-0001, ADR-0002 y ADR-0003
+│   ├── development/             # Guías de arquitectura, módulos y pruebas
+│   ├── setup/                   # Instalación Windows, configuración y dataset demo
 │   └── product/
 │       ├── vision-and-scope.md
 │       ├── stakeholders.md
@@ -195,8 +217,10 @@ docker exec -i are-mysql mysql -u root -p"$env:ARE_DB_ROOT_PASSWORD" -e "CREATE 
     │   ├── java/com/arequiparescue/
     │   └── resources/
     │       ├── application.properties
-    │       ├── db/migration/    # Migraciones Flyway V1–V7
-    │       ├── static/          # CSS/JS propios y vendor (Bootstrap, Lucide)
+    │       ├── application-demo.properties
+    │       ├── application-historical.properties
+    │       ├── db/migration/    # Migraciones Flyway V1–V8
+    │       ├── static/          # CSS/JS propios y vendor (Bootstrap, Lucide, Chart.js)
     │       └── templates/       # Vistas Thymeleaf
     └── test/
         ├── java/com/arequiparescue/
@@ -206,11 +230,13 @@ docker exec -i are-mysql mysql -u root -p"$env:ARE_DB_ROOT_PASSWORD" -e "CREATE 
 
 ---
 
-## Documentación normativa y de arquitectura
+## Documentación normativa, de arquitectura e instalación
 
 - Contrato del proyecto: [`AGENTS.md`](AGENTS.md)
 - Registro de decisiones: [`docs/decisions/decision-log.md`](docs/decisions/decision-log.md)
-- Decisiones de arquitectura: [`ADR-0001`](docs/decisions/adr/ADR-0001-arquitectura-modular-persistencia-stack-y-pruebas.md) y [`ADR-0002`](docs/decisions/adr/ADR-0002-concurrencia-bloqueo-pesimista-transacciones-y-reintentos.md)
+- Decisiones de arquitectura: [`ADR-0001`](docs/decisions/adr/ADR-0001-arquitectura-modular-persistencia-stack-y-pruebas.md), [`ADR-0002`](docs/decisions/adr/ADR-0002-concurrencia-bloqueo-pesimista-transacciones-y-reintentos.md) y [`ADR-0003`](docs/decisions/adr/ADR-0003-persistencia-historica-de-rutas-dijkstra.md)
+- Instalación y entorno: [`docs/setup/installation-windows.md`](docs/setup/installation-windows.md), [`docs/setup/environment-configuration.md`](docs/setup/environment-configuration.md) y [`docs/setup/demo-dataset.md`](docs/setup/demo-dataset.md)
+- Guías técnicas de desarrollo: [`docs/development/architecture-walkthrough.md`](docs/development/architecture-walkthrough.md), [`docs/development/module-guide.md`](docs/development/module-guide.md) y [`docs/development/testing-guide.md`](docs/development/testing-guide.md)
 - Modelo C4 y diagramas UML: [`docs/architecture/c4/README.md`](docs/architecture/c4/README.md) y [`docs/architecture/uml/`](docs/architecture/uml/)
 - Requisitos e historias de usuario: [`docs/product/requirements/user-stories.md`](docs/product/requirements/user-stories.md) y [`docs/product/requirements/business-rules.md`](docs/product/requirements/business-rules.md)
 

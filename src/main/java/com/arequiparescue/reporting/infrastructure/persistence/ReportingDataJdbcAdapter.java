@@ -40,9 +40,11 @@ public class ReportingDataJdbcAdapter implements ReportingDataQueryPort {
         ReportingSourceData.ScenarioRow referenceScenario = resolveReferenceScenario(scenarios, requestedScenarioId);
         String referenceScenarioId = referenceScenario != null ? referenceScenario.id() : null;
         String referenceScenarioStatus = referenceScenario != null ? referenceScenario.status() : "SIN_ESCENARIO";
-        long currentLogicalTicks = referenceScenario != null
-                ? referenceScenario.currentLogicalTicks()
-                : Math.max(0L, fallbackLogicalTicks);
+        long currentLogicalTicks = resolveCurrentLogicalTicks(
+                referenceScenario,
+                requestedScenarioId,
+                fallbackLogicalTicks
+        );
 
         List<ReportingSourceData.EmergencyRow> emergencies = jdbcTemplate.query(
                 """
@@ -140,7 +142,20 @@ public class ReportingDataJdbcAdapter implements ReportingDataQueryPort {
         );
     }
 
-    private static ReportingSourceData.ScenarioRow resolveReferenceScenario(
+    /**
+     * Resuelve el escenario de referencia temporal para el reporte (RN-MET-004):
+     * <ol>
+     *   <li>Si el usuario especificó {@code requestedScenarioId} y existe, se respeta su selección exacta.</li>
+     *   <li>En modo automático, tiene prioridad el escenario {@code ACTIVE}.</li>
+     *   <li>Si no hay escenario {@code ACTIVE}, se elige el escenario {@code COMPLETED} con mayor
+     *       {@code current_logical_t} (desempate determinista por {@code id} descendente) para evitar
+     *       que un escenario vacío en {@code t=0} colapse el denominador de MET-05.</li>
+     * </ol>
+     * Nota de alcance: el esquema actual ({@code V1}–{@code V8}) no particiona {@code emergencies} por
+     * {@code scenario_id}; las mediciones de ocupación de MET-05 corresponden a datos globales evaluados
+     * sobre la referencia temporal resuelta.
+     */
+    static ReportingSourceData.ScenarioRow resolveReferenceScenario(
             List<ReportingSourceData.ScenarioRow> scenarios,
             String requestedScenarioId
     ) {
@@ -160,7 +175,35 @@ public class ReportingDataJdbcAdapter implements ReportingDataQueryPort {
                 return row;
             }
         }
-        return scenarios.getLast();
+        ReportingSourceData.ScenarioRow bestCompleted = null;
+        for (ReportingSourceData.ScenarioRow row : scenarios) {
+            if (bestCompleted == null
+                    || row.currentLogicalTicks() > bestCompleted.currentLogicalTicks()
+                    || (row.currentLogicalTicks() == bestCompleted.currentLogicalTicks()
+                    && row.id().compareTo(bestCompleted.id()) > 0)) {
+                bestCompleted = row;
+            }
+        }
+        return bestCompleted;
+    }
+
+    static long resolveCurrentLogicalTicks(
+            ReportingSourceData.ScenarioRow referenceScenario,
+            String requestedScenarioId,
+            long fallbackLogicalTicks
+    ) {
+        long safeFallback = Math.max(0L, fallbackLogicalTicks);
+        if (referenceScenario == null) {
+            return safeFallback;
+        }
+        long scenarioTicks = Math.max(0L, referenceScenario.currentLogicalTicks());
+        boolean explicitSelection = requestedScenarioId != null
+                && !requestedScenarioId.isBlank()
+                && requestedScenarioId.trim().equals(referenceScenario.id());
+        if (explicitSelection || "ACTIVE".equals(referenceScenario.status())) {
+            return scenarioTicks;
+        }
+        return Math.max(scenarioTicks, safeFallback);
     }
 
     private static Long getNullableLong(ResultSet rs, String column) throws SQLException {

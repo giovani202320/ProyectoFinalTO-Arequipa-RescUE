@@ -140,4 +140,47 @@ class ReportingCalculatorTest {
         assertEquals(1, filtered.experimentalRecords().size());
         assertEquals(16L, filtered.experimentalRecords().getFirst().dischargedAtTicks());
     }
+
+    @Test
+    void computesMultiAmbulanceUtilizationAccuratelyWithoutMaskingMultiScenarioOverflow() {
+        // Caso 6 y 7: 3 ambulancias controladas con Δt = 10:
+        // - AMB-01: dos emergencias completadas acumuladas (7 + 5 = 12 u. > Δt=10 -> 1.20 sin truncamiento artificial)
+        // - AMB-02: activa en curso desde t=4 hasta t=10 -> 6 u. -> 0.60
+        // - AMB-03: ociosa -> 0 u. -> 0.00
+        // Promedio flota: (12 + 6 + 0) / (3 * 10) = 18 / 30 = 0.60
+        List<ReportingSourceData.EmergencyRow> emergencies = List.of(
+                new ReportingSourceData.EmergencyRow(
+                        "EMG-00001", "COMPLETED", "RUL-V01", "AMB-01", "HOSP-01", "COMPLETED",
+                        0L, 0L, 0L, 3L, null, 3L, 7L),
+                new ReportingSourceData.EmergencyRow(
+                        "EMG-00002", "COMPLETED", "RUL-V01", "AMB-01", "HOSP-01", "COMPLETED",
+                        0L, 0L, 0L, 2L, null, 2L, 5L),
+                new ReportingSourceData.EmergencyRow(
+                        "EMG-00003", "IN_TRANSPORT", "RUL-V01", "AMB-02", "HOSP-01", null,
+                        3L, 3L, 4L, 6L, null, 6L, null)
+        );
+        List<ReportingSourceData.AmbulanceRow> ambulances = List.of(
+                new ReportingSourceData.AmbulanceRow("AMB-01", "BASIC", "AVAILABLE", null),
+                new ReportingSourceData.AmbulanceRow("AMB-02", "SPECIALIZED", "TRANSPORTING", "EMG-00003"),
+                new ReportingSourceData.AmbulanceRow("AMB-03", "BASIC", "AVAILABLE", null)
+        );
+
+        ReportingSourceData source = new ReportingSourceData(
+                "SCN-02", "COMPLETED", 10L,
+                List.of(new ReportingSourceData.ScenarioRow("SCN-02", "Multi", "COMPLETED", 10L)),
+                emergencies, ambulances, List.of(), List.of(), List.of()
+        );
+
+        SimulationReportSnapshot report = ReportingCalculator.calculate(source, null);
+
+        assertEquals(10L, report.ambulanceUtilization().scenarioElapsedTicks());
+        assertEquals(18L, report.ambulanceUtilization().totalOccupiedTicks());
+        assertEquals(12L, report.ambulanceUtilization().items().get(0).occupiedTicks());
+        assertEquals(1.2, report.ambulanceUtilization().items().get(0).utilizationRatio(), 0.0001);
+        assertEquals(6L, report.ambulanceUtilization().items().get(1).occupiedTicks());
+        assertEquals(0.6, report.ambulanceUtilization().items().get(1).utilizationRatio(), 0.0001);
+        assertEquals(0L, report.ambulanceUtilization().items().get(2).occupiedTicks());
+        assertEquals(0.0, report.ambulanceUtilization().items().get(2).utilizationRatio(), 0.0001);
+        assertEquals(0.6, report.ambulanceUtilization().averageUtilizationRatio(), 0.0001);
+    }
 }

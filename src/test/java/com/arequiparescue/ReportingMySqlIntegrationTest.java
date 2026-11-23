@@ -20,7 +20,9 @@ import com.arequiparescue.hospital.application.RegisterHospitalCommand;
 import com.arequiparescue.hospital.infrastructure.persistence.SpringDataHospitalRepository;
 import com.arequiparescue.hospital.infrastructure.persistence.SpringDataHospitalReservationRepository;
 import com.arequiparescue.reporting.application.ReportingApplicationService;
+import com.arequiparescue.reporting.domain.ReportingSourceData;
 import com.arequiparescue.reporting.domain.SimulationReportSnapshot;
+import com.arequiparescue.reporting.domain.port.ReportingDataQueryPort;
 import com.arequiparescue.shared.domain.LogicalClock;
 import com.arequiparescue.simulation.application.ScheduleSimulationEventCommand;
 import com.arequiparescue.simulation.application.SimulationScenarioApplicationService;
@@ -60,6 +62,9 @@ class ReportingMySqlIntegrationTest {
 
     @Autowired
     private ReportingApplicationService reportingService;
+
+    @Autowired
+    private ReportingDataQueryPort reportingDataQueryPort;
 
     @Autowired
     private LogicalClock logicalClock;
@@ -221,5 +226,54 @@ class ReportingMySqlIntegrationTest {
         } finally {
             pool.shutdownNow();
         }
+    }
+
+    @Test
+    @DisplayName("P0-2 MySQL: selección automática de referencia temporal (ACTIVE > mayor COMPLETED > fallback) y respeto de selección explícita")
+    void resolvesReferenceScenarioAndLogicalTicksAcrossCompletedZeroActiveAndEmptyCases() {
+        ambulanceCatalogService.registerAmbulance(new RegisterAmbulanceCommand("AMB-01", "BASIC", "N01"));
+        ambulanceCatalogService.registerAmbulance(new RegisterAmbulanceCommand("AMB-02", "SPECIALIZED", "N02"));
+
+        // Caso 4: sin escenarios registrados, usa fallbackLogicalTicks
+        ReportingSourceData noScenarioData = reportingDataQueryPort.loadSourceData(null, 9L);
+        assertEquals(null, noScenarioData.referenceScenarioId());
+        assertEquals("SIN_ESCENARIO", noScenarioData.referenceScenarioStatus());
+        assertEquals(9L, noScenarioData.currentLogicalTicks());
+
+        // Caso 1: COMPLETED con t=6 seguido de COMPLETED con t=0 (SCN-67) y empate t=5 (SCN-04 vs SCN-05)
+        jdbcTemplate.update(
+                "INSERT INTO simulation_scenarios (id, name, status, current_logical_t) VALUES "
+                        + "('SCN-02', 'Avanzado', 'COMPLETED', 6), "
+                        + "('SCN-04', 'Empate A', 'COMPLETED', 5), "
+                        + "('SCN-05', 'Empate B', 'COMPLETED', 5), "
+                        + "('SCN-67', 'Vacío', 'COMPLETED', 0)");
+
+        // Modo automático con fallback <= 6: elige SCN-02 (t=6), no SCN-67 (t=0)
+        ReportingSourceData autoCompleted = reportingDataQueryPort.loadSourceData(null, 4L);
+        assertEquals("SCN-02", autoCompleted.referenceScenarioId());
+        assertEquals("COMPLETED", autoCompleted.referenceScenarioStatus());
+        assertEquals(6L, autoCompleted.currentLogicalTicks());
+
+        // Caso 5: en modo automático, si el reloj global fallback (12) supera al COMPLETED (6), usa 12
+        ReportingSourceData autoWithHigherFallback = reportingDataQueryPort.loadSourceData(null, 12L);
+        assertEquals("SCN-02", autoWithHigherFallback.referenceScenarioId());
+        assertEquals(12L, autoWithHigherFallback.currentLogicalTicks());
+
+        // Caso 2: selección explícita de SCN-67 (t=0) se respeta exactamente sin división por cero
+        ReportingSourceData explicitZero = reportingDataQueryPort.loadSourceData("SCN-67", 12L);
+        assertEquals("SCN-67", explicitZero.referenceScenarioId());
+        assertEquals(0L, explicitZero.currentLogicalTicks());
+        SimulationReportSnapshot zeroSnapshot =
+                com.arequiparescue.reporting.domain.ReportingCalculator.calculate(explicitZero, null);
+        assertEquals(0.0, zeroSnapshot.ambulanceUtilization().averageUtilizationRatio());
+
+        // Caso 3: escenario ACTIVE tiene prioridad absoluta sobre cualquier COMPLETED aunque tenga menor t
+        jdbcTemplate.update(
+                "INSERT INTO simulation_scenarios (id, name, status, current_logical_t) VALUES "
+                        + "('SCN-ACT', 'Activo actual', 'ACTIVE', 3)");
+        ReportingSourceData activePreferred = reportingDataQueryPort.loadSourceData(null, 12L);
+        assertEquals("SCN-ACT", activePreferred.referenceScenarioId());
+        assertEquals("ACTIVE", activePreferred.referenceScenarioStatus());
+        assertEquals(3L, activePreferred.currentLogicalTicks());
     }
 }

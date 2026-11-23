@@ -197,7 +197,7 @@
                     </div>
                     <div class="are-card-body">
                         <p class="text-secondary small mb-2">
-                            Tiempo lógico ocupado sobre tiempo lógico transcurrido de la referencia temporal (sin división por cero si Δt=0).
+                            Tiempo lógico ocupado acumulado (<strong>datos globales</strong>, sin particionado por escenario) sobre el tiempo lógico de referencia Δt (sin división por cero si Δt=0; puede superar 100% si se acumulan múltiples escenarios).
                         </p>
                         <div class="fs-4 fw-bold mb-1" style="color: var(--are-navy);"
                              th:text="${#numbers.formatDecimal(report.ambulanceUtilization().averageUtilizationRatio() * 100, 1, 2) + '% (' + report.ambulanceUtilization().totalOccupiedTicks() + ' u. ocupadas)'}">
