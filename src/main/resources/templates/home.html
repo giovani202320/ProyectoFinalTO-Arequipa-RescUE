@@ -1,49 +1,241 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head(${status.systemTitle})}"></head>
-<body th:replace="~{fragments/layout :: appShell(${status.systemTitle}, 'Panel operativo de coordinación y simulación académica', 'home', ~{::homeContent})}">
+<body th:replace="~{fragments/layout :: appShell(${status.systemTitle}, 'Centro de control operativo — Estado operativo actual', 'home', ~{::homeContent})}">
 
 <th:block th:fragment="homeContent">
-    <!-- Hero / System Overview -->
+    <!-- A. Cabecera institucional compacta + perfil activo y relojes -->
     <section class="are-hero mb-4" aria-labelledby="are-hero-title">
-        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+        <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3">
             <div>
-                <div class="mb-2">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                     <span th:replace="~{fragments/components :: statusBadge('Centro de operaciones', 'primary')}"></span>
+                    <span th:replace="~{fragments/components :: statusBadge(${status.environmentProfileLabel}, ${status.environmentProfileTone})}"></span>
+                    <span class="are-badge are-badge-neutral are-mono"
+                          th:text="'Reloj global: t=' + ${status.globalLogicalTicks}">Reloj global: t=0</span>
+                    <span th:if="${status.hasActiveScenario}"
+                          class="are-badge are-badge-success are-mono"
+                          th:text="'Escenario activo: ' + ${status.activeScenarioId} + ' (t=' + ${status.activeScenarioLogicalTicks} + ')'">
+                        Escenario activo
+                    </span>
+                    <span th:unless="${status.hasActiveScenario}"
+                          class="are-badge are-badge-neutral">
+                        Sin escenario activo
+                    </span>
                 </div>
-                <h2 id="are-hero-title" class="h4 fw-bold text-dark mb-2" th:text="${status.systemTitle}">
+                <h2 id="are-hero-title" class="h4 fw-bold text-dark mb-1" th:text="${status.systemTitle}">
                     ARE — Arequipa RescUE
                 </h2>
-                <p class="text-secondary mb-0" th:text="${status.academicDescription}">
+                <p class="text-secondary small mb-1" th:text="${status.academicDescription}">
                     Simulador académico de atención de emergencias médicas, despacho concurrente de ambulancias,
                     cálculo de rutas mediante Dijkstra sobre una red vial simplificada de Arequipa y gestión
                     simulada de capacidad hospitalaria.
                 </p>
+                <p class="text-muted small mb-0" th:text="${status.environmentProfileNote}">
+                    Estado operativo actual basado en los registros persistidos al cargar esta vista.
+                </p>
             </div>
             <div class="d-flex flex-wrap gap-2 flex-shrink-0">
                 <a th:replace="~{fragments/components :: actionLink(@{/emergencies/new}, 'Registrar emergencia', 'primary', 'plus-circle')}"></a>
-                <a th:replace="~{fragments/components :: actionLink(@{/emergencies}, 'Consultar emergencias', 'outline', 'list')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/simulation}, 'Ir a simulación', 'outline', 'clock')}"></a>
+                <a th:replace="~{fragments/components :: actionLink(@{/reporting}, 'Ver reportes', 'outline', 'bar-chart-3')}"></a>
             </div>
         </div>
     </section>
 
-    <!-- Operational Modules Grid -->
+    <!-- E. Avisos operativos condicionales (solo respaldados por datos reales) -->
+    <section th:if="${!#lists.isEmpty(status.notices)}" class="mb-4" aria-labelledby="are-notices-heading">
+        <h2 id="are-notices-heading" class="visually-hidden">Avisos operativos actuales</h2>
+        <div class="d-flex flex-column gap-2">
+            <div th:each="notice : ${status.notices}"
+                 class="alert mb-0 py-2 px-3 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 small"
+                 th:classappend="${notice.alertClass}"
+                 role="status">
+                <span th:text="${notice.message}">Aviso operativo</span>
+                <a th:href="@{${notice.actionPath}}"
+                   class="btn btn-sm btn-outline-dark flex-shrink-0"
+                   th:text="${notice.actionLabel}">Ver detalle</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- F. Estado vacío comprensible cuando no hay registros en la base -->
+    <section th:if="${status.emptyDatabase}" class="are-card mb-4" aria-labelledby="are-empty-heading">
+        <div class="are-card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div>
+                <h2 id="are-empty-heading" class="h6 fw-bold mb-1" style="color: var(--are-navy);">
+                    Base de datos sin registros operativos iniciales
+                </h2>
+                <p class="text-secondary small mb-0">
+                    No existen emergencias, ambulancias, hospitales ni escenarios activos registrados en la conexión actual.
+                    Para iniciar una demostración, registre flota y hospitales o cargue su primera emergencia.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+                <a th:href="@{/admin/ambulances}" class="btn btn-sm btn-are-outline">Registrar ambulancias</a>
+                <a th:href="@{/admin/hospitals}" class="btn btn-sm btn-are-outline">Registrar hospitales</a>
+                <a th:href="@{/emergencies/new}" class="btn btn-sm btn-are-primary">Registrar emergencia</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- B. Tarjetas KPI compactas — Estado operativo actual -->
+    <section aria-labelledby="are-kpi-heading" class="mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <h2 id="are-kpi-heading" class="h5 fw-bold mb-0" style="color: var(--are-navy);">
+                Estado operativo actual
+            </h2>
+            <span class="text-muted small">Indicadores agregados al momento de la consulta (recargue para actualizar)</span>
+        </div>
+
+        <div class="row g-3">
+            <!-- KPI 1: Emergencias -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <article class="are-card h-100">
+                    <div class="are-card-body">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-secondary small fw-semibold">Emergencias</span>
+                            <i data-lucide="siren" class="are-nav-icon text-primary" aria-hidden="true"></i>
+                        </div>
+                        <div class="h3 fw-bold are-mono mb-1" style="color: var(--are-navy);"
+                             th:text="${status.totalEmergencies}">0</div>
+                        <div class="small text-secondary mb-2">
+                            Activas: <strong class="are-mono text-dark" th:text="${status.activeEmergencies}">0</strong>
+                            · Completadas: <strong class="are-mono text-dark" th:text="${status.completedEmergencies}">0</strong>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 small">
+                            <span class="are-badge are-badge-neutral are-mono"
+                                  th:text="'Cola amb.: ' + ${status.waitingAmbulanceCount}">Cola amb.: 0</span>
+                            <span class="are-badge are-badge-neutral are-mono"
+                                  th:text="'Cola hosp.: ' + ${status.waitingHospitalCount}">Cola hosp.: 0</span>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- KPI 2: Ambulancias -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <article class="are-card h-100">
+                    <div class="are-card-body">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-secondary small fw-semibold">Ambulancias disponibles</span>
+                            <i data-lucide="ambulance" class="are-nav-icon text-primary" aria-hidden="true"></i>
+                        </div>
+                        <div class="h3 fw-bold are-mono mb-1" style="color: var(--are-navy);"
+                             th:text="${status.availableAmbulances} + ' / ' + ${status.totalAmbulances}">0 / 0</div>
+                        <div class="small text-secondary mb-2">
+                            Ocupadas: <strong class="are-mono text-dark" th:text="${status.occupiedAmbulances}">0</strong>
+                        </div>
+                        <p class="text-muted mb-0" style="font-size: 0.78rem;">
+                            Disponibles en flota; la elegibilidad depende del equipamiento requerido por cada emergencia.
+                        </p>
+                    </div>
+                </article>
+            </div>
+
+            <!-- KPI 3: Hospitales y capacidad habilitada -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <article class="are-card h-100">
+                    <div class="are-card-body">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-secondary small fw-semibold">Hospitales habilitados</span>
+                            <i data-lucide="hospital" class="are-nav-icon text-primary" aria-hidden="true"></i>
+                        </div>
+                        <div class="h3 fw-bold are-mono mb-1" style="color: var(--are-navy);"
+                             th:text="${status.enabledHospitals} + ' / ' + ${status.totalHospitals}">0 / 0</div>
+                        <div class="small text-secondary mb-1">
+                            Capacidad habilitada:
+                            <strong class="are-mono"
+                                    th:classappend="${!status.hospitalCapacityConsistent ? ' text-danger' : ' text-dark'}"
+                                    th:text="'D=' + ${status.enabledAvailableCapacity} + ' / C=' + ${status.enabledCapacityTotal}">D=0 / C=0</strong>
+                        </div>
+                        <div class="small text-muted are-mono mb-1"
+                             th:text="'R=' + ${status.enabledReservedSlots} + ' · O=' + ${status.enabledOccupiedSlots} + ' · Deshab.: ' + ${status.disabledHospitals}">
+                            R=0 · O=0 · Deshab.: 0
+                        </div>
+                        <span th:if="${!status.hospitalCapacityConsistent}"
+                              class="are-badge are-badge-danger">
+                            Capacidad inconsistente detectada
+                        </span>
+                    </div>
+                </article>
+            </div>
+
+            <!-- KPI 4: Reloj global y escenario activo -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <article class="are-card h-100">
+                    <div class="are-card-body">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-secondary small fw-semibold">Reloj lógico y escenario</span>
+                            <i data-lucide="clock" class="are-nav-icon text-primary" aria-hidden="true"></i>
+                        </div>
+                        <div class="h3 fw-bold are-mono mb-1" style="color: var(--are-navy);"
+                             th:text="'t = ' + ${status.globalLogicalTicks}">t = 0</div>
+                        <div class="small text-secondary mb-1">Reloj lógico global monotónico</div>
+                        <div th:if="${status.hasActiveScenario}" class="small text-dark">
+                            Escenario <strong class="are-mono" th:text="${status.activeScenarioId}">SCN-01</strong>:
+                            <span class="are-mono" th:text="'t=' + ${status.activeScenarioLogicalTicks}">t=0</span>
+                            <div class="text-muted text-truncate" th:text="${status.activeScenarioName}"
+                                 th:title="${status.activeScenarioName}">Nombre escenario</div>
+                        </div>
+                        <div th:unless="${status.hasActiveScenario}" class="small text-muted">
+                            Sin escenario ACTIVE en curso.
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- C. Distribución de emergencias por los 7 estados -->
+    <section aria-labelledby="are-state-dist-heading" class="are-card mb-4">
+        <div class="are-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <h2 id="are-state-dist-heading" class="are-card-title mb-0">
+                Distribución de emergencias por estado
+            </h2>
+            <span class="are-badge are-badge-neutral are-mono"
+                  th:text="${status.totalEmergencies} + ' registradas'">0 registradas</span>
+        </div>
+        <div class="are-card-body">
+            <p th:if="${status.totalEmergencies == 0}" class="text-secondary small mb-0">
+                Aún no hay emergencias registradas para calcular la distribución por estado.
+            </p>
+            <div th:if="${status.totalEmergencies > 0}" class="row g-3">
+                <div class="col-12 col-md-6" th:each="row : ${status.stateDistribution}">
+                    <div class="d-flex justify-content-between align-items-baseline small mb-1">
+                        <span class="fw-semibold text-dark"
+                              th:text="${@areUi.emergencyStateLabel(row.stateCode)}"
+                              th:title="${row.stateCode}">Estado</span>
+                        <span class="are-mono text-secondary"
+                              th:text="${row.count} + ' (' + ${#numbers.formatDecimal(row.sharePercent, 1, 1)} + '%)'">0 (0.0%)</span>
+                    </div>
+                    <div class="progress" style="height: 0.5rem;" role="progressbar"
+                         th:aria-label="${@areUi.emergencyStateLabel(row.stateCode)}"
+                         th:aria-valuenow="${row.sharePercent}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar"
+                             th:classappend="${row.barToneClass}"
+                             th:style="'width:' + ${row.sharePercent} + '%'"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- D. Accesos rápidos a los 7 módulos principales -->
     <section aria-labelledby="are-modules-heading" class="mb-4">
         <div class="d-flex align-items-center justify-content-between mb-3">
             <h2 id="are-modules-heading" class="h5 fw-bold mb-0" style="color: var(--are-navy);">
                 Módulos operativos
             </h2>
-            <span class="text-muted small">Accesos directos a rutas activas del sistema</span>
+            <span class="text-muted small">Accesos rápidos a las rutas principales del simulador</span>
         </div>
 
         <div class="row g-3">
             <div class="col-12 col-md-6 col-xl-4">
                 <article class="are-card are-card-interactive h-100 d-flex flex-column">
                     <div class="are-card-body flex-grow-1">
-                        <div class="d-flex align-items-start gap-3 mb-3">
-                            <span class="are-module-icon" aria-hidden="true">
-                                <i data-lucide="siren"></i>
-                            </span>
+                        <div class="d-flex align-items-start gap-3 mb-2">
+                            <span class="are-module-icon" aria-hidden="true"><i data-lucide="siren"></i></span>
                             <div>
                                 <h3 class="are-card-title">Emergencias</h3>
                                 <p class="text-muted small mb-0">Registro, triage y ciclo prehospitalario (HU-01, HU-02)</p>
@@ -63,10 +255,28 @@
             <div class="col-12 col-md-6 col-xl-4">
                 <article class="are-card are-card-interactive h-100 d-flex flex-column">
                     <div class="are-card-body flex-grow-1">
-                        <div class="d-flex align-items-start gap-3 mb-3">
-                            <span class="are-module-icon" aria-hidden="true">
-                                <i data-lucide="radio"></i>
-                            </span>
+                        <div class="d-flex align-items-start gap-3 mb-2">
+                            <span class="are-module-icon" aria-hidden="true"><i data-lucide="ambulance"></i></span>
+                            <div>
+                                <h3 class="are-card-title">Ambulancias</h3>
+                                <p class="text-muted small mb-0">Flota básica y especializada (HU-03)</p>
+                            </div>
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Administre unidades, su nodo actual en la red N01–N10 y su equipamiento.
+                        </p>
+                    </div>
+                    <div class="px-3 pb-3">
+                        <a th:href="@{/admin/ambulances}" class="btn btn-sm btn-are-outline">Administrar flota</a>
+                    </div>
+                </article>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <article class="are-card are-card-interactive h-100 d-flex flex-column">
+                    <div class="are-card-body flex-grow-1">
+                        <div class="d-flex align-items-start gap-3 mb-2">
+                            <span class="are-module-icon" aria-hidden="true"><i data-lucide="radio"></i></span>
                             <div>
                                 <h3 class="are-card-title">Despacho y colas</h3>
                                 <p class="text-muted small mb-0">Asignación FIFO y recepción hospitalaria (HU-08, HU-10)</p>
@@ -86,39 +296,15 @@
             <div class="col-12 col-md-6 col-xl-4">
                 <article class="are-card are-card-interactive h-100 d-flex flex-column">
                     <div class="are-card-body flex-grow-1">
-                        <div class="d-flex align-items-start gap-3 mb-3">
-                            <span class="are-module-icon" aria-hidden="true">
-                                <i data-lucide="ambulance"></i>
-                            </span>
-                            <div>
-                                <h3 class="are-card-title">Ambulancias</h3>
-                                <p class="text-muted small mb-0">Flota básica y especializada (HU-03)</p>
-                            </div>
-                        </div>
-                        <p class="small text-secondary mb-0">
-                            Administre unidades disponibles, su nodo inicial en la red N01–N10 y su nivel de equipamiento.
-                        </p>
-                    </div>
-                    <div class="px-3 pb-3">
-                        <a th:href="@{/admin/ambulances}" class="btn btn-sm btn-are-outline">Administrar flota</a>
-                    </div>
-                </article>
-            </div>
-
-            <div class="col-12 col-md-6 col-xl-4">
-                <article class="are-card are-card-interactive h-100 d-flex flex-column">
-                    <div class="are-card-body flex-grow-1">
-                        <div class="d-flex align-items-start gap-3 mb-3">
-                            <span class="are-module-icon" aria-hidden="true">
-                                <i data-lucide="hospital"></i>
-                            </span>
+                        <div class="d-flex align-items-start gap-3 mb-2">
+                            <span class="are-module-icon" aria-hidden="true"><i data-lucide="hospital"></i></span>
                             <div>
                                 <h3 class="are-card-title">Hospitales</h3>
                                 <p class="text-muted small mb-0">Capacidad total, reservas y ocupación (HU-03, HU-12)</p>
                             </div>
                         </div>
                         <p class="small text-secondary mb-0">
-                            Gestione establecimientos habilitados y su capacidad operativa para traslado y entrega.
+                            Gestione establecimientos habilitados y su capacidad operativa C / R / O / D.
                         </p>
                     </div>
                     <div class="px-3 pb-3">
@@ -130,17 +316,15 @@
             <div class="col-12 col-md-6 col-xl-4">
                 <article class="are-card are-card-interactive h-100 d-flex flex-column">
                     <div class="are-card-body flex-grow-1">
-                        <div class="d-flex align-items-start gap-3 mb-3">
-                            <span class="are-module-icon" aria-hidden="true">
-                                <i data-lucide="clock"></i>
-                            </span>
+                        <div class="d-flex align-items-start gap-3 mb-2">
+                            <span class="are-module-icon" aria-hidden="true"><i data-lucide="clock"></i></span>
                             <div>
                                 <h3 class="are-card-title">Simulación</h3>
-                                <p class="text-muted small mb-0">Escenarios y reloj lógico monotónico (HU-13)</p>
+                                <p class="text-muted small mb-0">Escenarios y eventos discretos (HU-13)</p>
                             </div>
                         </div>
                         <p class="small text-secondary mb-0">
-                            Controle escenarios experimentales, programe eventos discretos y avance el tiempo lógico t.
+                            Controle escenarios experimentales, programe eventos discretos y avance el reloj lógico.
                         </p>
                     </div>
                     <div class="px-3 pb-3">
@@ -152,17 +336,35 @@
             <div class="col-12 col-md-6 col-xl-4">
                 <article class="are-card are-card-interactive h-100 d-flex flex-column">
                     <div class="are-card-body flex-grow-1">
-                        <div class="d-flex align-items-start gap-3 mb-3">
-                            <span class="are-module-icon" aria-hidden="true">
-                                <i data-lucide="bar-chart-3"></i>
-                            </span>
+                        <div class="d-flex align-items-start gap-3 mb-2">
+                            <span class="are-module-icon" aria-hidden="true"><i data-lucide="map"></i></span>
                             <div>
-                                <h3 class="are-card-title">Reportes y métricas</h3>
-                                <p class="text-muted small mb-0">Indicadores experimentales y trazabilidad (HU-14)</p>
+                                <h3 class="are-card-title">Topología / Dijkstra</h3>
+                                <p class="text-muted small mb-0">Red vial N01–N10 y rutas mínimas (HU-03, HU-05)</p>
                             </div>
                         </div>
                         <p class="small text-secondary mb-0">
-                            Consulte tiempos promedio, utilización de flota, contención concurrente y registro experimental.
+                            Consulte el grafo vial de Arequipa, distancias en pesos lógicos y ubicación de recursos.
+                        </p>
+                    </div>
+                    <div class="px-3 pb-3">
+                        <a th:href="@{/admin/topology}" class="btn btn-sm btn-are-outline">Ver topología N01–N10</a>
+                    </div>
+                </article>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <article class="are-card are-card-interactive h-100 d-flex flex-column">
+                    <div class="are-card-body flex-grow-1">
+                        <div class="d-flex align-items-start gap-3 mb-2">
+                            <span class="are-module-icon" aria-hidden="true"><i data-lucide="bar-chart-3"></i></span>
+                            <div>
+                                <h3 class="are-card-title">Reportes y métricas</h3>
+                                <p class="text-muted small mb-0">MET-01 a MET-07, indicadores y CSV (HU-14)</p>
+                            </div>
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Consulte métricas experimentales, indicadores complementarios y exporte trazabilidad en CSV.
                         </p>
                     </div>
                     <div class="px-3 pb-3">
@@ -173,18 +375,14 @@
         </div>
     </section>
 
-    <!-- Configuration, Topology & Architecture Summary -->
+    <!-- Reglas de triage y base técnica -->
     <div class="row g-3">
         <div class="col-12 col-lg-5">
             <section class="are-card h-100" aria-labelledby="are-config-heading">
                 <div class="are-card-header">
-                    <h2 id="are-config-heading" class="are-card-title">Configuración y red vial</h2>
+                    <h2 id="are-config-heading" class="are-card-title">Reglas de triage</h2>
                 </div>
                 <div class="are-card-body d-flex flex-column gap-2">
-                    <a th:href="@{/admin/topology}" class="btn btn-sm btn-are-outline text-start d-flex align-items-center gap-2">
-                        <i data-lucide="map" class="are-nav-icon" aria-hidden="true"></i>
-                        <span>Consultar topología N01–N10 (HU-03)</span>
-                    </a>
                     <a th:href="@{/admin/triage-rules}" class="btn btn-sm btn-are-outline text-start d-flex align-items-center gap-2">
                         <i data-lucide="sliders-horizontal" class="are-nav-icon" aria-hidden="true"></i>
                         <span>Versiones de reglas de triage — Admin (HU-04)</span>
@@ -211,7 +409,7 @@
 
                         <dt class="col-sm-4 text-dark">Base técnica activa</dt>
                         <dd class="col-sm-8 text-secondary">
-                            Java 21 LTS, Spring Boot 3.4.5, MySQL 8.4 LTS (Flyway), grafo inicial N01–N10 y reloj lógico monotónico (t &gt;= 0)
+                            Java 21 LTS, Spring Boot 3.4.5, MySQL 8.4 LTS (Flyway), grafo N01–N10 y reloj lógico monotónico (t &gt;= 0)
                         </dd>
 
                         <dt class="col-sm-4 text-dark mb-0">Sistema visual</dt>
