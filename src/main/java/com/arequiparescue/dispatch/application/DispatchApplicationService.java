@@ -17,7 +17,6 @@ import com.arequiparescue.routing.domain.RoadGraph;
 import com.arequiparescue.routing.domain.port.RoadGraphRepository;
 import com.arequiparescue.shared.domain.LogicalClock;
 import com.arequiparescue.shared.domain.LogicalTime;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -108,7 +107,9 @@ public class DispatchApplicationService {
         SupervisedDispatchAttemptExecutor.AttemptOutcome attemptOutcome;
         try {
             attemptOutcome = attemptExecutor.executeSupervisedAssignmentAttempt(emergencyId, ambulanceId, now);
-        } catch (PessimisticLockingFailureException | DataIntegrityViolationException ex) {
+        } catch (DispatchValidationException ex) {
+            throw ex;
+        } catch (PessimisticLockingFailureException ex) {
             Emergency current = emergencyRepository.findById(emergencyId)
                     .orElseThrow(() -> new DispatchValidationException(
                             "No existe ninguna emergencia con identificador " + emergencyId.value() + "."));
@@ -119,6 +120,11 @@ public class DispatchApplicationService {
                     null,
                     "Conflicto concurrente de bloqueo al intentar asignar la ambulancia " + ambulanceId.value() + "."
             );
+        } catch (RuntimeException ex) {
+            // Error técnico ajeno a conflicto concurrente (incl. DataIntegrityViolationException): no se clasifica como conflicto (ADR-0002 Decisión 4)
+            recordTechnicalErrorBestEffort(operationId, OP_SUPERVISED, emergencyId.value(),
+                    ambulanceId.value(), 1, ex.getMessage(), now.ticks());
+            throw ex;
         }
 
         if (attemptOutcome.succeeded()) {

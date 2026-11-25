@@ -224,6 +224,49 @@ class AutomaticDispatchRetryTest {
                 eq(1), eq("TECHNICAL_ERROR"), anyString(), anyLong());
     }
 
+    @Test
+    @DisplayName("A2 / ADR-0002: assignSupervised clasifica DataIntegrityViolationException como error técnico y no como conflicto de bloqueo")
+    void shouldTreatDataIntegrityViolationInSupervisedDispatchAsTechnicalErrorNotLockConflict() {
+        EmergencyId emergencyId = EmergencyId.of("EMG-00001");
+        AmbulanceId ambulanceId = AmbulanceId.of("AMB-01");
+        when(attemptExecutor.executeSupervisedAssignmentAttempt(eq(emergencyId), eq(ambulanceId), any()))
+                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("Violación de FK/CHECK"));
+
+        assertThatThrownBy(() -> service.assignSupervised("EMG-00001", "AMB-01"))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class)
+                .hasMessageContaining("FK/CHECK");
+
+        verify(attemptExecutor, times(1)).executeSupervisedAssignmentAttempt(any(), any(), any());
+        verify(traceabilityRepository).recordAttempt(
+                anyString(), eq("SUPERVISED_DISPATCH"), eq("EMG-00001"), eq("AMB-01"),
+                eq(1), eq("TECHNICAL_ERROR"), anyString(), anyLong());
+        verify(traceabilityRepository).recordOperationResult(
+                anyString(), eq("SUPERVISED_DISPATCH"), eq("EMG-00001"), eq(null),
+                eq(1), eq("TECHNICAL_ERROR"), anyString(), anyLong());
+        verify(traceabilityRepository, never()).recordAttempt(
+                anyString(), anyString(), anyString(), any(), anyInt(),
+                eq("AMBULANCE_UNAVAILABLE_CONFLICT"), anyString(), anyLong());
+    }
+
+    @Test
+    @DisplayName("A2 / ADR-0002: assignSupervised mantiene clasificación de conflicto ante PessimisticLockingFailureException")
+    void shouldClassifyPessimisticLockFailureInSupervisedDispatchAsConflictReloadRequired() {
+        Emergency registered = emergency("EMG-00001", EquipmentType.BASIC, "N02");
+        Ambulance amb2 = Ambulance.registerInCatalog(AmbulanceId.of("AMB-02"), EquipmentType.BASIC, NodeId.of("N01"));
+        when(attemptExecutor.executeSupervisedAssignmentAttempt(eq(registered.id()), eq(AmbulanceId.of("AMB-01")), any()))
+                .thenThrow(new org.springframework.dao.CannotAcquireLockException("Lock wait timeout"));
+        when(emergencyRepository.findById(registered.id())).thenReturn(Optional.of(registered));
+        when(ambulanceRepository.findAllOrderById()).thenReturn(List.of(amb2));
+
+        SupervisedDispatchResult result = service.assignSupervised("EMG-00001", "AMB-01");
+
+        assertThat(result.outcome()).isEqualTo(DispatchOperationOutcome.CONFLICT_RELOAD_REQUIRED);
+        verify(attemptExecutor, times(1)).executeSupervisedAssignmentAttempt(any(), any(), any());
+        verify(traceabilityRepository).recordAttempt(
+                anyString(), eq("SUPERVISED_DISPATCH"), eq("EMG-00001"), eq("AMB-01"),
+                eq(1), eq("AMBULANCE_UNAVAILABLE_CONFLICT"), anyString(), anyLong());
+    }
+
     private static Emergency emergency(String id, EquipmentType equipment, String node) {
         return Emergency.register(
                 EmergencyId.of(id),
