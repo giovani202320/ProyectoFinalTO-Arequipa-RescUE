@@ -29,7 +29,7 @@ El script [`demo-seed.sql`](demo-seed.sql) permite poblar una base aislada **`ar
 ## 2. Garantías de seguridad del script
 
 - Aborta con `SIGNAL SQLSTATE '45000'` si `DATABASE()` no es exactamente `arequipa_rescue_demo`.
-- Aborta si Flyway `V1`–`V7` no ha finalizado (`version = '7'` y `success = 1`).
+- Aborta si Flyway `V1`–`V8` no ha finalizado (`version = '8'` y `success = 1`).
 - Aborta de forma segura sin modificar nada si `ambulances`, `hospitals` o `emergencies` ya contienen registros.
 - Se ejecuta dentro de `START TRANSACTION ... COMMIT`, sin desactivar `FOREIGN_KEY_CHECKS` ni usar `TRUNCATE`, `DROP` o `DELETE`.
 
@@ -45,17 +45,17 @@ GRANT ALL PRIVILEGES ON arequipa_rescue_demo.* TO 'are_user'@'%';
 FLUSH PRIVILEGES;" | docker exec -i are-mysql sh -c 'mysql -u root -p"$MYSQL_ROOT_PASSWORD"'
 ```
 
-2. Arrancar Spring Boot una vez apuntando a `arequipa_rescue_demo` para que Flyway aplique `V1`–`V7` (y luego detenerlo con `Ctrl+C` si desea cargar el seed antes de la demo, o cargarlo con el servidor detenido):
+2. Arrancar Spring Boot una vez apuntando a `arequipa_rescue_demo` para que Flyway aplique `V1`–`V8` (y luego detenerlo con `Ctrl+C` si desea cargar el seed antes de la demo, o cargarlo con el servidor detenido):
 
 ```powershell
 $env:ARE_DB_URL = "jdbc:mysql://localhost:3306/arequipa_rescue_demo?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
 .\mvnw.cmd spring-boot:run
 ```
 
-3. Cargar [`demo-seed.sql`](demo-seed.sql) sobre `arequipa_rescue_demo`:
+3. Cargar [`demo-seed.sql`](demo-seed.sql) sobre `arequipa_rescue_demo` forzando codificación UTF-8 (`--default-character-set=utf8mb4` para evitar mojibake en Windows PowerShell):
 
 ```powershell
-Get-Content docs/setup/demo-seed.sql -Raw | docker exec -i are-mysql sh -c 'mysql -u root -p"$MYSQL_ROOT_PASSWORD" arequipa_rescue_demo'
+Get-Content docs/setup/demo-seed.sql -Raw -Encoding UTF8 | docker exec -i are-mysql sh -c 'mysql --default-character-set=utf8mb4 -u root -p"$MYSQL_ROOT_PASSWORD" arequipa_rescue_demo'
 ```
 
 4. Iniciar ARE nuevamente sobre `arequipa_rescue_demo` y abrir `http://localhost:8080`.

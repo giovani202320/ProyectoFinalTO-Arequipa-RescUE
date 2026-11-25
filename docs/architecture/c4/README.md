@@ -1,7 +1,7 @@
 # Modelo Arquitectónico C4 (Structurizr DSL) — ARE (Arequipa RescUE)
 
-**Estado del documento:** Aprobado — Modelo arquitectónico C4 (Nivel 1 y Nivel 2) alineado con `DEC-001` a `DEC-021`, `ADR-0001`, `ADR-0002` y el backlog `HU-01` a `HU-14`
-**Archivo DSL asociado:** [`workspace.dsl`](file:///c:/Users/giovani/Documents/GitHub/ProyectoFinalTO-Arequipa-RescUE/docs/architecture/c4/workspace.dsl)
+**Estado del documento:** Aprobado — Modelo arquitectónico C4 (Nivel 1 y Nivel 2) alineado con `DEC-001` a `DEC-021`, `ADR-0001`, `ADR-0002`, `ADR-0003` y el backlog `HU-01` a `HU-14`
+**Archivo DSL asociado:** [`workspace.dsl`](workspace.dsl)
 **Propósito:** Documentar la arquitectura estática y de despliegue de alto nivel del MVP académico de **ARE – Arequipa RescUE** mediante los diagramas **C4 Nivel 1 (System Context)** y **C4 Nivel 2 (Container)** en formato **Structurizr DSL**.
 
 ---
@@ -75,21 +75,21 @@
 ## 5. Cómo abrir y visualizar el modelo en Structurizr
 
 ### Opción A: Structurizr Lite mediante Docker (local)
-Si tenés Docker en ejecución en tu máquina, podés levantar Structurizr Lite apuntando directamente a la carpeta `docs/architecture/c4`:
+Si Docker está en ejecución en el equipo, es posible iniciar Structurizr Lite apuntando directamente a la carpeta `docs/architecture/c4`:
 
 ```powershell
 docker run -it --rm -p 8080:8080 -v "${PWD}/docs/architecture/c4:/usr/local/structurizr" structurizr/lite
 ```
 
-Luego abrí `http://localhost:8080` en el navegador y seleccioná las vistas **`C1_SystemContext`** y **`C2_Containers`**.
+Luego abra `http://localhost:8080` en el navegador y seleccione las vistas **`C1_SystemContext`** y **`C2_Containers`**.
 
 ### Opción B: Structurizr Playground (navegador web sin instalación)
-1. Abrí el entorno interactivo oficial de Structurizr DSL (`https://structurizr.com/dsl`).
-2. Copiá el contenido íntegro de [`docs/architecture/c4/workspace.dsl`](file:///c:/Users/giovani/Documents/GitHub/ProyectoFinalTO-Arequipa-RescUE/docs/architecture/c4/workspace.dsl) y pegalo en el editor.
-3. Alterná entre las vistas **`C1_SystemContext`** y **`C2_Containers`**.
+1. Abra el entorno interactivo oficial de Structurizr DSL (`https://structurizr.com/dsl`).
+2. Copie el contenido íntegro de [`docs/architecture/c4/workspace.dsl`](workspace.dsl) y péguelo en el editor.
+3. Alterne entre las vistas **`C1_SystemContext`** y **`C2_Containers`**.
 
 ### Opción C: Validación por línea de comandos con Structurizr CLI
-Si disponés de `structurizr-cli` instalado localmente:
+Si dispone de `structurizr-cli` instalado localmente:
 
 ```powershell
 structurizr validate -workspace docs/architecture/c4/workspace.dsl
@@ -97,9 +97,9 @@ structurizr validate -workspace docs/architecture/c4/workspace.dsl
 
 ---
 
-## 6. Correspondencia con `ADR-0001`, `ADR-0002` y las Historias de Usuario (`HU-01` a `HU-14`)
+## 6. Correspondencia con `ADR-0001`, `ADR-0002`, `ADR-0003` y las Historias de Usuario (`HU-01` a `HU-14`)
 
-Los dos contenedores del Nivel 2 materializan íntegramente los **7 módulos funcionales** definidos en [`ADR-0001`](file:///c:/Users/giovani/Documents/GitHub/ProyectoFinalTO-Arequipa-RescUE/docs/decisions/adr/ADR-0001-arquitectura-modular-persistencia-stack-y-pruebas.md) y las **14 historias de usuario** de [`user-stories.md`](file:///c:/Users/giovani/Documents/GitHub/ProyectoFinalTO-Arequipa-RescUE/docs/product/requirements/user-stories.md):
+Los dos contenedores del Nivel 2 materializan íntegramente los módulos funcionales definidos en [`ADR-0001`](../../decisions/adr/ADR-0001-arquitectura-modular-persistencia-stack-y-pruebas.md) (complementados con el módulo `dashboard/` para el centro de control de inicio y con `emergency_route_segments` de [`ADR-0003`](../../decisions/adr/ADR-0003-persistencia-historica-de-rutas-dijkstra.md)) y las **14 historias de usuario** de [`user-stories.md`](../../product/requirements/user-stories.md):
 
 | Módulo interno (`ADR-0001`) | Contenedor de ejecución (`C2_Containers`) | Persistencia en `Base de Datos ARE` (`MySQL 8.4`) | Historias de usuario soportadas |
 | :--- | :--- | :--- | :--- |

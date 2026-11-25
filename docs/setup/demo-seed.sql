@@ -2,16 +2,18 @@
 -- demo-seed.sql — Dataset de demostración reproducible para ARE
 -- Base objetivo obligatoria: arequipa_rescue_demo
 -- Requisitos:
---   1. Flyway V1–V7 aplicado previamente sobre arequipa_rescue_demo.
---   2. Ejecutar con un usuario con privilegios de procedimiento en esa base
+--   1. Flyway V1–V8 aplicado previamente sobre arequipa_rescue_demo.
+--   2. Ejecutar con --default-character-set=utf8mb4 y un usuario con privilegios de procedimiento en esa base
 --      (por ejemplo root en Docker o usuario con CREATE/ALTER ROUTINE).
 -- Seguridad:
 --   - Verifica DATABASE() = 'arequipa_rescue_demo' antes de consultar tablas.
---   - Verifica existencia de flyway_schema_history y versión 7 exitosa.
+--   - Verifica existencia de flyway_schema_history y versión 8 exitosa.
 --   - Aborta de forma segura si ya existen datos en ambulancias, hospitales o emergencias.
 --   - Usa START TRANSACTION + EXIT HANDLER con ROLLBACK + RESIGNAL.
 --   - No desactiva FOREIGN_KEY_CHECKS ni usa TRUNCATE/DROP/DELETE de datos.
 -- =============================================================================
+
+SET NAMES utf8mb4;
 
 DELIMITER //
 
@@ -20,7 +22,7 @@ DROP PROCEDURE IF EXISTS sp_are_seed_demo //
 CREATE PROCEDURE sp_are_seed_demo()
 BEGIN
     DECLARE v_flyway_table INT DEFAULT 0;
-    DECLARE v_flyway_v7 INT DEFAULT 0;
+    DECLARE v_flyway_v8 INT DEFAULT 0;
     DECLARE v_existing_rows INT DEFAULT 0;
 
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -44,13 +46,13 @@ BEGIN
             SET MESSAGE_TEXT = 'ABORTADO: No existe flyway_schema_history en arequipa_rescue_demo. Ejecute la aplicación primero.';
     END IF;
 
-    SELECT COUNT(*) INTO v_flyway_v7
+    SELECT COUNT(*) INTO v_flyway_v8
     FROM flyway_schema_history
-    WHERE version = '7' AND success = 1;
+    WHERE version = '8' AND success = 1;
 
-    IF v_flyway_v7 = 0 THEN
+    IF v_flyway_v8 = 0 THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'ABORTADO: Flyway V1-V7 no ha finalizado correctamente en arequipa_rescue_demo.';
+            SET MESSAGE_TEXT = 'ABORTADO: Flyway V1-V8 no ha finalizado correctamente en arequipa_rescue_demo.';
     END IF;
 
     SELECT (

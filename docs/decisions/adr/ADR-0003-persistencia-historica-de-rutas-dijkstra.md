@@ -26,15 +26,15 @@ Durante la validación funcional de la Fase 5A (`A07-4`), se comprobó que al fi
 ## 3. Alternativas consideradas
 
 ### 3.1 Estrategia de almacenamiento
-- **Alternativa A (Propuesta): Tabla independiente `emergency_route_segments` (Flyway `V8`) con clave única `(emergency_id, segment_type)`.** Separa la trazabilidad histórica de rutas del agregado operativo `emergencies`, preserva intacto el esquema de `V3` y permite modelar explícitamente `AMBULANCE_TO_INCIDENT` (Tramo A) e `INCIDENT_TO_HOSPITAL` (Tramo B) con sus invariantes y claves foráneas.
+- **Alternativa A (Adoptada): Tabla independiente `emergency_route_segments` (Flyway `V8`) con clave única `(emergency_id, segment_type)`.** Separa la trazabilidad histórica de rutas del agregado operativo `emergencies`, preserva intacto el esquema de `V3` y permite modelar explícitamente `AMBULANCE_TO_INCIDENT` (Tramo A) e `INCIDENT_TO_HOSPITAL` (Tramo B) con sus invariantes y claves foráneas.
 - **Alternativa B (Descartada): Agregar columnas `dispatch_*` y `hospital_route_*` directamente en `emergencies`.** Mezcla historial de rutas de múltiples tramos en la tabla principal de estado y escala peor si se agregan metadatos por segmento.
 
 ### 3.2 Representación de `path_nodes`
-- **Alternativa A (Propuesta): Columna `path_nodes VARCHAR(512) NOT NULL` en formato canónico separado por comas (`N01,N02,N05`) o JSON array.** En el formato `N01,N02,N05` (o JSON validado en Java/MySQL) resulta compacto, legible en SQL y determinista al mapear `List<NodeId>` en `infrastructure/` sin requerir librerías adicionales.
+- **Alternativa A (Adoptada): Columna `path_nodes VARCHAR(512) NOT NULL` en formato canónico separado por comas (`N01,N02,N05`) o JSON array.** En el formato `N01,N02,N05` (o JSON validado en Java/MySQL) resulta compacto, legible en SQL y determinista al mapear `List<NodeId>` en `infrastructure/` sin requerir librerías adicionales.
 
 ---
 
-## 4. Decisión propuesta
+## 4. Decisión
 
 ### 4.1 Esquema relacional (`V8__create_emergency_route_segments_table.sql`)
 Crear la tabla `emergency_route_segments` en MySQL 8.4 (InnoDB, `utf8mb4`):
