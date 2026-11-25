@@ -58,4 +58,22 @@ class AreUiFormatterTest {
         assertThat(formatter.badgeTone("EQUIPMENT", "SPECIALIZED")).isEqualTo("navy");
         assertThat(formatter.badgeTone("EVENT", "FAILED")).isEqualTo("danger");
     }
+
+    @Test
+    @DisplayName("A3 / DEC-004: traduce etiquetas operativas, colas y errores técnicos previamente faltantes")
+    void shouldTranslateWaitingQueueAndTechnicalOperationLabels() {
+        assertThat(formatter.inProgressStatusLabel("EN_ESPERA_HOSPITAL")).isEqualTo("En espera de hospital");
+        assertThat(formatter.operationTypeLabel("WAITING_QUEUE_DISPATCH"))
+                .isEqualTo("Despacho desde cola de ambulancias");
+        assertThat(formatter.operationTypeLabel("WAITING_HOSPITAL_QUEUE"))
+                .isEqualTo("Reserva desde cola hospitalaria");
+        assertThat(formatter.operationStatusLabel("MOVED_TO_WAITING_AMBULANCE"))
+                .isEqualTo("Derivada a cola de ambulancias");
+        assertThat(formatter.operationStatusLabel("MOVED_TO_WAITING_HOSPITAL"))
+                .isEqualTo("Derivada a cola hospitalaria");
+        assertThat(formatter.operationStatusLabel("RESERVED"))
+                .isEqualTo("Plaza hospitalaria reservada");
+        assertThat(formatter.operationStatusLabel("TECHNICAL_ERROR"))
+                .isEqualTo("Error técnico de persistencia");
+    }
 }
