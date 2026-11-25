@@ -1,9 +1,11 @@
-package com.arequiparescue.shared.presentation;
+package com.arequiparescue.dashboard.presentation;
 
 import com.arequiparescue.ambulance.domain.AmbulanceState;
+import com.arequiparescue.dashboard.application.HomeDashboardApplicationService;
+import com.arequiparescue.dashboard.application.HomeDashboardSnapshot;
 import com.arequiparescue.emergency.domain.EmergencyState;
-import com.arequiparescue.shared.application.HomeDashboardApplicationService;
-import com.arequiparescue.shared.application.HomeDashboardSnapshot;
+import com.arequiparescue.shared.presentation.AreUiFormatter;
+import com.arequiparescue.shared.presentation.HtmlStructureAssertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

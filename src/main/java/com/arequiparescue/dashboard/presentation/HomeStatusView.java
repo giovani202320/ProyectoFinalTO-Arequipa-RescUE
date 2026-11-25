@@ -1,4 +1,4 @@
-package com.arequiparescue.shared.presentation;
+package com.arequiparescue.dashboard.presentation;
 
 import java.util.List;
 

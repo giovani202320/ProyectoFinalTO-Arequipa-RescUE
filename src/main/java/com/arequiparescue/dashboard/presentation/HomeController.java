@@ -1,7 +1,7 @@
-package com.arequiparescue.shared.presentation;
+package com.arequiparescue.dashboard.presentation;
 
-import com.arequiparescue.shared.application.HomeDashboardApplicationService;
-import com.arequiparescue.shared.application.HomeDashboardSnapshot;
+import com.arequiparescue.dashboard.application.HomeDashboardApplicationService;
+import com.arequiparescue.dashboard.application.HomeDashboardSnapshot;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -1,4 +1,4 @@
-package com.arequiparescue.shared.application;
+package com.arequiparescue.dashboard.application;
 
 import com.arequiparescue.ambulance.domain.AmbulanceState;
 import com.arequiparescue.emergency.domain.EmergencyState;
