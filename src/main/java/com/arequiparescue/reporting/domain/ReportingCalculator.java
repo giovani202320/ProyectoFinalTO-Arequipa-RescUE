@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 public final class ReportingCalculator {
 
     private static final String OP_HOSPITAL_RESERVATION = "HOSPITAL_RESERVATION";
+    private static final String OP_WAITING_HOSPITAL_QUEUE = "WAITING_HOSPITAL_QUEUE";
     private static final List<String> PRIORITY_ORDER = List.of("HIGH", "MEDIUM", "LOW");
     private static final List<String> CATEGORY_ORDER = List.of("INC-A", "INC-B", "INC-C", "INC-D");
     private static final List<String> ACTIVE_STATES_ORDER = List.of(
@@ -276,7 +277,7 @@ public final class ReportingCalculator {
         long hospitalExhaustions = 0L;
 
         for (ReportingSourceData.AttemptLogRow log : attemptLogs) {
-            boolean isHospital = OP_HOSPITAL_RESERVATION.equals(log.operationType());
+            boolean isHospital = isHospitalOperation(log.operationType());
             if (isHospital) {
                 if ("HOSPITAL_CAPACITY_CONFLICT".equals(log.outcomeCode())) {
                     hospitalConflicts++;
@@ -295,7 +296,7 @@ public final class ReportingCalculator {
         }
 
         for (ReportingSourceData.OperationResultRow res : operationResults) {
-            if (OP_HOSPITAL_RESERVATION.equals(res.operationType())) {
+            if (isHospitalOperation(res.operationType())) {
                 if ("HOSPITAL_RESERVATION_RETRY_EXHAUSTED".equals(res.finalStatus())) {
                     hospitalExhaustions++;
                 }
@@ -316,6 +317,11 @@ public final class ReportingCalculator {
                 dispatchRetries + hospitalRetries,
                 dispatchExhaustions + hospitalExhaustions
         );
+    }
+
+    private static boolean isHospitalOperation(String operationType) {
+        return OP_HOSPITAL_RESERVATION.equals(operationType)
+                || OP_WAITING_HOSPITAL_QUEUE.equals(operationType);
     }
 
     private static TemporalMetricSummary computeWaitingForHospital(

@@ -297,4 +297,38 @@ class ReportingCalculatorTest {
         assertThrows(IllegalArgumentException.class,
                 () -> new ReportingSupplementaryMetrics.TraceabilityFilter(null, null, 10L, 5L));
     }
+
+    @Test
+    void countsWaitingHospitalQueueConflictsRetriesAndExhaustionsUnderHospitalMet06() {
+        List<ReportingSourceData.AttemptLogRow> logs = List.of(
+                new ReportingSourceData.AttemptLogRow(
+                        "HOSP-Q-1", "WAITING_HOSPITAL_QUEUE", "EMG-00010", "HOSP-01",
+                        1, "HOSPITAL_CAPACITY_CONFLICT", "Conflicto 1", 10L),
+                new ReportingSourceData.AttemptLogRow(
+                        "HOSP-Q-1", "WAITING_HOSPITAL_QUEUE", "EMG-00010", "HOSP-01",
+                        2, "HOSPITAL_CAPACITY_CONFLICT", "Conflicto 2", 10L)
+        );
+        List<ReportingSourceData.OperationResultRow> results = List.of(
+                new ReportingSourceData.OperationResultRow(
+                        "HOSP-Q-1", "WAITING_HOSPITAL_QUEUE", "EMG-00010", null,
+                        3, "HOSPITAL_RESERVATION_RETRY_EXHAUSTED", "Agotado en cola hospitalaria", 10L)
+        );
+        ReportingSourceData source = new ReportingSourceData(
+                "SCN-MET06", "ACTIVE", 10L,
+                List.of(new ReportingSourceData.ScenarioRow("SCN-MET06", "MET-06", "ACTIVE", 10L)),
+                List.of(), List.of(), List.of(), results, logs
+        );
+
+        SimulationReportSnapshot report = ReportingCalculator.calculate(source, null);
+
+        assertEquals(2L, report.concurrencyConflicts().hospitalReservation().conflicts());
+        assertEquals(1L, report.concurrencyConflicts().hospitalReservation().retriesConsumed());
+        assertEquals(1L, report.concurrencyConflicts().hospitalReservation().exhaustions());
+        assertEquals(0L, report.concurrencyConflicts().ambulanceDispatch().conflicts());
+        assertEquals(0L, report.concurrencyConflicts().ambulanceDispatch().retriesConsumed());
+        assertEquals(0L, report.concurrencyConflicts().ambulanceDispatch().exhaustions());
+        assertEquals(2L, report.concurrencyConflicts().totalConflicts());
+        assertEquals(1L, report.concurrencyConflicts().totalRetriesConsumed());
+        assertEquals(1L, report.concurrencyConflicts().totalExhaustions());
+    }
 }
