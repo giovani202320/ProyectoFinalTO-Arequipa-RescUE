@@ -15,8 +15,24 @@ public record ReportingSourceData(
         List<AmbulanceRow> ambulances,
         List<HospitalReservationRow> hospitalReservations,
         List<OperationResultRow> operationResults,
-        List<AttemptLogRow> attemptLogs
+        List<AttemptLogRow> attemptLogs,
+        List<HospitalRow> hospitals
 ) {
+
+    public ReportingSourceData(
+            String referenceScenarioId,
+            String referenceScenarioStatus,
+            long currentLogicalTicks,
+            List<ScenarioRow> scenarios,
+            List<EmergencyRow> emergencies,
+            List<AmbulanceRow> ambulances,
+            List<HospitalReservationRow> hospitalReservations,
+            List<OperationResultRow> operationResults,
+            List<AttemptLogRow> attemptLogs
+    ) {
+        this(referenceScenarioId, referenceScenarioStatus, currentLogicalTicks, scenarios,
+                emergencies, ambulances, hospitalReservations, operationResults, attemptLogs, List.of());
+    }
 
     public record ScenarioRow(
             String id,
@@ -39,7 +55,39 @@ public record ReportingSourceData(
             Long atIncidentAtTicks,
             Long hospitalQueueEnteredAtTicks,
             Long inTransportAtTicks,
-            Long completedAtTicks
+            Long completedAtTicks,
+            String simulatedPriority,
+            String incidentCategory
+    ) {
+        public EmergencyRow(
+                String id,
+                String state,
+                String ruleVersionId,
+                String assignedAmbulanceId,
+                String hospitalId,
+                String lastOutcomeReason,
+                long registeredAtTicks,
+                Long queueEnteredAtTicks,
+                Long assignedAtTicks,
+                Long atIncidentAtTicks,
+                Long hospitalQueueEnteredAtTicks,
+                Long inTransportAtTicks,
+                Long completedAtTicks
+        ) {
+            this(id, state, ruleVersionId, assignedAmbulanceId, hospitalId, lastOutcomeReason,
+                    registeredAtTicks, queueEnteredAtTicks, assignedAtTicks, atIncidentAtTicks,
+                    hospitalQueueEnteredAtTicks, inTransportAtTicks, completedAtTicks, null, null);
+        }
+    }
+
+    public record HospitalRow(
+            String id,
+            String name,
+            String nodeId,
+            boolean enabled,
+            int capacityTotal,
+            int reservedSlots,
+            int occupiedSlots
     ) {
     }
 

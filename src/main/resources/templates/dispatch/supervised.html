@@ -177,7 +177,25 @@
                                       th:text="${@areUi.ambulanceStateLabel(cand.stateCode)}">Disponible</span>
                             </td>
                             <td><strong class="are-mono" th:text="${cand.routeCost}">4</strong></td>
-                            <td><code class="are-mono" th:text="${cand.routePathFormatted}">N01 -> N02</code></td>
+                            <td>
+                                <code class="are-mono" th:text="${cand.routePathFormatted}">N01 -> N02</code>
+                                <div class="mt-1 d-flex flex-wrap gap-1">
+                                    <button type="button"
+                                            class="btn btn-sm btn-are-outline are-preview-route-btn"
+                                            th:attr="data-preview-amb-id=${cand.id},
+                                                     data-preview-origin=${cand.currentNodeId},
+                                                     data-preview-destination=${emergency.nodeId},
+                                                     data-preview-cost=${cand.routeCost},
+                                                     data-preview-path=${cand.routePathFormatted},
+                                                     data-preview-nodes=${#strings.listJoin(cand.routePathNodes, ',')},
+                                                     aria-label=${'Previsualizar ruta en grafo para ' + cand.id}">
+                                        Previsualizar ruta
+                                    </button>
+                                    <a th:href="@{/admin/topology(origin=${cand.currentNodeId},destination=${emergency.nodeId})}"
+                                       class="btn btn-sm btn-are-outline"
+                                       th:attr="aria-label=${'Abrir en Topología la ruta de ' + cand.id}">Topología</a>
+                                </div>
+                            </td>
                             <td>
                                 <form th:action="@{'/dispatch/emergencies/' + ${emergency.id} + '/assign'}" method="post">
                                     <input type="hidden" name="ambulanceId" th:value="${cand.id}">
@@ -192,6 +210,88 @@
                     </table>
                 </div>
             </div>
+        </div>
+
+        <!-- Read-only Dijkstra Route Preview in Supervised Dispatch (D06) -->
+        <div th:if="${!#lists.isEmpty(candidates)}" id="supervisedDispatchGraphCard" class="are-card mt-4" aria-labelledby="dispatch-graph-heading">
+            <div class="are-card-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+                <div>
+                    <h3 id="dispatch-graph-heading" class="are-card-title mb-1">
+                        Previsualización de ruta Dijkstra (solo lectura — Tramo A: Ambulancia → Emergencia)
+                    </h3>
+                    <p class="text-secondary small mb-0" id="areDispatchPreviewSummary" aria-live="polite"
+                       th:with="firstCand=${candidates[0]}">
+                        Candidata seleccionada: <strong class="are-mono" th:text="${firstCand.id}">AMB-01</strong>
+                        (<span class="are-mono" th:text="${firstCand.currentNodeId}">N01</span> →
+                        <span class="are-mono" th:text="${emergency.nodeId}">N02</span>,
+                        costo Dijkstra <strong class="are-mono" th:text="${firstCand.routeCost}">4</strong>,
+                        secuencia <span class="are-mono" th:text="${firstCand.routePathFormatted}">N01 -> N02</span>).
+                        Esta previsualización no ejecuta ninguna asignación.
+                    </p>
+                </div>
+                <div class="d-flex flex-wrap gap-2 small">
+                    <span class="are-badge are-badge-success">Origen (Ambulancia)</span>
+                    <span class="are-badge are-badge-danger">Destino (Emergencia)</span>
+                    <span class="are-badge are-badge-primary">Ruta Dijkstra</span>
+                </div>
+            </div>
+            <div class="are-card-body">
+                <div class="border rounded-3 bg-light p-2">
+                    <svg id="areTopologySvg"
+                         viewBox="0 0 800 470"
+                         class="w-100 h-auto d-block"
+                         style="max-height: 430px;"
+                         role="img"
+                         aria-label="Previsualización esquemática de la ruta Dijkstra entre la ambulancia candidata y la emergencia">
+                    </svg>
+                </div>
+            </div>
+
+            <script id="areDispatchTopologyBootstrap" th:inline="javascript">
+                window.ARE_TOPOLOGY_DATA = {
+                    nodes: /*[[${graphNodes}]]*/ [],
+                    edges: /*[[${graphEdges}]]*/ [],
+                    routeOrigin: /*[[${candidates[0].currentNodeId}]]*/ "",
+                    routeDestination: /*[[${emergency.nodeId}]]*/ "",
+                    routeNodes: /*[[${candidates[0].routePathNodes}]]*/ [],
+                    routeType: "TRAMO_A"
+                };
+            </script>
+            <script th:src="@{/js/are-topology-graph.js(v='5a-fix')}"></script>
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    var summaryEl = document.getElementById("areDispatchPreviewSummary");
+                    document.querySelectorAll(".are-preview-route-btn").forEach(function (btn) {
+                        btn.addEventListener("click", function () {
+                            var ambId = btn.getAttribute("data-preview-amb-id") || "";
+                            var origin = btn.getAttribute("data-preview-origin") || "";
+                            var dest = btn.getAttribute("data-preview-destination") || "";
+                            var cost = btn.getAttribute("data-preview-cost") || "0";
+                            var pathText = btn.getAttribute("data-preview-path") || "";
+                            var rawNodes = btn.getAttribute("data-preview-nodes") || "";
+                            var routeNodes = rawNodes ? rawNodes.split(",") : [];
+
+                            if (typeof window.areRenderTopologyGraph === "function" && window.ARE_TOPOLOGY_DATA) {
+                                window.areRenderTopologyGraph({
+                                    nodes: window.ARE_TOPOLOGY_DATA.nodes,
+                                    edges: window.ARE_TOPOLOGY_DATA.edges,
+                                    routeOrigin: origin,
+                                    routeDestination: dest,
+                                    routeNodes: routeNodes,
+                                    routeType: "TRAMO_A"
+                                });
+                            }
+                            if (summaryEl) {
+                                summaryEl.textContent = "Candidata seleccionada: " + ambId
+                                    + " (" + origin + " \u2192 " + dest
+                                    + ", costo Dijkstra " + cost
+                                    + ", secuencia " + pathText
+                                    + "). Esta previsualización no ejecuta ninguna asignación.";
+                            }
+                        });
+                    });
+                });
+            </script>
         </div>
     </section>
 </th:block>

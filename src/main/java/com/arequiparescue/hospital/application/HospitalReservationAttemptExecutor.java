@@ -6,12 +6,19 @@ import com.arequiparescue.ambulance.domain.AmbulanceState;
 import com.arequiparescue.ambulance.domain.port.AmbulanceRepository;
 import com.arequiparescue.emergency.domain.Emergency;
 import com.arequiparescue.emergency.domain.EmergencyId;
+import com.arequiparescue.emergency.domain.EmergencyRouteSegment;
 import com.arequiparescue.emergency.domain.EmergencyState;
+import com.arequiparescue.emergency.domain.RouteSegmentType;
 import com.arequiparescue.emergency.domain.port.EmergencyRepository;
+import com.arequiparescue.emergency.domain.port.EmergencyRouteSegmentRepository;
 import com.arequiparescue.hospital.domain.Hospital;
 import com.arequiparescue.hospital.domain.HospitalId;
 import com.arequiparescue.hospital.domain.port.HospitalRepository;
 import com.arequiparescue.hospital.domain.port.HospitalReservationRepository;
+import com.arequiparescue.routing.domain.DijkstraPathResult;
+import com.arequiparescue.routing.domain.DijkstraRouteCalculator;
+import com.arequiparescue.routing.domain.RoadGraph;
+import com.arequiparescue.routing.domain.port.RoadGraphRepository;
 import com.arequiparescue.shared.domain.LogicalTime;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Isolation;
@@ -51,17 +58,24 @@ public class HospitalReservationAttemptExecutor {
     private final AmbulanceRepository ambulanceRepository;
     private final HospitalRepository hospitalRepository;
     private final HospitalReservationRepository hospitalReservationRepository;
+    private final RoadGraphRepository roadGraphRepository;
+    private final EmergencyRouteSegmentRepository routeSegmentRepository;
+    private final DijkstraRouteCalculator dijkstraRouteCalculator = new DijkstraRouteCalculator();
 
     public HospitalReservationAttemptExecutor(
             EmergencyRepository emergencyRepository,
             AmbulanceRepository ambulanceRepository,
             HospitalRepository hospitalRepository,
-            HospitalReservationRepository hospitalReservationRepository
+            HospitalReservationRepository hospitalReservationRepository,
+            RoadGraphRepository roadGraphRepository,
+            EmergencyRouteSegmentRepository routeSegmentRepository
     ) {
         this.emergencyRepository = Objects.requireNonNull(emergencyRepository);
         this.ambulanceRepository = Objects.requireNonNull(ambulanceRepository);
         this.hospitalRepository = Objects.requireNonNull(hospitalRepository);
         this.hospitalReservationRepository = Objects.requireNonNull(hospitalReservationRepository);
+        this.roadGraphRepository = Objects.requireNonNull(roadGraphRepository);
+        this.routeSegmentRepository = Objects.requireNonNull(routeSegmentRepository);
     }
 
     /**
@@ -189,6 +203,12 @@ public class HospitalReservationAttemptExecutor {
             );
         }
 
+        RoadGraph graph = roadGraphRepository.loadGraph();
+        DijkstraPathResult hospitalPath = dijkstraRouteCalculator
+                .shortestPath(graph, emergency.locationNode(), hospital.locationNode())
+                .orElseThrow(() -> new HospitalCatalogValidationException(
+                        "No existe camino alcanzable hacia el hospital reservado " + hospital.id().value() + "."));
+
         Hospital updatedHospital = hospitalRepository.save(hospital.reserveSlot());
         hospitalReservationRepository.createReserved(
                 "RES-" + emergencyId.value(),
@@ -200,6 +220,17 @@ public class HospitalReservationAttemptExecutor {
                 emergency.reserveHospitalAndStartTransport(hospitalId.value(), at)
         );
         Ambulance transportingAmbulance = ambulanceRepository.save(ambulance.startTransportToHospital());
+
+        routeSegmentRepository.saveIfAbsent(new EmergencyRouteSegment(
+                inTransportEmergency.id(),
+                RouteSegmentType.INCIDENT_TO_HOSPITAL,
+                updatedHospital.id().value(),
+                emergency.locationNode(),
+                updatedHospital.locationNode(),
+                hospitalPath.path(),
+                hospitalPath.totalCost(),
+                at.ticks()
+        ));
 
         return new ReservationAttemptOutcome(
                 true,

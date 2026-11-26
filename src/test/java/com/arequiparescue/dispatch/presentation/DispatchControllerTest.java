@@ -14,10 +14,15 @@ import com.arequiparescue.emergency.domain.IncidentCategory;
 import com.arequiparescue.emergency.domain.SimulatedPriority;
 import com.arequiparescue.emergency.domain.TriageClassification;
 import com.arequiparescue.emergency.domain.TriageRuleVersionId;
+import com.arequiparescue.routing.domain.GraphEdge;
+import com.arequiparescue.routing.domain.GraphNode;
 import com.arequiparescue.routing.domain.NodeId;
+import com.arequiparescue.routing.domain.RoadGraph;
+import com.arequiparescue.routing.domain.port.RoadGraphRepository;
 import com.arequiparescue.shared.domain.LogicalTime;
 import com.arequiparescue.shared.presentation.AreUiFormatter;
 import com.arequiparescue.shared.presentation.HtmlStructureAssertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +53,20 @@ class DispatchControllerTest {
     @MockitoBean
     private DispatchApplicationService dispatchApplicationService;
 
+    @MockitoBean
+    private RoadGraphRepository roadGraphRepository;
+
+    @BeforeEach
+    void setUpGraph() {
+        when(roadGraphRepository.loadGraph()).thenReturn(new RoadGraph(
+                List.of(
+                        new GraphNode(NodeId.of("N01"), "Z01", "Centro", false),
+                        new GraphNode(NodeId.of("N02"), "Z02", "Cayma", false)
+                ),
+                List.of(new GraphEdge("EDG-01", NodeId.of("N01"), NodeId.of("N02"), 5))
+        ));
+    }
+
     private static Emergency sampleRegisteredEmergency() {
         return Emergency.register(
                 EmergencyId.of("EMG-00001"),
@@ -70,6 +89,14 @@ class DispatchControllerTest {
         Ambulance amb1 = Ambulance.registerInCatalog(AmbulanceId.of("AMB-01"), EquipmentType.BASIC, NodeId.of("N01"));
         Ambulance amb2 = Ambulance.registerInCatalog(AmbulanceId.of("AMB-02"), EquipmentType.BASIC, NodeId.of("N02"));
 
+        when(roadGraphRepository.loadGraph()).thenReturn(new RoadGraph(
+                List.of(
+                        new GraphNode(NodeId.of("N01"), "Z01", "Centro", false),
+                        new GraphNode(NodeId.of("N02"), "Z02", "Cayma", false)
+                ),
+                List.of(new GraphEdge("EDG-01", NodeId.of("N01"), NodeId.of("N02"), 5))
+        ));
+
         when(dispatchApplicationService.evaluateEligibleAmbulances("EMG-00001"))
                 .thenReturn(new DispatchApplicationService.EligibleEvaluation(
                         emergency,
@@ -88,6 +115,12 @@ class DispatchControllerTest {
                 .andExpect(content().string(containsString("Registrada")))
                 .andExpect(content().string(containsString("Básica")))
                 .andExpect(content().string(containsString("Disponible")))
+                .andExpect(content().string(containsString("id=\"supervisedDispatchGraphCard\"")))
+                .andExpect(content().string(containsString("id=\"areTopologySvg\"")))
+                .andExpect(content().string(containsString("data-preview-amb-id=\"AMB-01\"")))
+                .andExpect(content().string(containsString("data-preview-amb-id=\"AMB-02\"")))
+                .andExpect(content().string(containsString("data-preview-nodes=\"N02,N01\"")))
+                .andExpect(content().string(containsString("/js/are-topology-graph.js?v=5a-fix")))
                 .andExpect(content().string(containsString("/css/are-design-system.css")))
                 .andReturn()
                 .getResponse()

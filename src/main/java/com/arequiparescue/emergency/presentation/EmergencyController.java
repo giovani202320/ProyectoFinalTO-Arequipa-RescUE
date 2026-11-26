@@ -5,9 +5,16 @@ import com.arequiparescue.emergency.application.EmergencyNotFoundException;
 import com.arequiparescue.emergency.application.EmergencyValidationException;
 import com.arequiparescue.emergency.application.RegisterEmergencyCommand;
 import com.arequiparescue.emergency.domain.Emergency;
+import com.arequiparescue.emergency.domain.EmergencyRouteSegment;
 import com.arequiparescue.emergency.domain.EmergencyState;
 import com.arequiparescue.emergency.domain.IncidentCategory;
+import com.arequiparescue.emergency.domain.RouteSegmentType;
 import com.arequiparescue.emergency.domain.TriageRuleVersion;
+import com.arequiparescue.hospital.application.HospitalCatalogApplicationService;
+import com.arequiparescue.hospital.domain.Hospital;
+import com.arequiparescue.routing.domain.NodeId;
+import com.arequiparescue.routing.domain.RoadGraph;
+import com.arequiparescue.routing.domain.port.RoadGraphRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -36,9 +43,17 @@ import java.util.List;
 public class EmergencyController {
 
     private final EmergencyApplicationService emergencyApplicationService;
+    private final HospitalCatalogApplicationService hospitalCatalogApplicationService;
+    private final RoadGraphRepository roadGraphRepository;
 
-    public EmergencyController(EmergencyApplicationService emergencyApplicationService) {
+    public EmergencyController(
+            EmergencyApplicationService emergencyApplicationService,
+            HospitalCatalogApplicationService hospitalCatalogApplicationService,
+            RoadGraphRepository roadGraphRepository
+    ) {
         this.emergencyApplicationService = emergencyApplicationService;
+        this.hospitalCatalogApplicationService = hospitalCatalogApplicationService;
+        this.roadGraphRepository = roadGraphRepository;
     }
 
     @GetMapping
@@ -122,7 +137,106 @@ public class EmergencyController {
         if (!model.containsAttribute("justRegistered")) {
             model.addAttribute("justRegistered", false);
         }
+        populateHospitalLegRoute(emergency, model);
         return "emergencies/detail";
+    }
+
+    private void populateHospitalLegRoute(Emergency emergency, Model model) {
+        RoadGraph graph = roadGraphRepository.loadGraph();
+        model.addAttribute("graphNodes", graph.nodes().stream()
+                .map(node -> new DetailGraphNode(
+                        node.id().value(),
+                        node.zoneCode(),
+                        node.displayName(),
+                        graph.degreeOf(node.id()),
+                        graph.isIsolated(node.id())
+                ))
+                .toList());
+        model.addAttribute("graphEdges", graph.edges().stream()
+                .map(edge -> new DetailGraphEdge(
+                        edge.id(),
+                        edge.sourceNodeId().value(),
+                        edge.targetNodeId().value(),
+                        edge.abstractCost()
+                ))
+                .toList());
+
+        List<EmergencyRouteSegment> segments = emergencyApplicationService.findRouteSegments(emergency.id());
+        EmergencyRouteSegment segmentA = segments.stream()
+                .filter(s -> s.segmentType() == RouteSegmentType.AMBULANCE_TO_INCIDENT)
+                .findFirst()
+                .orElse(null);
+        EmergencyRouteSegment segmentB = segments.stream()
+                .filter(s -> s.segmentType() == RouteSegmentType.INCIDENT_TO_HOSPITAL)
+                .findFirst()
+                .orElse(null);
+
+        if (segmentA != null) {
+            List<String> nodesA = segmentA.pathNodes().stream().map(NodeId::value).toList();
+            model.addAttribute("tramoADefined", true);
+            model.addAttribute("tramoAAmbulanceId", segmentA.resourceId());
+            model.addAttribute("tramoAOrigin", segmentA.originNodeId().value());
+            model.addAttribute("tramoADestination", segmentA.destinationNodeId().value());
+            model.addAttribute("tramoACost", segmentA.abstractCost());
+            model.addAttribute("tramoANodes", nodesA);
+            model.addAttribute("tramoAPathFormatted", String.join(" \u2192 ", nodesA));
+        } else {
+            model.addAttribute("tramoADefined", false);
+            model.addAttribute("tramoANodes", List.of());
+            model.addAttribute("tramoACost", null);
+        }
+
+        if (segmentB != null) {
+            List<String> nodesB = segmentB.pathNodes().stream().map(NodeId::value).toList();
+            String hospitalName = hospitalCatalogApplicationService.listHospitals().stream()
+                    .filter(h -> h.id().value().equals(segmentB.resourceId()))
+                    .map(Hospital::name)
+                    .findFirst()
+                    .orElse(segmentB.resourceId());
+            model.addAttribute("hospitalLegDefined", true);
+            model.addAttribute("hospitalLegMessage", null);
+            model.addAttribute("hospitalLegHospitalId", segmentB.resourceId());
+            model.addAttribute("hospitalLegHospitalName", hospitalName);
+            model.addAttribute("hospitalLegOrigin", segmentB.originNodeId().value());
+            model.addAttribute("hospitalLegDestination", segmentB.destinationNodeId().value());
+            model.addAttribute("hospitalLegCost", segmentB.abstractCost());
+            model.addAttribute("hospitalLegPathFormatted", String.join(" \u2192 ", nodesB));
+            model.addAttribute("hospitalLegNodes", nodesB);
+        } else {
+            model.addAttribute("hospitalLegDefined", false);
+            model.addAttribute("hospitalLegNodes", List.of());
+            String hospitalId = emergency.reservedOrOccupiedHospitalId();
+            if (hospitalId == null || hospitalId.isBlank()) {
+                model.addAttribute("hospitalLegMessage", "Destino hospitalario aún no definido.");
+            } else {
+                model.addAttribute("hospitalLegMessage",
+                        "Datos históricos de ruta no disponibles para el hospital " + hospitalId
+                                + " (emergencia previa a la persistencia histórica de segmentos).");
+            }
+        }
+
+        if (segmentA != null && segmentB != null) {
+            model.addAttribute("combinedRouteCost", segmentA.abstractCost() + segmentB.abstractCost());
+        } else {
+            model.addAttribute("combinedRouteCost", null);
+        }
+    }
+
+    public record DetailGraphNode(
+            String id,
+            String zoneCode,
+            String displayName,
+            int degree,
+            boolean isolated
+    ) {
+    }
+
+    public record DetailGraphEdge(
+            String id,
+            String sourceNodeId,
+            String targetNodeId,
+            int abstractCost
+    ) {
     }
 
     @ExceptionHandler(EmergencyNotFoundException.class)

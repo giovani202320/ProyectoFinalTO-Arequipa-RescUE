@@ -210,11 +210,7 @@ public class SimulationScenarioApplicationService {
     }
 
     private void synchronizeLogicalClockMonotonically(LogicalTime targetTime) {
-        synchronized (logicalClock) {
-            if (!targetTime.isBefore(logicalClock.currentTime())) {
-                logicalClock.advanceTo(targetTime);
-            }
-        }
+        logicalClock.synchronizeAtLeast(targetTime);
     }
 
     private static String buildSuccessNote(

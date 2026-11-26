@@ -8,6 +8,7 @@ import com.arequiparescue.emergency.domain.IncidentCategory;
 import com.arequiparescue.emergency.domain.SimulatedPriority;
 import com.arequiparescue.emergency.domain.TriageClassification;
 import com.arequiparescue.emergency.domain.TriageRuleVersionId;
+import com.arequiparescue.hospital.application.HospitalCatalogValidationException;
 import com.arequiparescue.hospital.application.HospitalDeliveryAndDischargeApplicationService;
 import com.arequiparescue.hospital.application.HospitalDeliveryResult;
 import com.arequiparescue.hospital.application.HospitalDischargeResult;
@@ -174,5 +175,26 @@ class HospitalDispatchControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/dispatch/hospital-queue"))
                 .andExpect(flash().attributeExists("dischargeSuccessMessage"));
+    }
+
+    @Test
+    @DisplayName("Error funcional esperado en alta o entrega devuelve HTTP 400 con mensaje claro sin HTTP 500")
+    void shouldRenderCleanBadRequestOnExpectedFunctionalError() throws Exception {
+        when(deliveryAndDischargeApplicationService.executeSimulatedDischarge("RES-404"))
+                .thenThrow(new HospitalCatalogValidationException(
+                        "No existe ninguna reserva u ocupación hospitalaria con identificador RES-404."));
+        when(hospitalDispatchApplicationService.listHospitalsOrderById()).thenReturn(List.of());
+        when(hospitalDispatchApplicationService.listAssignedEmergencies()).thenReturn(List.of());
+        when(hospitalDispatchApplicationService.listWaitingHospitalQueue()).thenReturn(List.of());
+        when(hospitalDispatchApplicationService.listRecentHospitalExhaustedNotices()).thenReturn(List.of());
+        when(deliveryAndDischargeApplicationService.listInTransportEmergencies()).thenReturn(List.of());
+        when(deliveryAndDischargeApplicationService.listCompletedEmergencies()).thenReturn(List.of());
+        when(deliveryAndDischargeApplicationService.listHospitalReservations()).thenReturn(List.of());
+
+        mockMvc.perform(post("/dispatch/hospital-reservations/RES-404/discharge"))
+                .andExpect(status().isBadRequest())
+                .andExpect(view().name("dispatch/hospital-queue"))
+                .andExpect(model().attributeExists("errorMessage"))
+                .andExpect(content().string(containsString("RES-404")));
     }
 }

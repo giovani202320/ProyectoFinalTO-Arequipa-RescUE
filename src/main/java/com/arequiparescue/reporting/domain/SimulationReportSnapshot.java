@@ -17,6 +17,31 @@ public record SimulationReportSnapshot(
         AmbulanceUtilizationMetric ambulanceUtilization,
         ConcurrencyMetric concurrencyConflicts,
         TemporalMetricSummary waitingForHospital,
-        List<ExperimentalEmergencyRecord> experimentalRecords
+        List<ExperimentalEmergencyRecord> experimentalRecords,
+        ReportingSupplementaryMetrics.EmergencyDistributionSummary emergencyDistribution,
+        ReportingSupplementaryMetrics.HospitalCapacitySummary hospitalCapacity,
+        ReportingSupplementaryMetrics.OperationOutcomeSummary operationOutcomes
 ) {
+
+    public SimulationReportSnapshot(
+            String referenceScenarioId,
+            String referenceScenarioStatus,
+            long currentLogicalTicks,
+            TemporalMetricSummary waitingForAmbulance,
+            TemporalMetricSummary responseToIncident,
+            TemporalMetricSummary pickupToHospital,
+            CompletedEmergenciesMetric completedEmergencies,
+            AmbulanceUtilizationMetric ambulanceUtilization,
+            ConcurrencyMetric concurrencyConflicts,
+            TemporalMetricSummary waitingForHospital,
+            List<ExperimentalEmergencyRecord> experimentalRecords
+    ) {
+        this(referenceScenarioId, referenceScenarioStatus, currentLogicalTicks,
+                waitingForAmbulance, responseToIncident, pickupToHospital,
+                completedEmergencies, ambulanceUtilization, concurrencyConflicts,
+                waitingForHospital, experimentalRecords,
+                ReportingSupplementaryMetrics.EmergencyDistributionSummary.empty(),
+                ReportingSupplementaryMetrics.HospitalCapacitySummary.empty(),
+                ReportingSupplementaryMetrics.OperationOutcomeSummary.empty());
+    }
 }

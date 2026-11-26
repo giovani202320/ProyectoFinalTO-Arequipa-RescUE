@@ -6,12 +6,18 @@
 <th:block th:fragment="simulationContent">
     <!-- Header -->
     <section class="are-card mb-4" aria-labelledby="simulation-page-title">
-        <div class="are-card-body d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+        <div class="are-card-body d-flex flex-column gap-3">
+            <div class="d-flex flex-column flex-xl-row align-items-xl-start justify-content-between gap-3">
             <div>
                 <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
                     <span th:replace="~{fragments/components :: statusBadge('Administrador (ACT-03) — HU-13', 'navy')}"></span>
                     <span class="are-badge are-badge-neutral are-mono"
-                          th:text="'Reloj lógico global en memoria: t=' + ${globalClockTicks}">Reloj lógico global en memoria: t=0</span>
+                          th:text="'Reloj lógico global (sistema): t=' + ${globalClockTicks}">Reloj lógico global (sistema): t=0</span>
+                    <span class="are-badge are-badge-primary are-mono"
+                          th:if="${selectedScenario != null}"
+                          th:text="'Reloj del escenario (' + ${selectedScenario.id()} + '): t=' + ${selectedScenario.currentTime().ticks()}">
+                        Reloj del escenario: t=0
+                    </span>
                 </div>
                 <h2 id="simulation-page-title" class="h4 fw-bold mb-1" style="color: var(--are-navy);">
                     Control de Escenarios y Avance Manual del Reloj Lógico
@@ -20,13 +26,258 @@
                     Motor de simulación por eventos discretos con avance manual paso a paso, tiempo lógico monotónico
                     (<code>t &gt;= 0</code>) y desempate determinista por precedencia de tipo, secuencia de creación e identificador estable.
                 </p>
+                <details class="mt-2 small text-secondary">
+                    <summary class="fw-semibold" style="cursor: pointer;">Diferencia entre reloj global, escenario y concurrencia real</summary>
+                    <ul class="mb-0 mt-1 ps-3">
+                        <li><strong>Ámbitos de reloj:</strong> el <em>reloj lógico global</em> mantiene la monotonicidad del sistema entre reinicios; cada <em>escenario</em> tiene su propio reloj (inicia en <code>t=0</code>) para programar eventos sin retroceder el reloj global.</li>
+                        <li><strong>Eventos discretos vs. concurrencia multihilo:</strong> esta pantalla ejecuta eventos secuenciales deterministas (1 paso a la vez) para estudiar políticas y colas; la concurrencia real entre hilos simultáneos se protege mediante bloqueos pesimistas <code>SELECT ... FOR UPDATE</code> (ADR-0002) y se demuestra con las pruebas de integración multihilo.</li>
+                    </ul>
+                </details>
             </div>
-            <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+            <div class="d-flex flex-wrap gap-2">
+                <a th:replace="~{fragments/components :: actionLink(@{/admin/topology}, 'Topología / Dijkstra', 'outline', 'map')}"></a>
                 <a th:replace="~{fragments/components :: actionLink(@{/reporting}, 'Métricas (HU-14)', 'outline', 'bar-chart-3')}"></a>
                 <a th:replace="~{fragments/components :: actionLink(@{/emergencies}, 'Emergencias', 'outline', 'siren')}"></a>
                 <a th:replace="~{fragments/components :: actionLink(@{/dispatch/waiting-queue}, 'Cola de ambulancias', 'outline', 'clock')}"></a>
                 <a th:replace="~{fragments/components :: actionLink(@{/dispatch/hospital-queue}, 'Cola hospitalaria', 'outline', 'hospital')}"></a>
             </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Live Operational Resources Panel (P1-1) -->
+    <section class="mb-4" th:if="${operationalSnapshot != null}" aria-labelledby="live-resources-heading">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+            <h3 id="live-resources-heading" class="h6 fw-bold mb-0" style="color: var(--are-navy);">
+                Estado operativo actual de recursos (lectura en vivo)
+            </h3>
+            <span class="text-secondary small">
+                Haga clic en cualquier emergencia para inspeccionar su recorrido Dijkstra (Tramo A y Tramo B).
+            </span>
+        </div>
+        <div class="row g-3">
+            <!-- Active Emergencies -->
+            <div class="col-12 col-xl-4">
+                <article class="are-card h-100">
+                    <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                        <h4 class="are-card-title">Emergencias activas</h4>
+                        <span class="are-badge are-badge-primary are-mono"
+                              th:text="${operationalSnapshot.totalActiveEmergencies()} + ' activas · ' + ${operationalSnapshot.totalCompletedEmergencies()} + ' comp.'">0 activas</span>
+                    </div>
+                    <div class="are-card-body">
+                        <p class="text-secondary small mb-0" th:if="${#lists.isEmpty(operationalSnapshot.activeEmergencies())}">
+                            No hay emergencias activas en este momento.
+                        </p>
+                        <div th:if="${!#lists.isEmpty(operationalSnapshot.activeEmergencies())}" class="are-table-wrap">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Estado</th>
+                                    <th>Nodo</th>
+                                    <th>Recursos</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="emg : ${operationalSnapshot.activeEmergencies()}">
+                                    <td class="are-mono fw-bold">
+                                        <a th:href="@{/emergencies/{id}(id=${emg.id()})}" th:text="${emg.id()}">EMG-00001</a>
+                                    </td>
+                                    <td>
+                                        <span class="are-badge"
+                                              th:classappend="'are-badge-' + ${@areUi.badgeTone('EMERGENCY', emg.state())}"
+                                              th:text="${@areUi.emergencyStateLabel(emg.state())}">Registrada</span>
+                                    </td>
+                                    <td class="are-mono" th:text="${emg.nodeId()}">N01</td>
+                                    <td class="small are-mono">
+                                        <span th:if="${emg.assignedAmbulanceId() != null}" th:text="${emg.assignedAmbulanceId()}">AMB-01</span>
+                                        <span th:if="${emg.hospitalId() != null}" th:text="' → ' + ${emg.hospitalId()}"> → HOSP-01</span>
+                                        <a th:if="${emg.state() == 'REGISTERED' or emg.state() == 'WAITING_AMBULANCE'}"
+                                           th:href="@{/dispatch/emergencies/{id}(id=${emg.id()})}"
+                                           class="ms-1 text-decoration-none">Despachar</a>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-secondary small mt-2"
+                             th:if="${operationalSnapshot.totalActiveEmergencies() > #lists.size(operationalSnapshot.activeEmergencies())}"
+                             th:text="'Mostrando ' + ${#lists.size(operationalSnapshot.activeEmergencies())} + ' de ' + ${operationalSnapshot.totalActiveEmergencies()} + ' emergencias activas.'">
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Ambulances Fleet -->
+            <div class="col-12 col-xl-4">
+                <article class="are-card h-100">
+                    <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                        <h4 class="are-card-title">Ambulancias</h4>
+                        <span class="are-badge are-badge-success are-mono"
+                              th:text="${operationalSnapshot.availableAmbulancesCount()} + ' / ' + ${operationalSnapshot.totalAmbulancesCount()} + ' disp.'">0 / 0 disp.</span>
+                    </div>
+                    <div class="are-card-body">
+                        <p class="text-secondary small mb-0" th:if="${#lists.isEmpty(operationalSnapshot.ambulances())}">
+                            No hay ambulancias registradas.
+                        </p>
+                        <div th:if="${!#lists.isEmpty(operationalSnapshot.ambulances())}" class="are-table-wrap">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Unidad</th>
+                                    <th>Tipo</th>
+                                    <th>Nodo</th>
+                                    <th>Estado</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="amb : ${operationalSnapshot.ambulances()}">
+                                    <td class="are-mono fw-bold" th:text="${amb.id()}">AMB-01</td>
+                                    <td class="small" th:text="${@areUi.equipmentLabel(amb.equipmentType())}">Básica</td>
+                                    <td class="are-mono" th:text="${amb.currentNodeId()}">N01</td>
+                                    <td class="small">
+                                        <span class="are-badge"
+                                              th:classappend="'are-badge-' + ${@areUi.badgeTone('AMBULANCE', amb.state())}"
+                                              th:text="${@areUi.ambulanceStateLabel(amb.state())}">Disponible</span>
+                                        <a th:if="${amb.assignedEmergencyId() != null}"
+                                           th:href="@{/emergencies/{id}(id=${amb.assignedEmergencyId()})}"
+                                           class="are-mono ms-1" th:text="${amb.assignedEmergencyId()}">EMG-00001</a>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Hospitals & Active Reservations -->
+            <div class="col-12 col-xl-4">
+                <article class="are-card h-100">
+                    <div class="are-card-header d-flex align-items-center justify-content-between gap-2">
+                        <h4 class="are-card-title">Hospitales (C / R / O / D)</h4>
+                        <span class="are-badge are-badge-navy are-mono"
+                              th:text="'D=' + ${operationalSnapshot.totalAvailableBeds()} + ' / C=' + ${operationalSnapshot.totalCapacityBeds()}">D=0 / C=0</span>
+                    </div>
+                    <div class="are-card-body">
+                        <p class="text-secondary small mb-0" th:if="${#lists.isEmpty(operationalSnapshot.hospitals())}">
+                            No hay hospitales registrados.
+                        </p>
+                        <div th:if="${!#lists.isEmpty(operationalSnapshot.hospitals())}" class="are-table-wrap">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Hospital</th>
+                                    <th>Nodo</th>
+                                    <th class="text-end">C</th>
+                                    <th class="text-end">R</th>
+                                    <th class="text-end">O</th>
+                                    <th class="text-end">D</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="h : ${operationalSnapshot.hospitals()}">
+                                    <td class="are-mono fw-bold" th:title="${h.name()}" th:text="${h.id()}">HOSP-01</td>
+                                    <td class="are-mono" th:text="${h.nodeId()}">N05</td>
+                                    <td class="text-end are-mono" th:text="${h.totalCapacity()}">5</td>
+                                    <td class="text-end are-mono" th:text="${h.reservedSlots()}">0</td>
+                                    <td class="text-end are-mono" th:text="${h.occupiedSlots()}">0</td>
+                                    <td class="text-end are-mono fw-bold" th:text="${h.availableSlots()}">5</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-2 pt-2 border-top small" th:if="${!#lists.isEmpty(operationalSnapshot.activeReservations())}">
+                            <div class="fw-semibold text-secondary mb-1">Reservas activas (para entrega/alta):</div>
+                            <div class="d-flex flex-wrap gap-1">
+                                <span th:each="res : ${operationalSnapshot.activeReservations()}"
+                                      class="are-badge are-badge-neutral are-mono"
+                                      th:text="${res.id() + ' (' + res.status() + ')'}">RES-EMG-00001 (OCCUPIED)</span>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- Last Processed Event & Real Before/After Comparison (P1-1) -->
+    <section class="are-card mb-4" th:if="${lastStepComparison != null}" aria-labelledby="last-step-comparison-heading">
+        <div class="are-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <h3 id="last-step-comparison-heading" class="are-card-title">
+                Último evento procesado — Comparación real Antes / Después
+            </h3>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="are-badge are-badge-navy are-mono"
+                      th:text="'t=' + ${lastStepComparison.previousTicks()} + ' → t=' + ${lastStepComparison.currentTicks()}">t=0 → t=5</span>
+                <span class="are-badge are-mono"
+                      th:classappend="${lastStepComparison.outcome() == 'EXECUTED' ? 'are-badge-success' : 'are-badge-warning'}"
+                      th:text="${lastStepComparison.outcome()}">EXECUTED</span>
+            </div>
+        </div>
+        <div class="are-card-body">
+            <div class="small mb-2">
+                Evento <strong class="are-mono" th:text="${lastStepComparison.eventId()}">EV-01</strong>
+                <span th:if="${lastStepComparison.eventTypeName() != null}"
+                      th:text="'(' + ${@areUi.eventTypeLabel(lastStepComparison.eventTypeName())} + ')'"></span> ·
+                Sujeto:
+                <a th:if="${#strings.startsWith(lastStepComparison.subjectId(), 'EMG-')}"
+                   th:href="@{/emergencies/{id}(id=${lastStepComparison.subjectId()})}"
+                   class="are-mono fw-bold" th:text="${lastStepComparison.subjectId()}">EMG-00001</a>
+                <strong th:if="${!#strings.startsWith(lastStepComparison.subjectId(), 'EMG-')}"
+                        class="are-mono" th:text="${lastStepComparison.subjectId()}">SYS-QUEUE</strong>
+            </div>
+            <p class="small text-secondary mb-3" th:text="${lastStepComparison.message()}">Resultado</p>
+
+            <div class="are-alert are-alert-info mb-0" th:if="${!lastStepComparison.hasOperationalChanges()}" role="status">
+                <i data-lucide="info" class="are-nav-icon mt-1" aria-hidden="true"></i>
+                <div class="small"><strong>Sin cambios operativos</strong> en emergencias, ambulancias, hospitales ni reservas durante este paso.</div>
+            </div>
+
+            <div th:if="${lastStepComparison.hasOperationalChanges()}" class="are-table-wrap">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Recurso</th>
+                        <th>Tipo</th>
+                        <th>Antes</th>
+                        <th>Después</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="delta : ${lastStepComparison.deltas()}">
+                        <td class="are-mono fw-bold">
+                            <a th:if="${delta.resourceKind() == 'Emergencia'}"
+                               th:href="@{/emergencies/{id}(id=${delta.resourceId()})}"
+                               th:text="${delta.resourceId()}">EMG-00001</a>
+                            <span th:if="${delta.resourceKind() != 'Emergencia'}" th:text="${delta.resourceId()}">AMB-01</span>
+                        </td>
+                        <td class="small" th:text="${delta.resourceKind()}">Emergencia</td>
+                        <td class="small are-mono text-secondary" th:text="${delta.beforeState()}">ASSIGNED</td>
+                        <td class="small are-mono fw-semibold" th:text="${delta.afterState()}">IN_TRANSPORT</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="are-card mb-4" th:if="${lastStepComparison == null and latestHistoryEvent != null}" aria-labelledby="latest-history-heading">
+        <div class="are-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <h3 id="latest-history-heading" class="are-card-title">Último evento registrado en el escenario</h3>
+            <span class="are-badge are-badge-neutral are-mono"
+                  th:text="${'t=' + (latestHistoryEvent.executedAt().isPresent() ? latestHistoryEvent.executedAt().get().ticks() : latestHistoryEvent.event().scheduledAt().ticks())}">t=0</span>
+        </div>
+        <div class="are-card-body small">
+            <strong class="are-mono" th:text="${latestHistoryEvent.event().eventId()}">EV-01</strong>
+            (<span th:text="${@areUi.eventTypeLabel(latestHistoryEvent.event().type().name())}">Tipo</span> ·
+            sujeto
+            <a th:if="${#strings.startsWith(latestHistoryEvent.event().subjectId(), 'EMG-')}"
+               th:href="@{/emergencies/{id}(id=${latestHistoryEvent.event().subjectId()})}"
+               class="are-mono fw-bold" th:text="${latestHistoryEvent.event().subjectId()}">EMG-00001</a>
+            <span th:if="${!#strings.startsWith(latestHistoryEvent.event().subjectId(), 'EMG-')}"
+                  class="are-mono fw-bold" th:text="${latestHistoryEvent.event().subjectId()}">SYS</span>):
+            <span class="text-secondary" th:text="${latestHistoryEvent.executionNote()}">Nota</span>
         </div>
     </section>
 
@@ -200,7 +451,13 @@
                         <div class="col-12 col-md-6 col-lg-2">
                             <label for="subjectId" class="form-label fw-semibold">ID de sujeto</label>
                             <input id="subjectId" name="subjectId" type="text" class="form-control"
+                                   list="simulationSubjectSuggestions"
                                    placeholder="SYS-QUEUE" maxlength="64" required>
+                            <datalist id="simulationSubjectSuggestions" th:if="${operationalSnapshot != null}">
+                                <option th:each="sug : ${operationalSnapshot.subjectSuggestions()}"
+                                        th:value="${sug.value()}"
+                                        th:label="${sug.label()}"></option>
+                            </datalist>
                             <div class="form-text">
                                 <code>EMG-*</code>, <code>AMB-*</code>, <code>HOSP-*</code>, <code>RES-*</code> o <code>SYS-QUEUE</code>.
                             </div>
@@ -245,7 +502,13 @@
                             <td class="are-mono" th:text="${ev.event().scheduledAt().ticks()}">0</td>
                             <td th:text="${@areUi.eventTypeLabel(ev.event().type().name()) + ' (' + ev.event().type().precedenceRank() + ')'}">Evaluación (3)</td>
                             <td class="are-mono" th:text="${ev.event().sequenceNumber()}">1</td>
-                            <td class="are-mono" th:text="${ev.event().subjectId()}">SYS</td>
+                            <td class="are-mono">
+                                <a th:if="${#strings.startsWith(ev.event().subjectId(), 'EMG-')}"
+                                   th:href="@{/emergencies/{id}(id=${ev.event().subjectId()})}"
+                                   th:text="${ev.event().subjectId()}">EMG-00001</a>
+                                <span th:if="${!#strings.startsWith(ev.event().subjectId(), 'EMG-')}"
+                                      th:text="${ev.event().subjectId()}">SYS</span>
+                            </td>
                             <td th:text="${ev.event().description()}">Descripción</td>
                         </tr>
                         </tbody>
@@ -280,7 +543,13 @@
                             <td class="are-mono"
                                 th:text="${ev.event().scheduledAt().ticks() + ' / ' + (ev.executedAt().isPresent() ? ev.executedAt().get().ticks() : '-')}">0 / 0</td>
                             <td th:text="${@areUi.eventTypeLabel(ev.event().type().name())}">Evaluación</td>
-                            <td class="are-mono" th:text="${ev.event().subjectId()}">SYS</td>
+                            <td class="are-mono">
+                                <a th:if="${#strings.startsWith(ev.event().subjectId(), 'EMG-')}"
+                                   th:href="@{/emergencies/{id}(id=${ev.event().subjectId()})}"
+                                   th:text="${ev.event().subjectId()}">EMG-00001</a>
+                                <span th:if="${!#strings.startsWith(ev.event().subjectId(), 'EMG-')}"
+                                      th:text="${ev.event().subjectId()}">SYS</span>
+                            </td>
                             <td th:text="${ev.executionNote()}">Nota</td>
                         </tr>
                         </tbody>

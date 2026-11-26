@@ -70,7 +70,9 @@ public class AreUiFormatter {
     private static final Map<String, String> OPERATION_TYPES = Map.of(
             "AUTOMATIC_DISPATCH", "Despacho automático",
             "SUPERVISED_DISPATCH", "Despacho supervisado",
+            "WAITING_QUEUE_DISPATCH", "Despacho desde cola de ambulancias",
             "HOSPITAL_RESERVATION", "Reserva hospitalaria",
+            "WAITING_HOSPITAL_QUEUE", "Reserva desde cola hospitalaria",
             "HOSPITAL_DELIVERY", "Entrega hospitalaria",
             "HOSPITAL_DISCHARGE", "Alta simulada"
     );
@@ -79,16 +81,20 @@ public class AreUiFormatter {
             "EN_ESPERA", "En espera de ambulancia",
             "PENDIENTE_LLEGADA_INCIDENTE", "Pendiente de llegada al incidente",
             "EN_PROCESO_TRASLADO", "En proceso de traslado",
+            "EN_ESPERA_HOSPITAL", "En espera de hospital",
             "WAITING_HOSPITAL", "Esperando hospital"
     );
 
     private static final Map<String, String> OPERATION_STATUSES = Map.ofEntries(
             Map.entry("ASSIGNED", "Asignada"),
             Map.entry("WAITING_AMBULANCE", "Esperando ambulancia"),
+            Map.entry("MOVED_TO_WAITING_AMBULANCE", "Derivada a cola de ambulancias"),
             Map.entry("CONCURRENCY_RETRY_EXHAUSTED", "Reintentos de concurrencia agotados"),
             Map.entry("NO_ELIGIBLE_AMBULANCE", "Sin ambulancia elegible"),
             Map.entry("IN_TRANSPORT", "En traslado"),
+            Map.entry("RESERVED", "Plaza hospitalaria reservada"),
             Map.entry("WAITING_HOSPITAL", "Esperando hospital"),
+            Map.entry("MOVED_TO_WAITING_HOSPITAL", "Derivada a cola hospitalaria"),
             Map.entry("NO_ELIGIBLE_HOSPITAL", "Sin hospital elegible"),
             Map.entry("HOSPITAL_RESERVATION_RETRY_EXHAUSTED", "Reintentos de reserva hospitalaria agotados"),
             Map.entry("COMPLETED", "Entrega completada"),
@@ -96,6 +102,7 @@ public class AreUiFormatter {
             Map.entry("DUPLICATE_OR_INVALID_STATE", "Operación duplicada o estado inválido"),
             Map.entry("CONFLICT_RELOAD_REQUIRED", "Conflicto concurrente detectado"),
             Map.entry("CONCURRENCY_CONFLICT", "Conflicto de concurrencia"),
+            Map.entry("TECHNICAL_ERROR", "Error técnico de persistencia"),
             Map.entry("OK", "Ejecutada correctamente")
     );
 

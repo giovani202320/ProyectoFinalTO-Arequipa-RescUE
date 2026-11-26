@@ -3,6 +3,7 @@ package com.arequiparescue.reporting.presentation;
 import com.arequiparescue.reporting.application.ReportingApplicationService;
 import com.arequiparescue.reporting.domain.ReportingCalculator;
 import com.arequiparescue.reporting.domain.ReportingSourceData;
+import com.arequiparescue.reporting.domain.ReportingSupplementaryMetrics;
 import com.arequiparescue.reporting.domain.SimulationReportSnapshot;
 import com.arequiparescue.shared.presentation.AreUiFormatter;
 import com.arequiparescue.shared.presentation.HtmlStructureAssertions;
@@ -13,6 +14,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,6 +24,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ReportingController.class)
@@ -188,5 +191,89 @@ class ReportingControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("30.00%")))
                 .andExpect(content().string(containsString("data-met01=\"2.0\"")));
+    }
+
+    @Test
+    void rendersSupplementaryCardsAndHandlesInvalidTimeRangeGracefully() throws Exception {
+        ReportingSourceData source = new ReportingSourceData(
+                "SCN-10",
+                "ACTIVE",
+                12L,
+                List.of(new ReportingSourceData.ScenarioRow("SCN-10", "Demo", "ACTIVE", 12L)),
+                List.of(new ReportingSourceData.EmergencyRow(
+                        "EMG-00001", "COMPLETED", "RUL-V01", "AMB-01", "HOSP-01",
+                        "COMPLETED", 1L, 1L, 2L, 4L, null, 4L, 8L, "HIGH", "INC-A")),
+                List.of(new ReportingSourceData.AmbulanceRow("AMB-01", "BASIC", "AVAILABLE", null)),
+                List.of(),
+                List.of(new ReportingSourceData.OperationResultRow(
+                        "OP-1", "AUTOMATIC_DISPATCH", "EMG-00001", "AMB-01", 1, "ASSIGNED", "OK", 2L)),
+                List.of(),
+                List.of(new ReportingSourceData.HospitalRow("HOSP-01", "Hospital Central", "N03", true, 5, 1, 2))
+        );
+        SimulationReportSnapshot snapshot = ReportingCalculator.calculate(source, null);
+        when(reportingService.generateReport("SCN-10", null))
+                .thenReturn(new ReportingApplicationService.ReportViewResult(snapshot, source.scenarios()));
+
+        String html = mockMvc.perform(get("/reporting")
+                        .param("scenarioId", "SCN-10")
+                        .param("fromTicks", "10")
+                        .param("toTicks", "2"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Distribución de emergencias")))
+                .andExpect(content().string(containsString("Capacidad hospitalaria (C / R / O / D)")))
+                .andExpect(content().string(containsString("Resultados de operaciones e intentos")))
+                .andExpect(content().string(containsString("Hospital Central")))
+                .andExpect(content().string(containsString("Exportar CSV")))
+                .andExpect(content().string(containsString("El rango de tiempo lógico es inválido")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(HtmlStructureAssertions.countOccurrences(html, "<form")).isEqualTo(1);
+    }
+
+    @Test
+    void exportsFilteredTraceabilityCsvAndRejectsInvalidCsvRange() throws Exception {
+        ReportingSourceData source = new ReportingSourceData(
+                "SCN-10",
+                "ACTIVE",
+                12L,
+                List.of(new ReportingSourceData.ScenarioRow("SCN-10", "Demo", "ACTIVE", 12L)),
+                List.of(new ReportingSourceData.EmergencyRow(
+                        "EMG-00001", "COMPLETED", "RUL-V01", "AMB-01", "HOSP-01",
+                        "COMPLETED", 3L, 3L, 4L, 6L, null, 6L, 9L, "HIGH", "INC-A")),
+                List.of(new ReportingSourceData.AmbulanceRow("AMB-01", "BASIC", "AVAILABLE", null)),
+                List.of(new ReportingSourceData.HospitalReservationRow("EMG-00001", "HOSP-01", "DISCHARGED", 11L)),
+                List.of(),
+                List.of(),
+                List.of()
+        );
+        ReportingSupplementaryMetrics.TraceabilityFilter filter =
+                new ReportingSupplementaryMetrics.TraceabilityFilter("COMPLETED", "HIGH", 1L, 10L);
+        when(reportingService.generateFilteredReport("SCN-10", filter))
+                .thenReturn(new ReportingApplicationService.ReportViewResult(
+                        ReportingCalculator.calculateWithFilter(source, filter), source.scenarios()));
+
+        byte[] body = mockMvc.perform(get("/reporting/export.csv")
+                        .param("scenarioId", "SCN-10")
+                        .param("state", "COMPLETED")
+                        .param("priority", "HIGH")
+                        .param("fromTicks", "1")
+                        .param("toTicks", "10"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", containsString("text/csv")))
+                .andExpect(header().string("Content-Disposition", containsString("are-reporte-trazabilidad.csv")))
+                .andReturn()
+                .getResponse()
+                .getContentAsByteArray();
+
+        String csv = new String(body, StandardCharsets.UTF_8);
+        assertThat(csv).startsWith("\uFEFFemergency_id,state,priority,category,");
+        assertThat(csv).contains("EMG-00001,COMPLETED,HIGH,INC-A,RUL-V01,AMB-01,HOSP-01,COMPLETED,3,3,4,6,,6,9,11,0,0");
+
+        mockMvc.perform(get("/reporting/export.csv")
+                        .param("fromTicks", "8")
+                        .param("toTicks", "2"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("El rango de tiempo lógico es inválido")));
     }
 }

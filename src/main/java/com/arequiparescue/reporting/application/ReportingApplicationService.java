@@ -2,6 +2,7 @@ package com.arequiparescue.reporting.application;
 
 import com.arequiparescue.reporting.domain.ReportingCalculator;
 import com.arequiparescue.reporting.domain.ReportingSourceData;
+import com.arequiparescue.reporting.domain.ReportingSupplementaryMetrics;
 import com.arequiparescue.reporting.domain.SimulationReportSnapshot;
 import com.arequiparescue.reporting.domain.port.ReportingDataQueryPort;
 import com.arequiparescue.shared.domain.LogicalClock;
@@ -31,8 +32,18 @@ public class ReportingApplicationService {
 
     @Transactional(readOnly = true)
     public ReportViewResult generateReport(String scenarioId, String emergencyStateFilter) {
+        return generateFilteredReport(
+                scenarioId,
+                new ReportingSupplementaryMetrics.TraceabilityFilter(emergencyStateFilter, null, null, null));
+    }
+
+    @Transactional(readOnly = true)
+    public ReportViewResult generateFilteredReport(
+            String scenarioId,
+            ReportingSupplementaryMetrics.TraceabilityFilter filter
+    ) {
         ReportingSourceData sourceData = queryPort.loadSourceData(scenarioId, logicalClock.currentTicks());
-        SimulationReportSnapshot snapshot = ReportingCalculator.calculate(sourceData, emergencyStateFilter);
+        SimulationReportSnapshot snapshot = ReportingCalculator.calculateWithFilter(sourceData, filter);
         return new ReportViewResult(snapshot, sourceData.scenarios());
     }
 

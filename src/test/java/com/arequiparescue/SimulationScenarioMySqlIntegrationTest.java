@@ -144,6 +144,7 @@ class SimulationScenarioMySqlIntegrationTest {
     }
 
     private void cleanDatabase() {
+        jdbcTemplate.update("DELETE FROM emergency_route_segments");
         simulationEventJpaRepository.deleteAll();
         simulationScenarioJpaRepository.deleteAll();
         hospitalReservationJpaRepository.deleteAll();

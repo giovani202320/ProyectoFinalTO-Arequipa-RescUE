@@ -8,6 +8,8 @@ import com.arequiparescue.dispatch.domain.DispatchOperationOutcome;
 import com.arequiparescue.dispatch.domain.EligibleAmbulanceCandidate;
 import com.arequiparescue.emergency.domain.Emergency;
 import com.arequiparescue.emergency.presentation.EmergencyView;
+import com.arequiparescue.routing.domain.RoadGraph;
+import com.arequiparescue.routing.domain.port.RoadGraphRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -31,9 +33,14 @@ import java.util.Objects;
 public class DispatchController {
 
     private final DispatchApplicationService dispatchApplicationService;
+    private final RoadGraphRepository roadGraphRepository;
 
-    public DispatchController(DispatchApplicationService dispatchApplicationService) {
+    public DispatchController(
+            DispatchApplicationService dispatchApplicationService,
+            RoadGraphRepository roadGraphRepository
+    ) {
         this.dispatchApplicationService = Objects.requireNonNull(dispatchApplicationService);
+        this.roadGraphRepository = Objects.requireNonNull(roadGraphRepository);
     }
 
     @GetMapping("/{id}")
@@ -140,7 +147,7 @@ public class DispatchController {
         }
     }
 
-    private static void populatePanelModel(
+    private void populatePanelModel(
             Model model,
             Emergency emergency,
             List<EligibleAmbulanceCandidate> candidates
@@ -153,5 +160,41 @@ public class DispatchController {
         model.addAttribute("candidates", views);
         model.addAttribute("hasSupplementalNotice",
                 views.stream().anyMatch(EligibleAmbulanceView::supplementalSpecialized));
+
+        RoadGraph graph = roadGraphRepository.loadGraph();
+        model.addAttribute("graphNodes", graph.nodes().stream()
+                .map(node -> new GraphNodePreview(
+                        node.id().value(),
+                        node.zoneCode(),
+                        node.displayName(),
+                        graph.degreeOf(node.id()),
+                        graph.isIsolated(node.id())
+                ))
+                .toList());
+        model.addAttribute("graphEdges", graph.edges().stream()
+                .map(edge -> new GraphEdgePreview(
+                        edge.id(),
+                        edge.sourceNodeId().value(),
+                        edge.targetNodeId().value(),
+                        edge.abstractCost()
+                ))
+                .toList());
+    }
+
+    public record GraphNodePreview(
+            String id,
+            String zoneCode,
+            String displayName,
+            int degree,
+            boolean isolated
+    ) {
+    }
+
+    public record GraphEdgePreview(
+            String id,
+            String sourceNodeId,
+            String targetNodeId,
+            int abstractCost
+    ) {
     }
 }

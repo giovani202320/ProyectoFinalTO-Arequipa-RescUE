@@ -6,15 +6,23 @@ import com.arequiparescue.emergency.application.EmergencyValidationException;
 import com.arequiparescue.emergency.application.RegisterEmergencyCommand;
 import com.arequiparescue.emergency.domain.Emergency;
 import com.arequiparescue.emergency.domain.EmergencyId;
+import com.arequiparescue.emergency.domain.EmergencyRouteSegment;
 import com.arequiparescue.emergency.domain.EmergencyState;
 import com.arequiparescue.emergency.domain.EquipmentType;
 import com.arequiparescue.emergency.domain.IncidentCategory;
+import com.arequiparescue.emergency.domain.RouteSegmentType;
 import com.arequiparescue.emergency.domain.SimulatedPriority;
 import com.arequiparescue.emergency.domain.TriageClassification;
 import com.arequiparescue.emergency.domain.TriageRuleVersion;
 import com.arequiparescue.emergency.domain.TriageRuleVersionId;
+import com.arequiparescue.hospital.application.HospitalCatalogApplicationService;
+import com.arequiparescue.hospital.domain.Hospital;
+import com.arequiparescue.hospital.domain.HospitalId;
+import com.arequiparescue.routing.domain.GraphEdge;
 import com.arequiparescue.routing.domain.GraphNode;
 import com.arequiparescue.routing.domain.NodeId;
+import com.arequiparescue.routing.domain.RoadGraph;
+import com.arequiparescue.routing.domain.port.RoadGraphRepository;
 import com.arequiparescue.shared.domain.LogicalTime;
 import com.arequiparescue.shared.presentation.AreUiFormatter;
 import com.arequiparescue.shared.presentation.HtmlStructureAssertions;
@@ -60,15 +68,29 @@ class EmergencyControllerTest {
     @MockitoBean
     private EmergencyApplicationService emergencyApplicationService;
 
+    @MockitoBean
+    private HospitalCatalogApplicationService hospitalCatalogApplicationService;
+
+    @MockitoBean
+    private RoadGraphRepository roadGraphRepository;
+
     @BeforeEach
     void setUp() {
         when(emergencyApplicationService.currentLogicalTime()).thenReturn(LogicalTime.ZERO);
         when(emergencyApplicationService.findActiveRuleVersion())
                 .thenReturn(Optional.of(TriageRuleVersion.initialApprovedCatalog()));
-        when(emergencyApplicationService.listConfiguredGraphNodes()).thenReturn(List.of(
+        List<GraphNode> nodes = List.of(
                 new GraphNode(NodeId.of("N01"), "Z01", "N01 — Cercado Centro", false),
                 new GraphNode(NodeId.of("N02"), "Z02", "N02 — Yanahuara", false),
                 new GraphNode(NodeId.of("N10"), "Z10", "N10 — Yarabamba Rural", true)
+        );
+        when(emergencyApplicationService.listConfiguredGraphNodes()).thenReturn(nodes);
+        when(roadGraphRepository.loadGraph()).thenReturn(new RoadGraph(
+                nodes,
+                List.of(new GraphEdge("EDG-01", NodeId.of("N01"), NodeId.of("N02"), 5))
+        ));
+        when(hospitalCatalogApplicationService.listHospitals()).thenReturn(List.of(
+                Hospital.registerInCatalog(HospitalId.of("HOSP-01"), "Hospital Base", NodeId.of("N02"), true, 10)
         ));
     }
 
@@ -228,6 +250,117 @@ class EmergencyControllerTest {
                 .getContentAsString();
         HtmlStructureAssertions.assertSingleAppShellStructure(detailHtml, "detail-header-title");
         assertThat(HtmlStructureAssertions.countOccurrences(detailHtml, "Detalle de emergencia")).isEqualTo(1);
+        assertThat(detailHtml)
+                .contains("Recorrido de atención de emergencia")
+                .contains("Sin ambulancia asignada. No existe recorrido histórico.")
+                .contains("Destino hospitalario aún no definido.")
+                .contains("id=\"areTopologySvg\"")
+                .contains("/js/are-topology-graph.js?v=5a-a07");
+
+        Emergency assignedNoHospital = Emergency.register(
+                        EmergencyId.of("EMG-00003"),
+                        NodeId.of("N01"),
+                        "Asignada sin hospital",
+                        new TriageClassification(IncidentCategory.INC_B, SimulatedPriority.MEDIUM, EquipmentType.BASIC, TriageRuleVersionId.of("RUL-V01")),
+                        LogicalTime.ZERO)
+                .assignAmbulance("AMB-01", LogicalTime.of(1));
+        when(emergencyApplicationService.getEmergencyById("EMG-00003")).thenReturn(assignedNoHospital);
+
+        mockMvc.perform(get("/emergencies/EMG-00003"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("AMB-01")))
+                .andExpect(content().string(containsString("Origen histórico, secuencia y costo del Tramo A no disponibles")))
+                .andExpect(content().string(containsString("Destino hospitalario aún no definido.")));
+
+        Emergency inTransport = Emergency.register(
+                        EmergencyId.of("EMG-00002"),
+                        NodeId.of("N01"),
+                        "Traslado",
+                        new TriageClassification(IncidentCategory.INC_A, SimulatedPriority.HIGH, EquipmentType.SPECIALIZED, TriageRuleVersionId.of("RUL-V01")),
+                        LogicalTime.ZERO)
+                .assignAmbulance("AMB-01", LogicalTime.of(1))
+                .arriveAtIncident(LogicalTime.of(2))
+                .reserveHospitalAndStartTransport("HOSP-01", LogicalTime.of(3));
+        EmergencyRouteSegment segmentA = new EmergencyRouteSegment(
+                EmergencyId.of("EMG-00002"),
+                RouteSegmentType.AMBULANCE_TO_INCIDENT,
+                "AMB-01",
+                NodeId.of("N02"),
+                NodeId.of("N01"),
+                List.of(NodeId.of("N02"), NodeId.of("N01")),
+                5,
+                1L);
+        EmergencyRouteSegment segmentB = new EmergencyRouteSegment(
+                EmergencyId.of("EMG-00002"),
+                RouteSegmentType.INCIDENT_TO_HOSPITAL,
+                "HOSP-01",
+                NodeId.of("N01"),
+                NodeId.of("N02"),
+                List.of(NodeId.of("N01"), NodeId.of("N02")),
+                5,
+                3L);
+        when(emergencyApplicationService.getEmergencyById("EMG-00002")).thenReturn(inTransport);
+        when(emergencyApplicationService.findRouteSegments(EmergencyId.of("EMG-00002")))
+                .thenReturn(List.of(segmentA, segmentB));
+
+        String inTransportHtml = mockMvc.perform(get("/emergencies/EMG-00002"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Recorrido de atención de emergencia")))
+                .andExpect(content().string(containsString("HOSP-01")))
+                .andExpect(content().string(containsString("Hospital Base")))
+                .andExpect(content().string(containsString("N02 → N01")))
+                .andExpect(content().string(containsString("N01 → N02")))
+                .andExpect(content().string(containsString("id=\"areTopologySvg\"")))
+                .andExpect(content().string(containsString("routePathNodesA: [\"N02\",\"N01\"]")))
+                .andExpect(content().string(containsString("routePathNodesB: [\"N01\",\"N02\"]")))
+                .andExpect(content().string(containsString("10 unidades abstractas")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        HtmlStructureAssertions.assertSingleAppShellStructure(inTransportHtml, "detail-header-title");
+
+        Emergency completed = inTransport.completeHospitalDelivery(LogicalTime.of(5));
+        when(emergencyApplicationService.getEmergencyById("EMG-00004")).thenReturn(completed);
+        when(emergencyApplicationService.findRouteSegments(EmergencyId.of("EMG-00004")))
+                .thenReturn(List.of(
+                        new EmergencyRouteSegment(
+                                EmergencyId.of("EMG-00004"),
+                                RouteSegmentType.AMBULANCE_TO_INCIDENT,
+                                "AMB-01",
+                                NodeId.of("N02"),
+                                NodeId.of("N01"),
+                                List.of(NodeId.of("N02"), NodeId.of("N01")),
+                                5,
+                                1L),
+                        new EmergencyRouteSegment(
+                                EmergencyId.of("EMG-00004"),
+                                RouteSegmentType.INCIDENT_TO_HOSPITAL,
+                                "HOSP-01",
+                                NodeId.of("N01"),
+                                NodeId.of("N02"),
+                                List.of(NodeId.of("N01"), NodeId.of("N02")),
+                                5,
+                                3L)));
+        mockMvc.perform(get("/emergencies/EMG-00004"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("routePathNodesA: [\"N02\",\"N01\"]")))
+                .andExpect(content().string(containsString("routePathNodesB: [\"N01\",\"N02\"]")))
+                .andExpect(content().string(containsString("10 unidades abstractas")));
+
+        Emergency historicalWithoutSegments = Emergency.register(
+                        EmergencyId.of("EMG-00005"),
+                        NodeId.of("N10"),
+                        "Histórica previa a V8",
+                        new TriageClassification(IncidentCategory.INC_A, SimulatedPriority.HIGH, EquipmentType.SPECIALIZED, TriageRuleVersionId.of("RUL-V01")),
+                        LogicalTime.ZERO)
+                .assignAmbulance("AMB-01", LogicalTime.of(1))
+                .arriveAtIncident(LogicalTime.of(2))
+                .reserveHospitalAndStartTransport("HOSP-01", LogicalTime.of(3));
+        when(emergencyApplicationService.getEmergencyById("EMG-00005")).thenReturn(historicalWithoutSegments);
+        when(emergencyApplicationService.findRouteSegments(EmergencyId.of("EMG-00005"))).thenReturn(List.of());
+        mockMvc.perform(get("/emergencies/EMG-00005"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Datos históricos de ruta no disponibles para el hospital HOSP-01")));
 
         mockMvc.perform(get("/emergencies/EMG-99999"))
                 .andExpect(status().isNotFound())

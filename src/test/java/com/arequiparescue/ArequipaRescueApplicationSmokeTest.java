@@ -4,6 +4,7 @@ import com.arequiparescue.ambulance.infrastructure.persistence.SpringDataAmbulan
 import com.arequiparescue.dispatch.infrastructure.persistence.SpringDataExperimentOperationResultRepository;
 import com.arequiparescue.dispatch.infrastructure.persistence.SpringDataOperationAttemptLogRepository;
 import com.arequiparescue.emergency.infrastructure.persistence.SpringDataEmergencyRepository;
+import com.arequiparescue.emergency.infrastructure.persistence.SpringDataEmergencyRouteSegmentRepository;
 import com.arequiparescue.emergency.infrastructure.persistence.SpringDataEmergencySequenceRepository;
 import com.arequiparescue.emergency.infrastructure.persistence.SpringDataTriageRuleRepository;
 import com.arequiparescue.emergency.infrastructure.persistence.SpringDataTriageRuleVersionRepository;
@@ -54,6 +55,9 @@ class ArequipaRescueApplicationSmokeTest {
 
     @MockitoBean
     private SpringDataEmergencyRepository emergencyRepository;
+
+    @MockitoBean
+    private SpringDataEmergencyRouteSegmentRepository emergencyRouteSegmentRepository;
 
     @MockitoBean
     private SpringDataEmergencySequenceRepository emergencySequenceRepository;
